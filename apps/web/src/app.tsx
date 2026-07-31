@@ -4,6 +4,7 @@ import { ProtectedStudentRoute } from './features/auth/protected-route';
 import { SignupPage } from './features/auth/signup-page';
 import { LandingPage, RolePendingPage } from './features/misc-pages';
 import { MockExamTypesPage } from './features/student/mock-tests/exam-types-page';
+import { ContentPage } from './features/student/content/content-page';
 import { MockCategoriesPage } from './features/student/mock-tests/mock-categories-page';
 import { MockExamDetailPage } from './features/student/mock-tests/exam-detail-page';
 import { MockExamsPage } from './features/student/mock-tests/mock-exams-page';
@@ -25,6 +26,7 @@ export const App = () => (
         <Route path="mock-tests/:examTypeId" element={<MockCategoriesPage />} />
         <Route path="mock-tests/:examTypeId/:mockExamTypeId" element={<MockExamsPage />} />
         <Route path="mock-tests/:examTypeId/:mockExamTypeId/:examId" element={<MockExamDetailPage />} />
+        <Route path="content" element={<ContentPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route index element={<Navigate to="dashboard" replace />} />

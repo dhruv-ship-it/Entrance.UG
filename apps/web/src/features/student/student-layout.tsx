@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, BookOpenCheck, ChevronDown, CircleUserRound, ClipboardList, GraduationCap, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
+import { Bell, BookOpenCheck, BookOpenText, ChevronDown, CircleUserRound, ClipboardList, GraduationCap, LayoutDashboard, LogOut, Menu, X } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
@@ -16,6 +16,7 @@ type NotificationResponse = { notifications: Notification[]; unreadCount: number
 const navigation = [
   { to: '/student/dashboard', label: 'Overview', icon: LayoutDashboard },
   { to: '/student/mock-tests', label: 'Mock tests', icon: ClipboardList },
+  { to: '/student/content', label: 'Learning content', icon: BookOpenText },
   { to: '/student/profile', label: 'My profile', icon: CircleUserRound },
 ];
 
@@ -26,7 +27,7 @@ export const StudentLayout = () => {
   if (!user) return null;
   const sidebar = <aside className="flex h-full w-[272px] flex-col border-r border-moss-900/20 bg-moss-900 px-4 py-5 text-moss-100">
     <Link to="/student/dashboard" className="flex items-center gap-3 px-3 py-2"><span className="grid size-10 place-items-center rounded-2xl bg-lime text-moss-900"><GraduationCap size={22} strokeWidth={2.3} /></span><span><span className="block text-base font-bold text-white">Entrance UG</span><span className="text-[10px] font-semibold uppercase tracking-[.18em] text-moss-200">Student portal</span></span></Link>
-    <nav className="mt-9 space-y-1">{navigation.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/student/mock-tests'} onClick={() => setIsOpen(false)} className={({ isActive }) => cn('flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition', isActive ? 'bg-white/12 text-white shadow-sm' : 'text-moss-100/75 hover:bg-white/8 hover:text-white')}><Icon size={18} />{label}</NavLink>)}</nav>
+  <nav className="mt-9 space-y-1">{navigation.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/student/mock-tests' || to === '/student/content'} onClick={() => setIsOpen(false)} className={({ isActive }) => cn('flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition', isActive ? 'bg-white/12 text-white shadow-sm' : 'text-moss-100/75 hover:bg-white/8 hover:text-white')}><Icon size={18} />{label}</NavLink>)}</nav>
     <div className="mt-8 px-3"><p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-moss-200/70">Your preparation</p><div className="rounded-2xl border border-white/10 bg-white/5 p-4"><BookOpenCheck size={19} className="text-lime" /><p className="mt-3 text-sm font-semibold text-white">Build your rhythm</p><p className="mt-1 text-xs leading-5 text-moss-100/65">Mocks, content and mentoring will appear here as you unlock them.</p></div></div>
     <div className="mt-auto space-y-2 border-t border-white/10 pt-4"><Link to="/student/notifications" onClick={() => setIsOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-moss-100/80 transition hover:bg-white/8 hover:text-white"><span className="flex items-center gap-3"><Bell size={18} />Notifications</span>{(notifications.data?.unreadCount ?? 0) > 0 && <Badge className="bg-lime px-2 text-moss-900">{notifications.data?.unreadCount}</Badge>}</Link><button onClick={() => void signOut()} className="focus-ring flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-moss-100/80 transition hover:bg-white/8 hover:text-white"><LogOut size={18} />Sign out</button></div>
   </aside>;

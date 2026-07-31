@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock3, FileBarChart2, LoaderCircle, PlayCircle, ShieldCheck } from 'lucide-react';
+import { BarChart3, CheckCircle2, Clock3, FileBarChart2, LoaderCircle, Lock, PlayCircle, ShieldCheck, UsersRound } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { EmptyState } from '../../../components/empty-state';
@@ -67,6 +67,7 @@ export const MockExamDetailPage = () => {
         <Card className="p-6 sm:p-7">
           <div className="flex flex-wrap items-center gap-2">
             {data.isFree && <Badge className="bg-lime/45 text-moss-900">Free</Badge>}
+            {!data.hasAccess && <Badge className="bg-stone-100 text-stone-600">Locked</Badge>}
             <Badge>{data.difficulty}</Badge>
             {data.isAttempted && <Badge className="bg-moss-100 text-moss-800">Already attempted</Badge>}
             {inProgress && <Badge className="bg-amber/15 text-[#9a6810]">In progress</Badge>}
@@ -101,6 +102,8 @@ export const MockExamDetailPage = () => {
               <SummaryRow label="Passing marks" value={data.passingMarks == null ? 'Not set' : `${data.passingMarks}`} />
               <SummaryRow label="Questions" value={`${data.totalQuestions}`} />
               <SummaryRow label="Sections" value={`${data.sectionCount}`} />
+              <SummaryRow label="Students attempted" value={`${data.totalAttempts}`} />
+              <SummaryRow label="Average score" value={`${data.averageScore}/${data.totalMarks}`} />
               <SummaryRow label="Section navigation" value={data.canGoBackBetweenSections ? 'Allowed between sections' : 'Forward only between sections'} />
             </div>
 
@@ -119,7 +122,12 @@ export const MockExamDetailPage = () => {
             {attemptError && <p className="mt-4 rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700">{attemptError}</p>}
 
             <div className="mt-6 space-y-2">
-              {data.isAttempted ? (
+              {!data.hasAccess ? (
+                <Button disabled className="w-full" variant="secondary">
+                  <Lock size={16} />
+                  Locked for your account
+                </Button>
+              ) : data.isAttempted ? (
                 <Button disabled className="w-full" variant="secondary">
                   <CheckCircle2 size={16} />
                   Already attempted
@@ -148,13 +156,28 @@ export const MockExamDetailPage = () => {
 
           <Card className="border-dashed bg-[linear-gradient(130deg,#f0f6e9,#fff)] p-6">
             <div className="flex gap-3">
-              <Clock3 size={18} className="text-moss-700" />
+              {data.hasAccess ? <Clock3 size={18} className="text-moss-700" /> : <Lock size={18} className="text-moss-700" />}
               <div>
-                <p className="text-sm font-semibold">One attempt per test</p>
+                <p className="text-sm font-semibold">{data.hasAccess ? 'One attempt per test' : 'Access required to attempt'}</p>
                 <p className="mt-1 text-xs leading-5 text-stone-500">
-                  Once submitted, your answers become read-only and analysis will be shown from stored attempt data.
+                  {data.hasAccess
+                    ? 'Once submitted, your answers become read-only and analysis will be shown from stored attempt data.'
+                    : 'You can preview the test metadata here. Attempt creation is enabled only after valid mock access is added to your account.'}
                 </p>
               </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex gap-3">
+              <BarChart3 size={18} className="text-[#3f7f65]" />
+              <div>
+                <p className="text-sm font-semibold">Current cohort signal</p>
+                <p className="mt-1 text-xs leading-5 text-stone-500">
+                  {data.totalAttempts ? `${data.totalAttempts} students have attempted this mock with an average score of ${data.averageScore}.` : 'No submitted attempts yet. Analytics will start appearing after students submit this mock.'}
+                </p>
+              </div>
+              <UsersRound size={18} className="ml-auto text-[#cf7a47]" />
             </div>
           </Card>
         </div>

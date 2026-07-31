@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { CheckCircle2, Clock3, FileBarChart2, Hash, Layers, Lock, PlayCircle } from 'lucide-react';
+import { BarChart3, CheckCircle2, Clock3, FileBarChart2, Hash, Layers, Lock, PlayCircle, UsersRound } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import { EmptyState } from '../../../components/empty-state';
@@ -63,7 +63,7 @@ export const MockExamsPage = () => {
         <EmptyState
           icon={FileBarChart2}
           title="No mock tests available"
-          description="There are no active tests for this exam and category yet, or you may not have access to them."
+          description="There are no active tests for this exam and category yet."
         />
       )}
     </div>
@@ -80,17 +80,22 @@ const ExamRow = ({ exam, detailPath }: { exam: MockExamSummary; detailPath: stri
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-semibold text-ink">{exam.name}</h2>
             {exam.isFree && <Badge className="bg-lime/45 text-moss-900">Free</Badge>}
+            {!exam.hasAccess && <Badge className="bg-stone-100 text-stone-600">Locked</Badge>}
             {exam.isAttempted && <Badge className="bg-moss-100 text-moss-800">Attempted</Badge>}
             {inProgress && <Badge className="bg-amber/15 text-[#9a6810]">In progress</Badge>}
           </div>
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-500">{exam.description}</p>
+          <p className="mt-2 line-clamp-1 text-xs leading-5 text-stone-400">{exam.instructionsPreview}</p>
           <div className="mt-4 flex flex-wrap gap-4 text-xs font-medium text-stone-500">
             <span className="inline-flex items-center gap-1.5"><Clock3 size={14} />{exam.durationMinutes} min</span>
             <span className="inline-flex items-center gap-1.5"><Hash size={14} />{exam.totalMarks} marks</span>
             <span className="inline-flex items-center gap-1.5"><Layers size={14} />{exam.sectionCount} sections</span>
             <span className="inline-flex items-center gap-1.5"><FileBarChart2 size={14} />{exam.totalQuestions} questions</span>
+            <span className="inline-flex items-center gap-1.5"><UsersRound size={14} />{exam.totalAttempts} attempted</span>
+            <span className="inline-flex items-center gap-1.5"><BarChart3 size={14} />Avg {exam.averageScore}/{exam.totalMarks}</span>
             <span className="inline-flex items-center gap-1.5">Difficulty: {exam.difficulty}</span>
           </div>
+          <p className="mt-3 text-xs text-stone-400">Created {formatDateTime(exam.createdAt)}</p>
           {exam.isAttempted && exam.attempt && (
             <p className="mt-3 text-sm text-moss-800">
               Scored {exam.attempt.marksScored}/{exam.totalMarks} · {Math.round(exam.attempt.accuracy)}% accuracy
@@ -120,7 +125,7 @@ const ExamRow = ({ exam, detailPath }: { exam: MockExamSummary; detailPath: stri
           ) : (
             <Button disabled variant="secondary">
               <Lock size={16} />
-              Unavailable
+              Locked
             </Button>
           )}
         </div>

@@ -13,10 +13,13 @@ export type MockExamSummary = {
   id: string;
   name: string;
   description: string;
+  instructionsPreview: string;
   durationMinutes: number;
   totalMarks: number;
   passingMarks: number | null;
   isFree: boolean;
+  hasAccess: boolean;
+  createdAt: string;
   difficulty: string;
   sectionCount: number;
   totalQuestions: number;

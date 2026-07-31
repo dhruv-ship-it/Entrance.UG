@@ -2,6 +2,7 @@ export type LearningContent = {
   id: string; title: string; description: string; contentType: 'YOUTUBE' | 'PDF' | 'DOCUMENT' | 'WEBSITE';
   contentUrl: string | null; thumbnailUrl: string | null; sequenceNumber: number; isFree: boolean;
   estimatedDurationMinutes: number | null; hasAccess: boolean; completed: boolean; completedAt: string | null;
+  note: { id: string; text: string; updatedAt: string } | null;
 };
 export type ContentTest = {
   id: string; name: string; description: string; durationMinutes: number; totalMarks: number; difficulty: string;

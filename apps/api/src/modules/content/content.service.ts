@@ -32,7 +32,7 @@ export const getLearningTree = async (studentId: string) => {
               include: {
                 contents: {
                   where: { isActive: true }, orderBy: { sequenceNumber: 'asc' },
-                  include: { completions: { where: { studentId }, select: { id: true, completedAt: true } } },
+                  include: { completions: { where: { studentId }, select: { id: true, completedAt: true } }, notes: { where: { studentId }, select: { id: true, note: true, updatedAt: true } } },
                 },
               },
             },
@@ -60,6 +60,7 @@ export const getLearningTree = async (studentId: string) => {
           const contents = subtopic.contents.map((content) => {
             const hasAccess = content.isFree || hasPaidAccess;
             const completion = content.completions[0] ?? null;
+            const note = content.notes[0] ?? null;
             return {
               id: content.id, title: content.title, description: content.description,
               contentType: content.contentType, contentUrl: hasAccess ? content.contentUrl : null,
@@ -67,6 +68,7 @@ export const getLearningTree = async (studentId: string) => {
               sequenceNumber: content.sequenceNumber, isFree: content.isFree,
               estimatedDurationMinutes: content.estimatedDurationMinutes, hasAccess,
               completed: Boolean(completion), completedAt: completion?.completedAt ?? null,
+              note: note ? { id: note.id, text: note.note, updatedAt: note.updatedAt } : null,
             };
           });
           return {
@@ -114,6 +116,18 @@ export const setCompletion = async (studentId: string, contentId: string, comple
     create: { studentId, contentId }, update: {}, select: { completedAt: true },
   });
   return { contentId, completed: true, completedAt: completion.completedAt };
+};
+
+export const saveNote = async (studentId: string, contentId: string, note: string) => {
+  const content = await prisma.content.findFirst({ where: { id: contentId, isActive: true }, select: { id: true, isFree: true } });
+  if (!content) throw new AppError(404, 'Learning resource not found.');
+  if (!content.isFree && !(await activeAccess(studentId))) throw new AppError(403, 'This resource is locked for your account.');
+  const savedNote = await prisma.contentNote.upsert({
+    where: { studentId_contentId: { studentId, contentId } },
+    create: { studentId, contentId, note }, update: { note },
+    select: { id: true, note: true, updatedAt: true },
+  });
+  return { id: savedNote.id, text: savedNote.note, updatedAt: savedNote.updatedAt };
 };
 
 export const listAttempts = async (studentId: string) => {

@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { @apply border-stone-200; }
+  body { @apply min-h-screen bg-canvas font-sans text-ink antialiased; }
+  button, input, select { font: inherit; }
+  button { @apply disabled:cursor-not-allowed disabled:opacity-50; }
+}
+
+@layer components {
+  .focus-ring { @apply focus:outline-none focus:ring-2 focus:ring-moss-600/25 focus:ring-offset-2; }
+  .eyebrow { @apply text-xs font-bold uppercase tracking-[.16em] text-moss-700; }
+}
+

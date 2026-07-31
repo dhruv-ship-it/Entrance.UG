@@ -1,0 +1,29 @@
+{
+  "name": "entrance-ug",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c green,cyan \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "npm run dev --workspace=@entrance-ug/api",
+    "dev:web": "npm run dev --workspace=@entrance-ug/web",
+    "build": "npm run build:api && npm run build:web",
+    "build:api": "npm run build --workspace=@entrance-ug/api",
+    "build:web": "npm run build --workspace=@entrance-ug/web",
+    "typecheck": "npm run typecheck --workspace=@entrance-ug/api && npm run typecheck --workspace=@entrance-ug/web",
+    "db:generate": "npm run db:generate --workspace=@entrance-ug/api",
+    "db:migrate": "npm run db:migrate --workspace=@entrance-ug/api",
+    "db:deploy": "npm run db:deploy --workspace=@entrance-ug/api",
+    "db:studio": "npm run db:studio --workspace=@entrance-ug/api",
+    "db:seed:mock": "npm run db:seed:mock --workspace=@entrance-ug/api"
+  },
+  "engines": {
+    "node": ">=20.14.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4"
+  }
+}

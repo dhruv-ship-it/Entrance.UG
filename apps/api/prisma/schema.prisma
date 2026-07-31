@@ -1,0 +1,1708 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  SUB_ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum ParentRelationship {
+  FATHER
+  MOTHER
+  GUARDIAN
+}
+
+enum QuestionType {
+  MCQ
+  MULTIPLE_CORRECT
+  INTEGER
+  TRUE_FALSE
+}
+
+enum AttemptStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SUBMITTED
+  AUTO_SUBMITTED
+}
+
+enum AnswerStatus {
+  CORRECT
+  INCORRECT
+  PARTIALLY_CORRECT
+  UNATTEMPTED
+}
+
+enum EmailVerificationPurpose {
+  REGISTER
+  FORGOT_PASSWORD
+  CHANGE_EMAIL
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+}
+
+enum DoubtVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum DoubtStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+enum PaymentGateway {
+  RAZORPAY
+  STRIPE
+  MANUAL
+}
+
+enum PaymentStatus {
+  CREATED
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PurchaseStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum NoticePriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum NotificationType {
+  SYSTEM
+  MOCK
+  CONTENT
+  MENTORSHIP
+  RC
+  PURCHASE
+}
+
+model Admin {
+  id                              String   @id @default(uuid()) @db.Uuid
+  name                            String   @db.VarChar(150)
+  username                        String   @unique @db.VarChar(50)
+  email                           String   @unique @db.VarChar(320)
+  emailVerified                   Boolean  @default(false) @map("email_verified")
+  emailVerifiedAt                 DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  passwordHash                    String   @map("password_hash") @db.VarChar(255)
+  role                            AdminRole @default(SUB_ADMIN)
+  isActive                        Boolean  @default(true) @map("is_active")
+  lastLoginAt                     DateTime? @map("last_login_at") @db.Timestamptz(3)
+  canManageStudents               Boolean  @default(false) @map("can_manage_students")
+  canManageParents                Boolean  @default(false) @map("can_manage_parents")
+  canManageMentors                Boolean  @default(false) @map("can_manage_mentors")
+  canManageMockTests              Boolean  @default(false) @map("can_manage_mock_tests")
+  canManageContent                Boolean  @default(false) @map("can_manage_content")
+  canManageRcTests                Boolean  @default(false) @map("can_manage_rc_tests")
+  canManageMentorship             Boolean  @default(false) @map("can_manage_mentorship")
+  canManagePlans                  Boolean  @default(false) @map("can_manage_plans")
+  canManageAnalytics              Boolean  @default(false) @map("can_manage_analytics")
+  canManageFeedback               Boolean  @default(false) @map("can_manage_feedback")
+  canManageDashboardNotices       Boolean  @default(false) @map("can_manage_dashboard_notices")
+  canManageWebsiteSettings        Boolean  @default(false) @map("can_manage_website_settings")
+  canManageAdmins                 Boolean  @default(false) @map("can_manage_admins")
+  createdById                     String?  @map("created_by") @db.Uuid
+  updatedById                     String?  @map("updated_by") @db.Uuid
+  createdAt                       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy                       Admin?   @relation("AdminCreatedAdmins", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy                       Admin?   @relation("AdminUpdatedAdmins", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAdmins                   Admin[]  @relation("AdminCreatedAdmins")
+  updatedAdmins                   Admin[]  @relation("AdminUpdatedAdmins")
+  createdMentors                  Mentor[] @relation("AdminCreatedMentors")
+  updatedMentors                  Mentor[] @relation("AdminUpdatedMentors")
+  createdExamTypes                ExamType[] @relation("AdminCreatedExamTypes")
+  updatedExamTypes                ExamType[] @relation("AdminUpdatedExamTypes")
+  createdMockExamTypes            MockExamType[] @relation("AdminCreatedMockExamTypes")
+  updatedMockExamTypes            MockExamType[] @relation("AdminUpdatedMockExamTypes")
+  createdMockSectionTypes         MockSectionType[] @relation("AdminCreatedMockSectionTypes")
+  updatedMockSectionTypes         MockSectionType[] @relation("AdminUpdatedMockSectionTypes")
+  createdMockExams                MockExam[] @relation("AdminCreatedMockExams")
+  updatedMockExams                MockExam[] @relation("AdminUpdatedMockExams")
+  createdMockSections             MockSection[] @relation("AdminCreatedMockSections")
+  updatedMockSections             MockSection[] @relation("AdminUpdatedMockSections")
+  createdMockComprehensions       MockComprehension[] @relation("AdminCreatedMockComprehensions")
+  updatedMockComprehensions       MockComprehension[] @relation("AdminUpdatedMockComprehensions")
+  createdMockQuestions            MockQuestion[] @relation("AdminCreatedMockQuestions")
+  updatedMockQuestions            MockQuestion[] @relation("AdminUpdatedMockQuestions")
+  createdSubjects                 Subject[] @relation("AdminCreatedSubjects")
+  updatedSubjects                 Subject[] @relation("AdminUpdatedSubjects")
+  createdTopics                   Topic[] @relation("AdminCreatedTopics")
+  updatedTopics                   Topic[] @relation("AdminUpdatedTopics")
+  createdSubtopics                Subtopic[] @relation("AdminCreatedSubtopics")
+  updatedSubtopics                Subtopic[] @relation("AdminUpdatedSubtopics")
+  createdDifficultyLevels         DifficultyLevel[] @relation("AdminCreatedDifficultyLevels")
+  updatedDifficultyLevels         DifficultyLevel[] @relation("AdminUpdatedDifficultyLevels")
+  createdContents                 Content[] @relation("AdminCreatedContents")
+  updatedContents                 Content[] @relation("AdminUpdatedContents")
+  createdContentTests             ContentTest[] @relation("AdminCreatedContentTests")
+  updatedContentTests             ContentTest[] @relation("AdminUpdatedContentTests")
+  createdContentSections          ContentSection[] @relation("AdminCreatedContentSections")
+  updatedContentSections          ContentSection[] @relation("AdminUpdatedContentSections")
+  createdContentComprehensions    ContentComprehension[] @relation("AdminCreatedContentComprehensions")
+  updatedContentComprehensions    ContentComprehension[] @relation("AdminUpdatedContentComprehensions")
+  createdContentQuestions         ContentQuestion[] @relation("AdminCreatedContentQuestions")
+  updatedContentQuestions         ContentQuestion[] @relation("AdminUpdatedContentQuestions")
+  createdMentorshipPrograms       MentorshipProgram[] @relation("AdminCreatedMentorshipPrograms")
+  updatedMentorshipPrograms       MentorshipProgram[] @relation("AdminUpdatedMentorshipPrograms")
+  createdMentorshipBatches        MentorshipBatch[] @relation("AdminCreatedMentorshipBatches")
+  updatedMentorshipBatches        MentorshipBatch[] @relation("AdminUpdatedMentorshipBatches")
+  mentorBatchAssignments          MentorBatchAssignment[] @relation("AdminAssignedMentorBatches")
+  createdRcTests                  RcTest[] @relation("AdminCreatedRcTests")
+  updatedRcTests                  RcTest[] @relation("AdminUpdatedRcTests")
+  createdPlans                    Plan[] @relation("AdminCreatedPlans")
+  updatedPlans                    Plan[] @relation("AdminUpdatedPlans")
+  createdDashboardNotices         DashboardNotice[] @relation("AdminCreatedDashboardNotices")
+  updatedDashboardNotices         DashboardNotice[] @relation("AdminUpdatedDashboardNotices")
+  updatedWebsiteSettings          WebsiteSettings[] @relation("AdminUpdatedWebsiteSettings")
+
+  @@map("admins")
+}
+
+model Mentor {
+  id                        String   @id @default(uuid()) @db.Uuid
+  name                      String   @db.VarChar(150)
+  email                     String   @unique @db.VarChar(320)
+  emailVerified             Boolean  @default(false) @map("email_verified")
+  emailVerifiedAt           DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  phoneNumber               String   @unique @map("phone_number") @db.VarChar(20)
+  passwordHash              String   @map("password_hash") @db.VarChar(255)
+  qualification             String   @db.VarChar(255)
+  experienceYears           Int      @default(0) @map("experience_years")
+  bio                       String?  @db.Text
+  profileImage              String?  @map("profile_image") @db.VarChar(2048)
+  isActive                  Boolean  @default(true) @map("is_active")
+  lastLoginAt               DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdById               String   @map("created_by") @db.Uuid
+  updatedById               String   @map("updated_by") @db.Uuid
+  createdAt                 DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy                 Admin    @relation("AdminCreatedMentors", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy                 Admin    @relation("AdminUpdatedMentors", fields: [updatedById], references: [id], onDelete: Restrict)
+  batchAssignments          MentorBatchAssignment[]
+  createdBatchTasks         BatchTask[] @relation("MentorCreatedBatchTasks")
+  updatedBatchTasks         BatchTask[] @relation("MentorUpdatedBatchTasks")
+  createdBatchNotices       BatchNotice[]
+  doubtReplies              DoubtReply[]
+  createdLiveSessions       LiveSession[]
+  createdBatchTests         BatchTest[] @relation("MentorCreatedBatchTests")
+  updatedBatchTests         BatchTest[] @relation("MentorUpdatedBatchTests")
+  createdBatchSections      BatchSection[] @relation("MentorCreatedBatchSections")
+  updatedBatchSections      BatchSection[] @relation("MentorUpdatedBatchSections")
+  createdBatchComprehensions BatchComprehension[] @relation("MentorCreatedBatchComprehensions")
+  updatedBatchComprehensions BatchComprehension[] @relation("MentorUpdatedBatchComprehensions")
+  createdBatchQuestions     BatchQuestion[] @relation("MentorCreatedBatchQuestions")
+  updatedBatchQuestions     BatchQuestion[] @relation("MentorUpdatedBatchQuestions")
+
+  @@map("mentors")
+}
+
+model Student {
+  id                       String   @id @default(uuid()) @db.Uuid
+  name                     String   @db.VarChar(150)
+  email                    String   @unique @db.VarChar(320)
+  emailVerified            Boolean  @default(false) @map("email_verified")
+  emailVerifiedAt          DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  phoneNumber              String   @unique @map("phone_number") @db.VarChar(20)
+  passwordHash             String   @map("password_hash") @db.VarChar(255)
+  dateOfBirth              DateTime @map("date_of_birth") @db.Date
+  gender                   Gender
+  profileImage             String?  @map("profile_image") @db.VarChar(2048)
+  schoolName               String?  @map("school_name") @db.VarChar(255)
+  className                String?  @map("class_name") @db.VarChar(100)
+  city                     String?  @db.VarChar(100)
+  state                    String?  @db.VarChar(100)
+  isActive                 Boolean  @default(true) @map("is_active")
+  lastLoginAt              DateTime? @map("last_login_at") @db.Timestamptz(3)
+  lastSeenAt               DateTime? @map("last_seen_at") @db.Timestamptz(3)
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  parentLinks              ParentStudent[]
+  mockAttempts             MockAttempt[]
+  mockAccesses             StudentMockAccess[]
+  contentAccesses          StudentContentAccess[]
+  contentCompletions       StudentContentCompletion[]
+  contentNotes             ContentNote[]
+  contentAttempts          ContentAttempt[]
+  batchAccesses            StudentBatchAccess[]
+  completedTasks           CompletedTask[]
+  doubts                   Doubt[]
+  doubtReplies             DoubtReply[]
+  attendance               Attendance[]
+  batchAttempts            BatchAttempt[]
+  rcAttempts               RcAttempt[]
+  rcLeaderboard            RcLeaderboard?
+  payments                 Payment[]
+  purchases                Purchase[]
+  feedback                 Feedback[]
+  notifications            StudentNotification[]
+
+  @@index([isActive])
+  @@map("students")
+}
+
+model Parent {
+  id                String   @id @default(uuid()) @db.Uuid
+  name              String   @db.VarChar(150)
+  email             String   @unique @db.VarChar(320)
+  emailVerified     Boolean  @default(false) @map("email_verified")
+  emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  phoneNumber       String   @unique @map("phone_number") @db.VarChar(20)
+  passwordHash      String   @map("password_hash") @db.VarChar(255)
+  occupation        String?  @db.VarChar(255)
+  isActive          Boolean  @default(true) @map("is_active")
+  lastLoginAt       DateTime? @map("last_login_at") @db.Timestamptz(3)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  studentLinks      ParentStudent[]
+
+  @@index([isActive])
+  @@map("parents")
+}
+
+model ParentStudent {
+  parentId      String             @map("parent_id") @db.Uuid
+  studentId     String             @map("student_id") @db.Uuid
+  relationship  ParentRelationship
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  parent        Parent             @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student       Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([parentId, studentId])
+  @@index([studentId])
+  @@map("parent_student")
+}
+
+model Subject {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique @db.VarChar(150)
+  description  String   @db.Text
+  displayOrder Int      @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy    Admin    @relation("AdminCreatedSubjects", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Admin    @relation("AdminUpdatedSubjects", fields: [updatedById], references: [id], onDelete: Restrict)
+  topics       Topic[]
+
+  @@unique([displayOrder])
+  @@map("subjects")
+}
+
+model Topic {
+  id           String   @id @default(uuid()) @db.Uuid
+  subjectId    String   @map("subject_id") @db.Uuid
+  name         String   @db.VarChar(150)
+  description  String   @db.Text
+  displayOrder Int      @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  subject      Subject  @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  createdBy    Admin    @relation("AdminCreatedTopics", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Admin    @relation("AdminUpdatedTopics", fields: [updatedById], references: [id], onDelete: Restrict)
+  subtopics    Subtopic[]
+  mockQuestions MockQuestion[]
+  contentTests ContentTest[]
+  contentQuestions ContentQuestion[]
+  batchQuestions BatchQuestion[]
+  batchTopicAnalytics BatchTopicAnalytics[]
+
+  @@unique([subjectId, name])
+  @@unique([subjectId, displayOrder])
+  @@map("topics")
+}
+
+model Subtopic {
+  id           String   @id @default(uuid()) @db.Uuid
+  topicId      String   @map("topic_id") @db.Uuid
+  name         String   @db.VarChar(150)
+  description  String   @db.Text
+  displayOrder Int      @map("display_order")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  topic        Topic    @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  createdBy    Admin    @relation("AdminCreatedSubtopics", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Admin    @relation("AdminUpdatedSubtopics", fields: [updatedById], references: [id], onDelete: Restrict)
+  contents     Content[]
+  mockQuestions MockQuestion[]
+  contentQuestions ContentQuestion[]
+  batchQuestions BatchQuestion[]
+  batchSubtopicAnalytics BatchSubtopicAnalytics[]
+
+  @@unique([topicId, name])
+  @@unique([topicId, displayOrder])
+  @@map("subtopics")
+}
+
+model DifficultyLevel {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique @db.VarChar(50)
+  description  String   @db.Text
+  displayOrder Int      @unique @map("display_order")
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy    Admin    @relation("AdminCreatedDifficultyLevels", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Admin    @relation("AdminUpdatedDifficultyLevels", fields: [updatedById], references: [id], onDelete: Restrict)
+  mockExams    MockExam[]
+  mockQuestions MockQuestion[]
+  contentTests ContentTest[]
+  contentQuestions ContentQuestion[]
+  batchTests   BatchTest[]
+  batchQuestions BatchQuestion[]
+  rcTests      RcTest[]
+
+  @@map("difficulty_levels")
+}
+
+model ExamType {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique @db.VarChar(100)
+  description  String   @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy    Admin    @relation("AdminCreatedExamTypes", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Admin    @relation("AdminUpdatedExamTypes", fields: [updatedById], references: [id], onDelete: Restrict)
+  mockExams    MockExam[]
+  studentAccesses StudentMockAccess[]
+
+  @@map("exam_types")
+}
+
+model MockExamType {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique @db.VarChar(100)
+  description  String   @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy    Admin    @relation("AdminCreatedMockExamTypes", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Admin    @relation("AdminUpdatedMockExamTypes", fields: [updatedById], references: [id], onDelete: Restrict)
+  mockExams    MockExam[]
+
+  @@map("mock_exam_types")
+}
+
+model MockSectionType {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique @db.VarChar(100)
+  description  String   @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy    Admin    @relation("AdminCreatedMockSectionTypes", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Admin    @relation("AdminUpdatedMockSectionTypes", fields: [updatedById], references: [id], onDelete: Restrict)
+  mockSections MockSection[]
+
+  @@map("mock_section_types")
+}
+
+model MockExam {
+  id                            String   @id @default(uuid()) @db.Uuid
+  examTypeId                    String   @map("exam_type_id") @db.Uuid
+  mockExamTypeId                String   @map("mock_exam_type_id") @db.Uuid
+  name                          String   @db.VarChar(255)
+  description                   String   @db.Text
+  instructions                  String   @db.Text
+  difficultyId                  String   @map("difficulty_id") @db.Uuid
+  durationMinutes               Int      @map("duration_minutes")
+  totalMarks                    Decimal  @map("total_marks") @db.Decimal(10, 2)
+  passingMarks                  Decimal? @map("passing_marks") @db.Decimal(10, 2)
+  canGoBackBetweenSections      Boolean  @default(false) @map("can_go_back_between_sections")
+  isFree                        Boolean  @default(false) @map("is_free")
+  isActive                      Boolean  @default(true) @map("is_active")
+  createdById                   String   @map("created_by") @db.Uuid
+  updatedById                   String   @map("updated_by") @db.Uuid
+  createdAt                     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                     DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  examType                      ExamType @relation(fields: [examTypeId], references: [id], onDelete: Restrict)
+  mockExamType                  MockExamType @relation(fields: [mockExamTypeId], references: [id], onDelete: Restrict)
+  difficulty                    DifficultyLevel @relation(fields: [difficultyId], references: [id], onDelete: Restrict)
+  createdBy                     Admin    @relation("AdminCreatedMockExams", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy                     Admin    @relation("AdminUpdatedMockExams", fields: [updatedById], references: [id], onDelete: Restrict)
+  sections                      MockSection[]
+  attempts                      MockAttempt[]
+  analytics                     MockAttemptAnalytics?
+  planLinks                     PlanMockExam[]
+
+  @@index([examTypeId, isActive])
+  @@map("mock_exams")
+}
+
+model MockSection {
+  id                                String   @id @default(uuid()) @db.Uuid
+  mockExamId                        String   @map("mock_exam_id") @db.Uuid
+  mockSectionTypeId                 String   @map("mock_section_type_id") @db.Uuid
+  sequenceNumber                    Int      @map("sequence_number")
+  name                              String   @db.VarChar(255)
+  instructions                      String   @db.Text
+  durationMinutes                   Int?     @map("duration_minutes")
+  totalMarks                        Decimal  @map("total_marks") @db.Decimal(10, 2)
+  canGoBackToPreviousQuestion       Boolean  @default(false) @map("can_go_back_to_previous_question")
+  isOptional                        Boolean  @default(false) @map("is_optional")
+  createdById                       String   @map("created_by") @db.Uuid
+  updatedById                       String   @map("updated_by") @db.Uuid
+  createdAt                         DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                         DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mockExam                          MockExam @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
+  mockSectionType                   MockSectionType @relation(fields: [mockSectionTypeId], references: [id], onDelete: Restrict)
+  createdBy                         Admin    @relation("AdminCreatedMockSections", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy                         Admin    @relation("AdminUpdatedMockSections", fields: [updatedById], references: [id], onDelete: Restrict)
+  questions                         MockQuestion[]
+  attemptSections                   MockAttemptSection[]
+  attemptAnswers                    MockAttemptAnswer[]
+  analytics                         MockSectionAnalytics?
+
+  @@unique([mockExamId, sequenceNumber])
+  @@map("mock_sections")
+}
+
+model MockComprehension {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String?  @db.VarChar(255)
+  passage      String   @db.Text
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy    Admin    @relation("AdminCreatedMockComprehensions", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Admin    @relation("AdminUpdatedMockComprehensions", fields: [updatedById], references: [id], onDelete: Restrict)
+  questions    MockQuestion[]
+
+  @@map("mock_comprehensions")
+}
+
+model MockQuestion {
+  id                    String   @id @default(uuid()) @db.Uuid
+  mockSectionId         String   @map("mock_section_id") @db.Uuid
+  mockComprehensionId   String?  @map("mock_comprehension_id") @db.Uuid
+  topicId               String   @map("topic_id") @db.Uuid
+  subtopicId            String   @map("subtopic_id") @db.Uuid
+  difficultyId          String   @map("difficulty_id") @db.Uuid
+  sequenceNumber        Int      @map("sequence_number")
+  questionType          QuestionType @map("question_type")
+  question              String   @db.Text
+  options               Json?
+  correctAnswers        Json     @map("correct_answers")
+  positiveMarks         Decimal  @map("positive_marks") @db.Decimal(10, 2)
+  negativeMarks         Decimal  @default(0) @map("negative_marks") @db.Decimal(10, 2)
+  explanation           String   @db.Text
+  imageUrl              String?  @map("image_url") @db.VarChar(2048)
+  isActive              Boolean  @default(true) @map("is_active")
+  createdById           String   @map("created_by") @db.Uuid
+  updatedById           String   @map("updated_by") @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mockSection           MockSection @relation(fields: [mockSectionId], references: [id], onDelete: Cascade)
+  mockComprehension     MockComprehension? @relation(fields: [mockComprehensionId], references: [id], onDelete: SetNull)
+  topic                 Topic    @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  subtopic              Subtopic @relation(fields: [subtopicId], references: [id], onDelete: Restrict)
+  difficulty            DifficultyLevel @relation(fields: [difficultyId], references: [id], onDelete: Restrict)
+  createdBy             Admin    @relation("AdminCreatedMockQuestions", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy             Admin    @relation("AdminUpdatedMockQuestions", fields: [updatedById], references: [id], onDelete: Restrict)
+  attemptAnswers        MockAttemptAnswer[]
+
+  @@unique([mockSectionId, sequenceNumber])
+  @@index([topicId, subtopicId])
+  @@map("mock_questions")
+}
+
+model MockAttempt {
+  id                  String   @id @default(uuid()) @db.Uuid
+  studentId           String   @map("student_id") @db.Uuid
+  mockExamId          String   @map("mock_exam_id") @db.Uuid
+  startedAt           DateTime @map("started_at") @db.Timestamptz(3)
+  submittedAt         DateTime? @map("submitted_at") @db.Timestamptz(3)
+  status              AttemptStatus @default(NOT_STARTED)
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  totalMarks          Decimal  @map("total_marks") @db.Decimal(10, 2)
+  marksScored         Decimal  @default(0) @map("marks_scored") @db.Decimal(10, 2)
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
+  accuracy            Decimal  @default(0) @db.Decimal(5, 2)
+  rank                Int?
+  percentile          Decimal? @db.Decimal(5, 2)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student             Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  mockExam            MockExam @relation(fields: [mockExamId], references: [id], onDelete: Restrict)
+  sections            MockAttemptSection[]
+  answers             MockAttemptAnswer[]
+
+  @@index([studentId, mockExamId, status])
+  @@index([mockExamId, submittedAt])
+  @@unique([studentId, mockExamId])
+  @@map("mock_attempts")
+}
+
+model MockAttemptSection {
+  id                  String   @id @default(uuid()) @db.Uuid
+  mockAttemptId       String   @map("mock_attempt_id") @db.Uuid
+  mockSectionId       String   @map("mock_section_id") @db.Uuid
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  marksScored         Decimal  @default(0) @map("marks_scored") @db.Decimal(10, 2)
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
+  accuracy            Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mockAttempt         MockAttempt @relation(fields: [mockAttemptId], references: [id], onDelete: Cascade)
+  mockSection         MockSection @relation(fields: [mockSectionId], references: [id], onDelete: Restrict)
+
+  @@unique([mockAttemptId, mockSectionId])
+  @@map("mock_attempt_sections")
+}
+
+model MockAttemptAnswer {
+  id                  String   @id @default(uuid()) @db.Uuid
+  mockAttemptId       String   @map("mock_attempt_id") @db.Uuid
+  mockQuestionId      String   @map("mock_question_id") @db.Uuid
+  mockSectionId       String   @map("mock_section_id") @db.Uuid
+  selectedAnswers     Json     @map("selected_answers")
+  correctAnswers      Json     @map("correct_answers")
+  status              AnswerStatus @default(UNATTEMPTED)
+  marksAwarded        Decimal  @default(0) @map("marks_awarded") @db.Decimal(10, 2)
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  visited             Boolean  @default(false)
+  bookmarked          Boolean  @default(false)
+  markedForReview     Boolean  @default(false) @map("marked_for_review")
+  answerOrder         Int      @map("answer_order")
+  answeredAt          DateTime? @map("answered_at") @db.Timestamptz(3)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mockAttempt         MockAttempt @relation(fields: [mockAttemptId], references: [id], onDelete: Cascade)
+  mockQuestion        MockQuestion @relation(fields: [mockQuestionId], references: [id], onDelete: Restrict)
+  mockSection         MockSection @relation(fields: [mockSectionId], references: [id], onDelete: Restrict)
+
+  @@unique([mockAttemptId, mockQuestionId])
+  @@unique([mockAttemptId, answerOrder])
+  @@index([mockAttemptId, mockSectionId])
+  @@map("mock_attempt_answers")
+}
+
+model MockAttemptAnalytics {
+  id                      String   @id @default(uuid()) @db.Uuid
+  mockExamId              String   @unique @map("mock_exam_id") @db.Uuid
+  totalAttempts           Int      @default(0) @map("total_attempts")
+  averageScore            Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
+  averageAccuracy         Decimal  @default(0) @map("average_accuracy") @db.Decimal(5, 2)
+  averageTimeTaken        Int      @default(0) @map("average_time_taken")
+  averageRank             Decimal  @default(0) @map("average_rank") @db.Decimal(10, 2)
+  averagePercentile       Decimal  @default(0) @map("average_percentile") @db.Decimal(5, 2)
+  totalCorrectAnswers     Int      @default(0) @map("total_correct_answers")
+  totalIncorrectAnswers   Int      @default(0) @map("total_incorrect_answers")
+  totalUnattemptedAnswers Int      @default(0) @map("total_unattempted_answers")
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mockExam                MockExam @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
+
+  @@map("mock_attempt_analytics")
+}
+
+model MockSectionAnalytics {
+  id                      String   @id @default(uuid()) @db.Uuid
+  mockSectionId           String   @unique @map("mock_section_id") @db.Uuid
+  totalAttempts           Int      @default(0) @map("total_attempts")
+  averageScore            Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
+  averageAccuracy         Decimal  @default(0) @map("average_accuracy") @db.Decimal(5, 2)
+  averageTimeTaken        Int      @default(0) @map("average_time_taken")
+  totalCorrectAnswers     Int      @default(0) @map("total_correct_answers")
+  totalIncorrectAnswers   Int      @default(0) @map("total_incorrect_answers")
+  totalUnattemptedAnswers Int      @default(0) @map("total_unattempted_answers")
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mockSection             MockSection @relation(fields: [mockSectionId], references: [id], onDelete: Cascade)
+
+  @@map("mock_section_analytics")
+}
+
+model StudentMockAccess {
+  id           String   @id @default(uuid()) @db.Uuid
+  studentId    String   @map("student_id") @db.Uuid
+  examTypeId   String   @map("exam_type_id") @db.Uuid
+  purchaseId   String   @map("purchase_id") @db.Uuid
+  expiryDate   DateTime @map("expiry_date") @db.Date
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  examType     ExamType @relation(fields: [examTypeId], references: [id], onDelete: Restrict)
+  purchase     Purchase @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+
+  @@unique([studentId, examTypeId, purchaseId])
+  @@index([studentId, expiryDate])
+  @@map("student_mock_access")
+}
+
+model Content {
+  id                       String   @id @default(uuid()) @db.Uuid
+  subtopicId               String   @map("subtopic_id") @db.Uuid
+  title                    String   @db.VarChar(255)
+  description              String   @db.Text
+  contentType              ContentType @map("content_type")
+  contentUrl               String   @map("content_url") @db.VarChar(2048)
+  sequenceNumber           Int      @map("sequence_number")
+  isFree                   Boolean  @default(false) @map("is_free")
+  estimatedDurationMinutes Int?     @map("estimated_duration_minutes")
+  isActive                 Boolean  @default(true) @map("is_active")
+  createdById              String   @map("created_by") @db.Uuid
+  updatedById              String   @map("updated_by") @db.Uuid
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  subtopic                 Subtopic @relation(fields: [subtopicId], references: [id], onDelete: Restrict)
+  createdBy                Admin    @relation("AdminCreatedContents", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy                Admin    @relation("AdminUpdatedContents", fields: [updatedById], references: [id], onDelete: Restrict)
+  completions              StudentContentCompletion[]
+  notes                    ContentNote[]
+
+  @@unique([subtopicId, sequenceNumber])
+  @@map("contents")
+}
+
+enum ContentType {
+  YOUTUBE
+  PDF
+  DOCUMENT
+  WEBSITE
+}
+
+model StudentContentAccess {
+  id           String   @id @default(uuid()) @db.Uuid
+  studentId    String   @map("student_id") @db.Uuid
+  purchaseId   String   @map("purchase_id") @db.Uuid
+  expiryDate   DateTime @map("expiry_date") @db.Date
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  purchase     Purchase @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+
+  @@unique([studentId, purchaseId])
+  @@index([studentId, expiryDate])
+  @@map("student_content_access")
+}
+
+model ContentTest {
+  id                       String   @id @default(uuid()) @db.Uuid
+  topicId                  String   @map("topic_id") @db.Uuid
+  name                     String   @db.VarChar(255)
+  description              String   @db.Text
+  instructions             String   @db.Text
+  difficultyId             String   @map("difficulty_id") @db.Uuid
+  durationMinutes          Int      @map("duration_minutes")
+  totalMarks               Decimal  @map("total_marks") @db.Decimal(10, 2)
+  canGoBackBetweenSections Boolean  @default(false) @map("can_go_back_between_sections")
+  isFree                   Boolean  @default(false) @map("is_free")
+  isActive                 Boolean  @default(true) @map("is_active")
+  createdById              String   @map("created_by") @db.Uuid
+  updatedById              String   @map("updated_by") @db.Uuid
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  topic                    Topic    @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  difficulty               DifficultyLevel @relation(fields: [difficultyId], references: [id], onDelete: Restrict)
+  createdBy                Admin    @relation("AdminCreatedContentTests", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy                Admin    @relation("AdminUpdatedContentTests", fields: [updatedById], references: [id], onDelete: Restrict)
+  sections                 ContentSection[]
+  attempts                 ContentAttempt[]
+
+  @@index([topicId, isActive])
+  @@map("content_tests")
+}
+
+model ContentSection {
+  id                          String   @id @default(uuid()) @db.Uuid
+  contentTestId               String   @map("content_test_id") @db.Uuid
+  name                        String   @db.VarChar(255)
+  sequenceNumber              Int      @map("sequence_number")
+  instructions                String   @db.Text
+  durationMinutes             Int?     @map("duration_minutes")
+  totalMarks                  Decimal  @map("total_marks") @db.Decimal(10, 2)
+  canGoBackToPreviousQuestion Boolean  @default(false) @map("can_go_back_to_previous_question")
+  createdById                 String   @map("created_by") @db.Uuid
+  updatedById                 String   @map("updated_by") @db.Uuid
+  createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  contentTest                 ContentTest @relation(fields: [contentTestId], references: [id], onDelete: Cascade)
+  createdBy                   Admin    @relation("AdminCreatedContentSections", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy                   Admin    @relation("AdminUpdatedContentSections", fields: [updatedById], references: [id], onDelete: Restrict)
+  questions                   ContentQuestion[]
+  attemptSections             ContentAttemptSection[]
+  attemptAnswers              ContentAttemptAnswer[]
+
+  @@unique([contentTestId, sequenceNumber])
+  @@map("content_sections")
+}
+
+model ContentComprehension {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String?  @db.VarChar(255)
+  passage      String   @db.Text
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy    Admin    @relation("AdminCreatedContentComprehensions", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Admin    @relation("AdminUpdatedContentComprehensions", fields: [updatedById], references: [id], onDelete: Restrict)
+  questions    ContentQuestion[]
+
+  @@map("content_comprehensions")
+}
+
+model ContentQuestion {
+  id                      String   @id @default(uuid()) @db.Uuid
+  contentSectionId        String   @map("content_section_id") @db.Uuid
+  contentComprehensionId  String?  @map("content_comprehension_id") @db.Uuid
+  topicId                 String   @map("topic_id") @db.Uuid
+  subtopicId              String   @map("subtopic_id") @db.Uuid
+  difficultyId            String   @map("difficulty_id") @db.Uuid
+  sequenceNumber          Int      @map("sequence_number")
+  questionType            QuestionType @map("question_type")
+  question                String   @db.Text
+  options                 Json?
+  correctAnswers          Json     @map("correct_answers")
+  positiveMarks           Decimal  @map("positive_marks") @db.Decimal(10, 2)
+  negativeMarks           Decimal  @default(0) @map("negative_marks") @db.Decimal(10, 2)
+  explanation             String   @db.Text
+  imageUrl                String?  @map("image_url") @db.VarChar(2048)
+  isActive                Boolean  @default(true) @map("is_active")
+  createdById             String   @map("created_by") @db.Uuid
+  updatedById             String   @map("updated_by") @db.Uuid
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  contentSection          ContentSection @relation(fields: [contentSectionId], references: [id], onDelete: Cascade)
+  contentComprehension    ContentComprehension? @relation(fields: [contentComprehensionId], references: [id], onDelete: SetNull)
+  topic                   Topic    @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  subtopic                Subtopic @relation(fields: [subtopicId], references: [id], onDelete: Restrict)
+  difficulty              DifficultyLevel @relation(fields: [difficultyId], references: [id], onDelete: Restrict)
+  createdBy               Admin    @relation("AdminCreatedContentQuestions", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy               Admin    @relation("AdminUpdatedContentQuestions", fields: [updatedById], references: [id], onDelete: Restrict)
+  attemptAnswers          ContentAttemptAnswer[]
+
+  @@unique([contentSectionId, sequenceNumber])
+  @@index([topicId, subtopicId])
+  @@map("content_questions")
+}
+
+model StudentContentCompletion {
+  id           String   @id @default(uuid()) @db.Uuid
+  studentId    String   @map("student_id") @db.Uuid
+  contentId    String   @map("content_id") @db.Uuid
+  completedAt  DateTime @default(now()) @map("completed_at") @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  content      Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, contentId])
+  @@map("student_content_completion")
+}
+
+model ContentNote {
+  id           String   @id @default(uuid()) @db.Uuid
+  studentId    String   @map("student_id") @db.Uuid
+  contentId    String   @map("content_id") @db.Uuid
+  note         String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  content      Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, contentId])
+  @@map("content_notes")
+}
+
+model ContentAttempt {
+  id                  String   @id @default(uuid()) @db.Uuid
+  studentId           String   @map("student_id") @db.Uuid
+  contentTestId       String   @map("content_test_id") @db.Uuid
+  startedAt           DateTime @map("started_at") @db.Timestamptz(3)
+  submittedAt         DateTime? @map("submitted_at") @db.Timestamptz(3)
+  status              AttemptStatus @default(NOT_STARTED)
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  totalMarks          Decimal  @map("total_marks") @db.Decimal(10, 2)
+  marksScored         Decimal  @default(0) @map("marks_scored") @db.Decimal(10, 2)
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
+  accuracy            Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student             Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  contentTest         ContentTest @relation(fields: [contentTestId], references: [id], onDelete: Restrict)
+  sections            ContentAttemptSection[]
+  answers             ContentAttemptAnswer[]
+
+  @@index([studentId, contentTestId, status])
+  @@map("content_attempts")
+}
+
+model ContentAttemptSection {
+  id                  String   @id @default(uuid()) @db.Uuid
+  contentAttemptId    String   @map("content_attempt_id") @db.Uuid
+  contentSectionId    String   @map("content_section_id") @db.Uuid
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  marksScored         Decimal  @default(0) @map("marks_scored") @db.Decimal(10, 2)
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
+  accuracy            Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  contentAttempt      ContentAttempt @relation(fields: [contentAttemptId], references: [id], onDelete: Cascade)
+  contentSection      ContentSection @relation(fields: [contentSectionId], references: [id], onDelete: Restrict)
+
+  @@unique([contentAttemptId, contentSectionId])
+  @@map("content_attempt_sections")
+}
+
+model ContentAttemptAnswer {
+  id                  String   @id @default(uuid()) @db.Uuid
+  contentAttemptId    String   @map("content_attempt_id") @db.Uuid
+  contentQuestionId   String   @map("content_question_id") @db.Uuid
+  contentSectionId    String   @map("content_section_id") @db.Uuid
+  selectedAnswers     Json     @map("selected_answers")
+  correctAnswers      Json     @map("correct_answers")
+  status              AnswerStatus @default(UNATTEMPTED)
+  marksAwarded        Decimal  @default(0) @map("marks_awarded") @db.Decimal(10, 2)
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  visited             Boolean  @default(false)
+  bookmarked          Boolean  @default(false)
+  markedForReview     Boolean  @default(false) @map("marked_for_review")
+  answeredAt          DateTime? @map("answered_at") @db.Timestamptz(3)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  contentAttempt      ContentAttempt @relation(fields: [contentAttemptId], references: [id], onDelete: Cascade)
+  contentQuestion     ContentQuestion @relation(fields: [contentQuestionId], references: [id], onDelete: Restrict)
+  contentSection      ContentSection @relation(fields: [contentSectionId], references: [id], onDelete: Restrict)
+
+  @@unique([contentAttemptId, contentQuestionId])
+  @@index([contentAttemptId, contentSectionId])
+  @@map("content_attempt_answers")
+}
+
+model MentorshipProgram {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique @db.VarChar(255)
+  description  String   @db.Text
+  isActive     Boolean  @default(true) @map("is_active")
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy    Admin    @relation("AdminCreatedMentorshipPrograms", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Admin    @relation("AdminUpdatedMentorshipPrograms", fields: [updatedById], references: [id], onDelete: Restrict)
+  batches      MentorshipBatch[]
+  planLinks    PlanMentorshipProgram[]
+
+  @@map("mentorship_programs")
+}
+
+model MentorshipBatch {
+  id                    String   @id @default(uuid()) @db.Uuid
+  mentorshipProgramId   String   @map("mentorship_program_id") @db.Uuid
+  name                  String   @db.VarChar(255)
+  description           String   @db.Text
+  maximumStudents       Int      @map("maximum_students")
+  isActive              Boolean  @default(true) @map("is_active")
+  createdById           String   @map("created_by") @db.Uuid
+  updatedById           String   @map("updated_by") @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mentorshipProgram     MentorshipProgram @relation(fields: [mentorshipProgramId], references: [id], onDelete: Restrict)
+  createdBy             Admin    @relation("AdminCreatedMentorshipBatches", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy             Admin    @relation("AdminUpdatedMentorshipBatches", fields: [updatedById], references: [id], onDelete: Restrict)
+  mentorAssignments     MentorBatchAssignment[]
+  studentAccesses       StudentBatchAccess[]
+  tasks                 BatchTask[]
+  notices               BatchNotice[]
+  doubts                Doubt[]
+  liveSessions          LiveSession[]
+  tests                 BatchTest[]
+
+  @@unique([mentorshipProgramId, name])
+  @@index([isActive])
+  @@map("mentorship_batches")
+}
+
+model MentorBatchAssignment {
+  id                 String   @id @default(uuid()) @db.Uuid
+  mentorId           String   @map("mentor_id") @db.Uuid
+  mentorshipBatchId  String   @map("mentorship_batch_id") @db.Uuid
+  assignedById       String   @map("assigned_by") @db.Uuid
+  assignedAt         DateTime @default(now()) @map("assigned_at") @db.Timestamptz(3)
+  removedAt          DateTime? @map("removed_at") @db.Timestamptz(3)
+  isActive           Boolean  @default(true) @map("is_active")
+  mentor             Mentor   @relation(fields: [mentorId], references: [id], onDelete: Restrict)
+  mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Restrict)
+  assignedBy         Admin    @relation("AdminAssignedMentorBatches", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  @@unique([mentorId, mentorshipBatchId])
+  @@index([mentorshipBatchId, isActive])
+  @@map("mentor_batch_assignments")
+}
+
+model StudentBatchAccess {
+  id                 String   @id @default(uuid()) @db.Uuid
+  studentId          String   @map("student_id") @db.Uuid
+  mentorshipBatchId  String   @map("mentorship_batch_id") @db.Uuid
+  purchaseId         String   @map("purchase_id") @db.Uuid
+  joinedAt           DateTime @default(now()) @map("joined_at") @db.Timestamptz(3)
+  expiryDate         DateTime @map("expiry_date") @db.Date
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student            Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Restrict)
+  purchase           Purchase @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+
+  @@unique([studentId, mentorshipBatchId, purchaseId])
+  @@index([studentId, isActive, expiryDate])
+  @@map("student_batch_access")
+}
+
+model BatchTask {
+  id                 String   @id @default(uuid()) @db.Uuid
+  mentorshipBatchId  String   @map("mentorship_batch_id") @db.Uuid
+  title              String   @db.VarChar(255)
+  description        String   @db.Text
+  attachmentUrl      String?  @map("attachment_url") @db.VarChar(2048)
+  startDatetime      DateTime @map("start_datetime") @db.Timestamptz(3)
+  endDatetime        DateTime @map("end_datetime") @db.Timestamptz(3)
+  createdById        String   @map("created_by") @db.Uuid
+  updatedById        String   @map("updated_by") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Cascade)
+  createdBy          Mentor   @relation("MentorCreatedBatchTasks", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy          Mentor   @relation("MentorUpdatedBatchTasks", fields: [updatedById], references: [id], onDelete: Restrict)
+  completions        CompletedTask[]
+
+  @@index([mentorshipBatchId, startDatetime])
+  @@map("batch_tasks")
+}
+
+model CompletedTask {
+  id           String   @id @default(uuid()) @db.Uuid
+  batchTaskId  String   @map("batch_task_id") @db.Uuid
+  studentId    String   @map("student_id") @db.Uuid
+  status       TaskStatus @default(PENDING)
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batchTask    BatchTask @relation(fields: [batchTaskId], references: [id], onDelete: Cascade)
+  student      Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([batchTaskId, studentId])
+  @@index([studentId, status])
+  @@map("completed_tasks")
+}
+
+model BatchNotice {
+  id                 String   @id @default(uuid()) @db.Uuid
+  mentorshipBatchId  String   @map("mentorship_batch_id") @db.Uuid
+  title              String   @db.VarChar(255)
+  description        String   @db.Text
+  attachmentUrl      String?  @map("attachment_url") @db.VarChar(2048)
+  createdById        String   @map("created_by") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Cascade)
+  createdBy          Mentor   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([mentorshipBatchId, createdAt])
+  @@map("batch_notices")
+}
+
+model Doubt {
+  id                 String   @id @default(uuid()) @db.Uuid
+  mentorshipBatchId  String   @map("mentorship_batch_id") @db.Uuid
+  studentId          String   @map("student_id") @db.Uuid
+  title              String   @db.VarChar(255)
+  description        String   @db.Text
+  visibility         DoubtVisibility @default(PUBLIC)
+  status             DoubtStatus @default(OPEN)
+  isSatisfied        Boolean  @default(false) @map("is_satisfied")
+  lastReplyAt        DateTime? @map("last_reply_at") @db.Timestamptz(3)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Restrict)
+  student            Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  replies            DoubtReply[]
+
+  @@index([mentorshipBatchId, visibility, status])
+  @@index([studentId, status])
+  @@map("doubts")
+}
+
+model DoubtReply {
+  id             String   @id @default(uuid()) @db.Uuid
+  doubtId        String   @map("doubt_id") @db.Uuid
+  parentReplyId  String?  @map("parent_reply_id") @db.Uuid
+  mentorId       String?  @map("mentor_id") @db.Uuid
+  studentId      String?  @map("student_id") @db.Uuid
+  replyText      String   @map("reply_text") @db.Text
+  attachmentUrl  String?  @map("attachment_url") @db.VarChar(2048)
+  isEdited       Boolean  @default(false) @map("is_edited")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  doubt          Doubt    @relation(fields: [doubtId], references: [id], onDelete: Cascade)
+  parentReply    DoubtReply? @relation("DoubtReplyThread", fields: [parentReplyId], references: [id], onDelete: Cascade)
+  childReplies   DoubtReply[] @relation("DoubtReplyThread")
+  mentor         Mentor?  @relation(fields: [mentorId], references: [id], onDelete: SetNull)
+  student        Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  @@index([doubtId, parentReplyId, createdAt])
+  @@map("doubt_replies")
+}
+
+model LiveSession {
+  id                 String   @id @default(uuid()) @db.Uuid
+  mentorshipBatchId  String   @map("mentorship_batch_id") @db.Uuid
+  title              String   @db.VarChar(255)
+  description        String   @db.Text
+  meetingLink        String   @map("meeting_link") @db.VarChar(2048)
+  startDatetime      DateTime @map("start_datetime") @db.Timestamptz(3)
+  endDatetime        DateTime @map("end_datetime") @db.Timestamptz(3)
+  createdById        String   @map("created_by") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Cascade)
+  createdBy          Mentor   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  attendance         Attendance[]
+
+  @@index([mentorshipBatchId, startDatetime])
+  @@map("live_sessions")
+}
+
+model Attendance {
+  id             String   @id @default(uuid()) @db.Uuid
+  liveSessionId  String   @map("live_session_id") @db.Uuid
+  studentId      String   @map("student_id") @db.Uuid
+  joinedAt       DateTime @map("joined_at") @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  liveSession    LiveSession @relation(fields: [liveSessionId], references: [id], onDelete: Cascade)
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([liveSessionId, studentId])
+  @@index([studentId, joinedAt])
+  @@map("attendance")
+}
+
+model BatchTest {
+  id                       String   @id @default(uuid()) @db.Uuid
+  mentorshipBatchId        String   @map("mentorship_batch_id") @db.Uuid
+  name                     String   @db.VarChar(255)
+  description              String   @db.Text
+  instructions             String   @db.Text
+  difficultyId             String   @map("difficulty_id") @db.Uuid
+  durationMinutes          Int      @map("duration_minutes")
+  totalMarks               Decimal  @map("total_marks") @db.Decimal(10, 2)
+  canGoBackBetweenSections Boolean  @default(false) @map("can_go_back_between_sections")
+  isActive                 Boolean  @default(true) @map("is_active")
+  createdById              String   @map("created_by") @db.Uuid
+  updatedById              String   @map("updated_by") @db.Uuid
+  createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mentorshipBatch          MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Cascade)
+  difficulty               DifficultyLevel @relation(fields: [difficultyId], references: [id], onDelete: Restrict)
+  createdBy                Mentor   @relation("MentorCreatedBatchTests", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy                Mentor   @relation("MentorUpdatedBatchTests", fields: [updatedById], references: [id], onDelete: Restrict)
+  sections                 BatchSection[]
+  attempts                 BatchAttempt[]
+  analytics                BatchTestAnalytics?
+  topicAnalytics           BatchTopicAnalytics[]
+  subtopicAnalytics        BatchSubtopicAnalytics[]
+
+  @@index([mentorshipBatchId, isActive])
+  @@map("batch_tests")
+}
+
+model BatchSection {
+  id                          String   @id @default(uuid()) @db.Uuid
+  batchTestId                 String   @map("batch_test_id") @db.Uuid
+  name                        String   @db.VarChar(255)
+  sequenceNumber              Int      @map("sequence_number")
+  instructions                String   @db.Text
+  durationMinutes             Int?     @map("duration_minutes")
+  totalMarks                  Decimal  @map("total_marks") @db.Decimal(10, 2)
+  canGoBackToPreviousQuestion Boolean  @default(false) @map("can_go_back_to_previous_question")
+  createdById                 String   @map("created_by") @db.Uuid
+  updatedById                 String   @map("updated_by") @db.Uuid
+  createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batchTest                   BatchTest @relation(fields: [batchTestId], references: [id], onDelete: Cascade)
+  createdBy                   Mentor   @relation("MentorCreatedBatchSections", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy                   Mentor   @relation("MentorUpdatedBatchSections", fields: [updatedById], references: [id], onDelete: Restrict)
+  questions                   BatchQuestion[]
+  attemptSections             BatchAttemptSection[]
+  attemptAnswers              BatchAttemptAnswer[]
+  analytics                   BatchSectionAnalytics?
+
+  @@unique([batchTestId, sequenceNumber])
+  @@map("batch_sections")
+}
+
+model BatchComprehension {
+  id           String   @id @default(uuid()) @db.Uuid
+  title        String?  @db.VarChar(255)
+  passage      String   @db.Text
+  createdById  String   @map("created_by") @db.Uuid
+  updatedById  String   @map("updated_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy    Mentor   @relation("MentorCreatedBatchComprehensions", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy    Mentor   @relation("MentorUpdatedBatchComprehensions", fields: [updatedById], references: [id], onDelete: Restrict)
+  questions    BatchQuestion[]
+
+  @@map("batch_comprehensions")
+}
+
+model BatchQuestion {
+  id                    String   @id @default(uuid()) @db.Uuid
+  batchSectionId        String   @map("batch_section_id") @db.Uuid
+  batchComprehensionId  String?  @map("batch_comprehension_id") @db.Uuid
+  topicId               String   @map("topic_id") @db.Uuid
+  subtopicId            String   @map("subtopic_id") @db.Uuid
+  difficultyId          String   @map("difficulty_id") @db.Uuid
+  sequenceNumber        Int      @map("sequence_number")
+  questionType          QuestionType @map("question_type")
+  question              String   @db.Text
+  options               Json?
+  correctAnswers        Json     @map("correct_answers")
+  positiveMarks         Decimal  @map("positive_marks") @db.Decimal(10, 2)
+  negativeMarks         Decimal  @default(0) @map("negative_marks") @db.Decimal(10, 2)
+  explanation           String   @db.Text
+  imageUrl              String?  @map("image_url") @db.VarChar(2048)
+  isActive              Boolean  @default(true) @map("is_active")
+  createdById           String   @map("created_by") @db.Uuid
+  updatedById           String   @map("updated_by") @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batchSection          BatchSection @relation(fields: [batchSectionId], references: [id], onDelete: Cascade)
+  batchComprehension    BatchComprehension? @relation(fields: [batchComprehensionId], references: [id], onDelete: SetNull)
+  topic                 Topic    @relation(fields: [topicId], references: [id], onDelete: Restrict)
+  subtopic              Subtopic @relation(fields: [subtopicId], references: [id], onDelete: Restrict)
+  difficulty            DifficultyLevel @relation(fields: [difficultyId], references: [id], onDelete: Restrict)
+  createdBy             Mentor   @relation("MentorCreatedBatchQuestions", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy             Mentor   @relation("MentorUpdatedBatchQuestions", fields: [updatedById], references: [id], onDelete: Restrict)
+  attemptAnswers        BatchAttemptAnswer[]
+  analytics             BatchQuestionAnalytics?
+
+  @@unique([batchSectionId, sequenceNumber])
+  @@index([topicId, subtopicId])
+  @@map("batch_questions")
+}
+
+model BatchAttempt {
+  id                  String   @id @default(uuid()) @db.Uuid
+  studentId           String   @map("student_id") @db.Uuid
+  batchTestId         String   @map("batch_test_id") @db.Uuid
+  startedAt           DateTime @map("started_at") @db.Timestamptz(3)
+  submittedAt         DateTime? @map("submitted_at") @db.Timestamptz(3)
+  status              AttemptStatus @default(NOT_STARTED)
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  totalMarks          Decimal  @map("total_marks") @db.Decimal(10, 2)
+  marksScored         Decimal  @default(0) @map("marks_scored") @db.Decimal(10, 2)
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
+  accuracy            Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student             Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  batchTest           BatchTest @relation(fields: [batchTestId], references: [id], onDelete: Restrict)
+  sections            BatchAttemptSection[]
+  answers             BatchAttemptAnswer[]
+
+  @@index([studentId, batchTestId, status])
+  @@index([batchTestId, submittedAt])
+  @@map("batch_attempts")
+}
+
+model BatchAttemptSection {
+  id                  String   @id @default(uuid()) @db.Uuid
+  batchAttemptId      String   @map("batch_attempt_id") @db.Uuid
+  batchSectionId      String   @map("batch_section_id") @db.Uuid
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  marksScored         Decimal  @default(0) @map("marks_scored") @db.Decimal(10, 2)
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
+  accuracy            Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batchAttempt        BatchAttempt @relation(fields: [batchAttemptId], references: [id], onDelete: Cascade)
+  batchSection        BatchSection @relation(fields: [batchSectionId], references: [id], onDelete: Restrict)
+
+  @@unique([batchAttemptId, batchSectionId])
+  @@map("batch_attempt_sections")
+}
+
+model BatchAttemptAnswer {
+  id                  String   @id @default(uuid()) @db.Uuid
+  batchAttemptId      String   @map("batch_attempt_id") @db.Uuid
+  batchQuestionId     String   @map("batch_question_id") @db.Uuid
+  batchSectionId      String   @map("batch_section_id") @db.Uuid
+  selectedAnswers     Json     @map("selected_answers")
+  correctAnswers      Json     @map("correct_answers")
+  status              AnswerStatus @default(UNATTEMPTED)
+  marksAwarded        Decimal  @default(0) @map("marks_awarded") @db.Decimal(10, 2)
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  visited             Boolean  @default(false)
+  bookmarked          Boolean  @default(false)
+  markedForReview     Boolean  @default(false) @map("marked_for_review")
+  answeredAt          DateTime? @map("answered_at") @db.Timestamptz(3)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batchAttempt        BatchAttempt @relation(fields: [batchAttemptId], references: [id], onDelete: Cascade)
+  batchQuestion       BatchQuestion @relation(fields: [batchQuestionId], references: [id], onDelete: Restrict)
+  batchSection        BatchSection @relation(fields: [batchSectionId], references: [id], onDelete: Restrict)
+
+  @@unique([batchAttemptId, batchQuestionId])
+  @@index([batchAttemptId, batchSectionId])
+  @@map("batch_attempt_answers")
+}
+
+model BatchTestAnalytics {
+  id                       String   @id @default(uuid()) @db.Uuid
+  batchTestId              String   @unique @map("batch_test_id") @db.Uuid
+  totalAttempts            Int      @default(0) @map("total_attempts")
+  uniqueStudentsAttempted  Int      @default(0) @map("unique_students_attempted")
+  averageScore             Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
+  highestScore             Decimal  @default(0) @map("highest_score") @db.Decimal(10, 2)
+  lowestScore              Decimal  @default(0) @map("lowest_score") @db.Decimal(10, 2)
+  averageAccuracy          Decimal  @default(0) @map("average_accuracy") @db.Decimal(5, 2)
+  averageTimeTakenSeconds  Int      @default(0) @map("average_time_taken_seconds")
+  averagePercentile        Decimal  @default(0) @map("average_percentile") @db.Decimal(5, 2)
+  lastAttemptAt            DateTime? @map("last_attempt_at") @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batchTest                BatchTest @relation(fields: [batchTestId], references: [id], onDelete: Cascade)
+
+  @@map("batch_test_analytics")
+}
+
+model BatchSectionAnalytics {
+  id                       String   @id @default(uuid()) @db.Uuid
+  batchSectionId           String   @unique @map("batch_section_id") @db.Uuid
+  totalAttempts            Int      @default(0) @map("total_attempts")
+  averageScore             Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
+  highestScore             Decimal  @default(0) @map("highest_score") @db.Decimal(10, 2)
+  lowestScore              Decimal  @default(0) @map("lowest_score") @db.Decimal(10, 2)
+  averageAccuracy          Decimal  @default(0) @map("average_accuracy") @db.Decimal(5, 2)
+  averageTimeTakenSeconds  Int      @default(0) @map("average_time_taken_seconds")
+  totalCorrectAnswers      Int      @default(0) @map("total_correct_answers")
+  totalIncorrectAnswers    Int      @default(0) @map("total_incorrect_answers")
+  totalUnattemptedAnswers  Int      @default(0) @map("total_unattempted_answers")
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batchSection             BatchSection @relation(fields: [batchSectionId], references: [id], onDelete: Cascade)
+
+  @@map("batch_section_analytics")
+}
+
+model BatchQuestionAnalytics {
+  id                       String   @id @default(uuid()) @db.Uuid
+  batchQuestionId          String   @unique @map("batch_question_id") @db.Uuid
+  totalAttempts            Int      @default(0) @map("total_attempts")
+  correctCount             Int      @default(0) @map("correct_count")
+  incorrectCount           Int      @default(0) @map("incorrect_count")
+  unattemptedCount         Int      @default(0) @map("unattempted_count")
+  averageTimeTakenSeconds  Int      @default(0) @map("average_time_taken_seconds")
+  correctPercentage        Decimal  @default(0) @map("correct_percentage") @db.Decimal(5, 2)
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batchQuestion            BatchQuestion @relation(fields: [batchQuestionId], references: [id], onDelete: Cascade)
+
+  @@map("batch_question_analytics")
+}
+
+model BatchTopicAnalytics {
+  id                  String   @id @default(uuid()) @db.Uuid
+  batchTestId         String   @map("batch_test_id") @db.Uuid
+  topicId             String   @map("topic_id") @db.Uuid
+  totalQuestions      Int      @default(0) @map("total_questions")
+  totalAttempts       Int      @default(0) @map("total_attempts")
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
+  averageAccuracy     Decimal  @default(0) @map("average_accuracy") @db.Decimal(5, 2)
+  averageScore        Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batchTest           BatchTest @relation(fields: [batchTestId], references: [id], onDelete: Cascade)
+  topic               Topic    @relation(fields: [topicId], references: [id], onDelete: Restrict)
+
+  @@unique([batchTestId, topicId])
+  @@map("batch_topic_analytics")
+}
+
+model BatchSubtopicAnalytics {
+  id                  String   @id @default(uuid()) @db.Uuid
+  batchTestId         String   @map("batch_test_id") @db.Uuid
+  subtopicId          String   @map("subtopic_id") @db.Uuid
+  totalQuestions      Int      @default(0) @map("total_questions")
+  totalAttempts       Int      @default(0) @map("total_attempts")
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
+  averageAccuracy     Decimal  @default(0) @map("average_accuracy") @db.Decimal(5, 2)
+  averageScore        Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  batchTest           BatchTest @relation(fields: [batchTestId], references: [id], onDelete: Cascade)
+  subtopic            Subtopic @relation(fields: [subtopicId], references: [id], onDelete: Restrict)
+
+  @@unique([batchTestId, subtopicId])
+  @@map("batch_subtopic_analytics")
+}
+
+model RcTest {
+  id              String   @id @default(uuid()) @db.Uuid
+  title           String   @db.VarChar(255)
+  passage         String   @db.Text
+  instructions    String   @db.Text
+  startDatetime   DateTime @map("start_datetime") @db.Timestamptz(3)
+  endDatetime     DateTime @map("end_datetime") @db.Timestamptz(3)
+  durationMinutes Int?     @map("duration_minutes")
+  difficultyId    String   @map("difficulty_id") @db.Uuid
+  totalMarks      Decimal  @map("total_marks") @db.Decimal(10, 2)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdById     String   @map("created_by") @db.Uuid
+  updatedById     String   @map("updated_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  difficulty      DifficultyLevel @relation(fields: [difficultyId], references: [id], onDelete: Restrict)
+  createdBy       Admin    @relation("AdminCreatedRcTests", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy       Admin    @relation("AdminUpdatedRcTests", fields: [updatedById], references: [id], onDelete: Restrict)
+  questions       RcQuestion[]
+  attempts        RcAttempt[]
+  analytics       RcTestAnalytics?
+
+  @@index([isActive, startDatetime, endDatetime])
+  @@map("rc_tests")
+}
+
+model RcQuestion {
+  id             String   @id @default(uuid()) @db.Uuid
+  rcTestId       String   @map("rc_test_id") @db.Uuid
+  sequenceNumber Int      @map("sequence_number")
+  question       String   @db.Text
+  questionType   QuestionType @map("question_type")
+  options        Json?
+  correctAnswers Json     @map("correct_answers")
+  positiveMarks  Decimal  @map("positive_marks") @db.Decimal(10, 2)
+  negativeMarks  Decimal  @default(0) @map("negative_marks") @db.Decimal(10, 2)
+  explanation    String   @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  rcTest         RcTest   @relation(fields: [rcTestId], references: [id], onDelete: Cascade)
+  attemptAnswers RcAttemptAnswer[]
+
+  @@unique([rcTestId, sequenceNumber])
+  @@map("rc_questions")
+}
+
+model RcAttempt {
+  id                  String   @id @default(uuid()) @db.Uuid
+  studentId           String   @map("student_id") @db.Uuid
+  rcTestId            String   @map("rc_test_id") @db.Uuid
+  startedAt           DateTime @map("started_at") @db.Timestamptz(3)
+  submittedAt         DateTime? @map("submitted_at") @db.Timestamptz(3)
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  totalMarks          Decimal  @map("total_marks") @db.Decimal(10, 2)
+  marksScored         Decimal  @default(0) @map("marks_scored") @db.Decimal(10, 2)
+  correctAnswers      Int      @default(0) @map("correct_answers")
+  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
+  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
+  accuracy            Decimal  @default(0) @db.Decimal(5, 2)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student             Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  rcTest              RcTest   @relation(fields: [rcTestId], references: [id], onDelete: Restrict)
+  answers             RcAttemptAnswer[]
+
+  @@index([studentId, rcTestId])
+  @@index([rcTestId, submittedAt])
+  @@map("rc_attempts")
+}
+
+model RcAttemptAnswer {
+  id                  String   @id @default(uuid()) @db.Uuid
+  rcAttemptId         String   @map("rc_attempt_id") @db.Uuid
+  rcQuestionId        String   @map("rc_question_id") @db.Uuid
+  selectedAnswers     Json     @map("selected_answers")
+  correctAnswers      Json     @map("correct_answers")
+  status              AnswerStatus @default(UNATTEMPTED)
+  marksAwarded        Decimal  @default(0) @map("marks_awarded") @db.Decimal(10, 2)
+  timeTakenSeconds    Int      @default(0) @map("time_taken_seconds")
+  visited             Boolean  @default(false)
+  answeredAt          DateTime? @map("answered_at") @db.Timestamptz(3)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  rcAttempt           RcAttempt @relation(fields: [rcAttemptId], references: [id], onDelete: Cascade)
+  rcQuestion          RcQuestion @relation(fields: [rcQuestionId], references: [id], onDelete: Restrict)
+
+  @@unique([rcAttemptId, rcQuestionId])
+  @@map("rc_attempt_answers")
+}
+
+model RcTestAnalytics {
+  id                       String   @id @default(uuid()) @db.Uuid
+  rcTestId                 String   @unique @map("rc_test_id") @db.Uuid
+  totalAttempts            Int      @default(0) @map("total_attempts")
+  uniqueStudentsAttempted  Int      @default(0) @map("unique_students_attempted")
+  averageScore             Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
+  highestScore             Decimal  @default(0) @map("highest_score") @db.Decimal(10, 2)
+  lowestScore              Decimal  @default(0) @map("lowest_score") @db.Decimal(10, 2)
+  averageAccuracy          Decimal  @default(0) @map("average_accuracy") @db.Decimal(5, 2)
+  averageTimeTakenSeconds  Int      @default(0) @map("average_time_taken_seconds")
+  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  rcTest                   RcTest   @relation(fields: [rcTestId], references: [id], onDelete: Cascade)
+
+  @@map("rc_test_analytics")
+}
+
+model RcLeaderboard {
+  id                    String   @id @default(uuid()) @db.Uuid
+  studentId             String   @unique @map("student_id") @db.Uuid
+  currentStreak         Int      @default(0) @map("current_streak")
+  highestStreak         Int      @default(0) @map("highest_streak")
+  totalRcAttempted      Int      @default(0) @map("total_rc_attempted")
+  averageScore          Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
+  lastCompletedDate     DateTime? @map("last_completed_date") @db.Date
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student               Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([currentStreak(sort: Desc), averageScore(sort: Desc)])
+  @@map("rc_leaderboard")
+}
+
+model Plan {
+  id                 String   @id @default(uuid()) @db.Uuid
+  name               String   @unique @db.VarChar(255)
+  description        String   @db.Text
+  originalPrice      Decimal  @map("original_price") @db.Decimal(12, 2)
+  sellingPrice       Decimal  @map("selling_price") @db.Decimal(12, 2)
+  durationDays       Int      @map("duration_days")
+  isContentIncluded  Boolean  @default(false) @map("is_content_included")
+  isActive           Boolean  @default(true) @map("is_active")
+  displayOrder       Int      @unique @map("display_order")
+  createdById        String   @map("created_by") @db.Uuid
+  updatedById        String   @map("updated_by") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy          Admin    @relation("AdminCreatedPlans", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy          Admin    @relation("AdminUpdatedPlans", fields: [updatedById], references: [id], onDelete: Restrict)
+  mockExamLinks      PlanMockExam[]
+  mentorshipProgramLinks PlanMentorshipProgram[]
+  payments           Payment[]
+  purchases          Purchase[]
+
+  @@index([isActive])
+  @@map("plans")
+}
+
+model PlanMockExam {
+  id          String   @id @default(uuid()) @db.Uuid
+  planId      String   @map("plan_id") @db.Uuid
+  mockExamId  String   @map("mock_exam_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  plan        Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  mockExam    MockExam @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, mockExamId])
+  @@map("plan_mock_exams")
+}
+
+model PlanMentorshipProgram {
+  id                   String   @id @default(uuid()) @db.Uuid
+  planId               String   @map("plan_id") @db.Uuid
+  mentorshipProgramId  String   @map("mentorship_program_id") @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  plan                 Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  mentorshipProgram    MentorshipProgram @relation(fields: [mentorshipProgramId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, mentorshipProgramId])
+  @@map("plan_mentorship_programs")
+}
+
+model Payment {
+  id                    String   @id @default(uuid()) @db.Uuid
+  studentId             String   @map("student_id") @db.Uuid
+  planId                String   @map("plan_id") @db.Uuid
+  amount                Decimal  @db.Decimal(12, 2)
+  currency              String   @default("INR") @db.Char(3)
+  gateway               PaymentGateway
+  status                PaymentStatus @default(CREATED)
+  gatewayOrderId        String?  @unique @map("gateway_order_id") @db.VarChar(255)
+  gatewayPaymentId      String?  @unique @map("gateway_payment_id") @db.VarChar(255)
+  gatewaySignature      String?  @map("gateway_signature") @db.VarChar(1024)
+  gatewayTransactionId  String?  @unique @map("gateway_transaction_id") @db.VarChar(255)
+  failureReason         String?  @map("failure_reason") @db.Text
+  paidAt                DateTime? @map("paid_at") @db.Timestamptz(3)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student               Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  plan                  Plan     @relation(fields: [planId], references: [id], onDelete: Restrict)
+  purchase              Purchase?
+
+  @@index([studentId, status, createdAt])
+  @@map("payments")
+}
+
+model Purchase {
+  id             String   @id @default(uuid()) @db.Uuid
+  paymentId      String   @unique @map("payment_id") @db.Uuid
+  studentId      String   @map("student_id") @db.Uuid
+  planId         String   @map("plan_id") @db.Uuid
+  purchasePrice  Decimal  @map("purchase_price") @db.Decimal(12, 2)
+  purchaseDate   DateTime @default(now()) @map("purchase_date") @db.Timestamptz(3)
+  expiryDate     DateTime @map("expiry_date") @db.Date
+  status         PurchaseStatus @default(ACTIVE)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  payment        Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  plan           Plan     @relation(fields: [planId], references: [id], onDelete: Restrict)
+  mockAccesses   StudentMockAccess[]
+  contentAccesses StudentContentAccess[]
+  batchAccesses  StudentBatchAccess[]
+
+  @@index([studentId, status, expiryDate])
+  @@map("purchases")
+}
+
+model EmailVerification {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @db.VarChar(320)
+  otpHash      String   @map("otp_hash") @db.VarChar(255)
+  purpose      EmailVerificationPurpose
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz(3)
+  verifiedAt   DateTime? @map("verified_at") @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([email, purpose, expiresAt])
+  @@map("email_verifications")
+}
+
+model StudentNotification {
+  id          String   @id @default(uuid()) @db.Uuid
+  studentId   String   @map("student_id") @db.Uuid
+  title       String   @db.VarChar(255)
+  description String   @db.Text
+  type        NotificationType @default(SYSTEM)
+  actionUrl   String?  @map("action_url") @db.VarChar(2048)
+  isRead      Boolean  @default(false) @map("is_read")
+  readAt      DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, isRead, createdAt])
+  @@map("student_notifications")
+}
+
+model DashboardNotice {
+  id              String   @id @default(uuid()) @db.Uuid
+  title           String   @db.VarChar(255)
+  description     String   @db.Text
+  priority        NoticePriority @default(MEDIUM)
+  startDatetime   DateTime @map("start_datetime") @db.Timestamptz(3)
+  endDatetime     DateTime @map("end_datetime") @db.Timestamptz(3)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdById     String   @map("created_by") @db.Uuid
+  updatedById     String   @map("updated_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdBy       Admin    @relation("AdminCreatedDashboardNotices", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy       Admin    @relation("AdminUpdatedDashboardNotices", fields: [updatedById], references: [id], onDelete: Restrict)
+
+  @@index([isActive, startDatetime, endDatetime])
+  @@map("dashboard_notices")
+}
+
+model Feedback {
+  id           String   @id @default(uuid()) @db.Uuid
+  studentId    String   @map("student_id") @db.Uuid
+  rating       Int      @db.SmallInt
+  title        String   @db.VarChar(255)
+  comment      String   @db.Text
+  isPublic     Boolean  @default(false) @map("is_public")
+  isResolved   Boolean  @default(false) @map("is_resolved")
+  adminReply   String?  @map("admin_reply") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  student      Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
+  @@index([isResolved, createdAt])
+  @@index([studentId, createdAt])
+  @@map("feedback")
+}
+
+model WebsiteSettings {
+  id                    String   @id @default(uuid()) @db.Uuid
+  websiteName           String   @map("website_name") @db.VarChar(255)
+  supportEmail          String   @map("support_email") @db.VarChar(320)
+  supportPhonePrimary   String   @map("support_phone_primary") @db.VarChar(20)
+  supportPhoneSecondary String?  @map("support_phone_secondary") @db.VarChar(20)
+  whatsappNumber        String?  @map("whatsapp_number") @db.VarChar(20)
+  youtubeLink           String?  @map("youtube_link") @db.VarChar(2048)
+  instagramLink         String?  @map("instagram_link") @db.VarChar(2048)
+  facebookLink          String?  @map("facebook_link") @db.VarChar(2048)
+  twitterLink           String?  @map("twitter_link") @db.VarChar(2048)
+  linkedinLink          String?  @map("linkedin_link") @db.VarChar(2048)
+  telegramLink          String?  @map("telegram_link") @db.VarChar(2048)
+  websiteUrl            String?  @map("website_url") @db.VarChar(2048)
+  address               String?  @db.Text
+  googleMapsLink        String?  @map("google_maps_link") @db.VarChar(2048)
+  privacyPolicyLink     String?  @map("privacy_policy_link") @db.VarChar(2048)
+  termsConditionsLink   String?  @map("terms_conditions_link") @db.VarChar(2048)
+  refundPolicyLink      String?  @map("refund_policy_link") @db.VarChar(2048)
+  logoUrl               String?  @map("logo_url") @db.VarChar(2048)
+  faviconUrl            String?  @map("favicon_url") @db.VarChar(2048)
+  maintenanceMode       Boolean  @default(false) @map("maintenance_mode")
+  maintenanceMessage    String?  @map("maintenance_message") @db.Text
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedById           String?  @map("updated_by") @db.Uuid
+  updatedBy             Admin?   @relation("AdminUpdatedWebsiteSettings", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@map("website_settings")
+}

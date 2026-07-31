@@ -1,0 +1,10 @@
+import type { Response } from 'express'; import type { AuthenticatedRequest } from '../../shared/auth/auth.middleware.js'; import { AppError } from '../../shared/http/app-error.js'; import * as service from './mock.service.js'; import { mockExamsQuerySchema } from './mock.schemas.js';
+export const catalog = async (r: AuthenticatedRequest, s: Response) => s.json(await service.getCatalog(r.auth!.sub, r.query));
+export const examTypes = async (_r: AuthenticatedRequest, s: Response) => s.json({ examTypes: await service.listExamTypes() });
+export const mockExamTypes = async (_r: AuthenticatedRequest, s: Response) => s.json({ mockExamTypes: await service.listMockExamTypes() });
+export const exams = async (r: AuthenticatedRequest, s: Response) => { const parsed = mockExamsQuerySchema.safeParse(r.query); if (!parsed.success) throw new AppError(400, 'Invalid exam filters.'); return s.json({ exams: await service.listExams(r.auth!.sub, parsed.data.examTypeId, parsed.data.mockExamTypeId) }); };
+export const examDetail = async (r: AuthenticatedRequest, s: Response) => s.json({ exam: await service.getExamDetail(r.auth!.sub, String(r.params.examId)) });
+export const begin = async (r: AuthenticatedRequest, s: Response) => s.status(201).json({ attempt: await service.startAttempt(r.auth!.sub, String(r.params.mockId)) });
+export const engine = async (r: AuthenticatedRequest, s: Response) => s.json({ attempt: await service.getEngine(r.auth!.sub, String(r.params.attemptId)) });
+export const answer = async (r: AuthenticatedRequest, s: Response) => s.json({ answer: await service.saveAnswer(r.auth!.sub, String(r.params.attemptId), String(r.params.questionId), r.body) });
+export const submit = async (r: AuthenticatedRequest, s: Response) => s.json({ result: await service.submitAttempt(r.auth!.sub, String(r.params.attemptId), r.body.sectionTimes) });

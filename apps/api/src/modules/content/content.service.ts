@@ -115,3 +115,22 @@ export const setCompletion = async (studentId: string, contentId: string, comple
   });
   return { contentId, completed: true, completedAt: completion.completedAt };
 };
+
+export const listAttempts = async (studentId: string) => {
+  const attempts = await prisma.contentAttempt.findMany({
+    where: { studentId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      contentTest: { select: { id: true, name: true, totalMarks: true, durationMinutes: true, topic: { select: { id: true, name: true, subject: { select: { id: true, name: true } } } } } },
+      sections: { include: { contentSection: { select: { id: true, name: true, totalMarks: true } } }, orderBy: { contentSection: { sequenceNumber: 'asc' } } },
+    },
+  });
+  return attempts.map((attempt) => ({
+    id: attempt.id, status: attempt.status, startedAt: attempt.startedAt, submittedAt: attempt.submittedAt,
+    timeTakenSeconds: attempt.timeTakenSeconds, totalMarks: Number(attempt.totalMarks), marksScored: Number(attempt.marksScored),
+    correctAnswers: attempt.correctAnswers, incorrectAnswers: attempt.incorrectAnswers, unattemptedAnswers: attempt.unattemptedAnswers,
+    accuracy: Number(attempt.accuracy), createdAt: attempt.createdAt,
+    test: { id: attempt.contentTest.id, name: attempt.contentTest.name, durationMinutes: attempt.contentTest.durationMinutes, totalMarks: Number(attempt.contentTest.totalMarks), topic: attempt.contentTest.topic.name, subject: attempt.contentTest.topic.subject.name },
+    sections: attempt.sections.map((section) => ({ id: section.contentSection.id, name: section.contentSection.name, totalMarks: Number(section.contentSection.totalMarks), marksScored: Number(section.marksScored), accuracy: Number(section.accuracy), timeTakenSeconds: section.timeTakenSeconds, correctAnswers: section.correctAnswers, incorrectAnswers: section.incorrectAnswers, unattemptedAnswers: section.unattemptedAnswers })),
+  }));
+};

@@ -7,3 +7,6 @@ export const learningTree = async (request: AuthenticatedRequest, response: Resp
 
 export const completion = async (request: AuthenticatedRequest, response: Response) =>
   response.json({ completion: await service.setCompletion(request.auth!.sub, String(request.params.contentId), request.body.completed) });
+
+export const attempts = async (request: AuthenticatedRequest, response: Response) =>
+  response.json({ attempts: await service.listAttempts(request.auth!.sub) });

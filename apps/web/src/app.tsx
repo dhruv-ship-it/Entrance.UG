@@ -5,6 +5,8 @@ import { SignupPage } from './features/auth/signup-page';
 import { LandingPage, RolePendingPage } from './features/misc-pages';
 import { MockExamTypesPage } from './features/student/mock-tests/exam-types-page';
 import { ContentPage } from './features/student/content/content-page';
+import { MentorshipBatchPage, MentorshipBatchesPage, MentorshipProgramsPage } from './features/student/mentorship/mentorship-page';
+import { DoubtsPage } from './features/student/mentorship/doubts-page';
 import { MockCategoriesPage } from './features/student/mock-tests/mock-categories-page';
 import { MockExamDetailPage } from './features/student/mock-tests/exam-detail-page';
 import { MockExamsPage } from './features/student/mock-tests/mock-exams-page';
@@ -27,6 +29,10 @@ export const App = () => (
         <Route path="mock-tests/:examTypeId/:mockExamTypeId" element={<MockExamsPage />} />
         <Route path="mock-tests/:examTypeId/:mockExamTypeId/:examId" element={<MockExamDetailPage />} />
         <Route path="content" element={<ContentPage />} />
+        <Route path="mentorship" element={<MentorshipProgramsPage />} />
+        <Route path="mentorship/:programId" element={<MentorshipBatchesPage />} />
+        <Route path="mentorship/batches/:batchId" element={<MentorshipBatchPage />} />
+        <Route path="mentorship/batches/:batchId/doubts" element={<DoubtsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route index element={<Navigate to="dashboard" replace />} />

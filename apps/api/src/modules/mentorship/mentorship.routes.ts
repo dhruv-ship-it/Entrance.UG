@@ -1,0 +1,18 @@
+import { Router } from 'express';
+import { requireStudent } from '../../shared/auth/auth.middleware.js';
+import { validateBody } from '../../shared/http/validate.js';
+import { z } from 'zod';
+import { batchOverview, createDoubt, createReply, doubtReplies, doubts, listBatches, listPrograms, satisfied, sessionJoin, taskCompletion } from './mentorship.controller.js';
+import { doubtSchema, replySchema, satisfiedSchema } from './mentorship.schemas.js';
+export const mentorshipRouter = Router();
+mentorshipRouter.use(requireStudent);
+mentorshipRouter.get('/programs', listPrograms);
+mentorshipRouter.get('/programs/:programId/batches', listBatches);
+mentorshipRouter.get('/batches/:batchId', batchOverview);
+mentorshipRouter.patch('/tasks/:taskId/completion', validateBody(z.object({ completed: z.boolean() })), taskCompletion);
+mentorshipRouter.post('/sessions/:sessionId/join', sessionJoin);
+mentorshipRouter.get('/batches/:batchId/doubts', doubts);
+mentorshipRouter.post('/batches/:batchId/doubts', validateBody(doubtSchema), createDoubt);
+mentorshipRouter.get('/doubts/:doubtId/replies', doubtReplies);
+mentorshipRouter.post('/doubts/:doubtId/replies', validateBody(replySchema), createReply);
+mentorshipRouter.patch('/doubts/:doubtId/satisfied', validateBody(satisfiedSchema), satisfied);

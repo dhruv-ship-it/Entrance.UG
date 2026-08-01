@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, BookOpenCheck, BookOpenText, ChevronDown, CircleUserRound, ClipboardList, GraduationCap, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { Bell, BookOpenCheck, BookOpenText, ChevronDown, CircleUserRound, ClipboardList, GraduationCap, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, UsersRound, X } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
@@ -17,6 +17,7 @@ const navigation = [
   { to: '/student/dashboard', label: 'Overview', icon: LayoutDashboard },
   { to: '/student/mock-tests', label: 'Mock tests', icon: ClipboardList },
   { to: '/student/content', label: 'Learning content', icon: BookOpenText },
+  { to: '/student/mentorship', label: 'Mentorship', icon: UsersRound },
   { to: '/student/profile', label: 'My profile', icon: CircleUserRound },
 ];
 

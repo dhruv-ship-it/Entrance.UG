@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { contentRouter } from './modules/content/content.routes.js';
 import { mockRouter } from './modules/mock/mock.routes.js';
+import { mentorshipRouter } from './modules/mentorship/mentorship.routes.js';
 import { studentRouter } from './modules/student/student.routes.js';
 import { errorHandler, notFoundHandler } from './shared/http/error-handler.js';
 
@@ -25,6 +26,7 @@ app.get('/health', (_request, response) => {
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/students', studentRouter);
 app.use('/api/v1/mock-tests', mockRouter);
+app.use('/api/v1/mentorship', mentorshipRouter);
 app.use('/api/v1/content', contentRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);

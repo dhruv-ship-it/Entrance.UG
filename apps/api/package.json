@@ -12,7 +12,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:validate": "prisma validate",
-    "db:seed:mock": "tsx prisma/seed-mock-tests.ts"
+    "db:seed:mock": "tsx prisma/seed-mock-tests.ts",
+    "db:seed:mentorship": "tsx prisma/seed-mentorship.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",

@@ -174,6 +174,16 @@ model Admin {
   updatedMentorshipPrograms       MentorshipProgram[] @relation("AdminUpdatedMentorshipPrograms")
   createdMentorshipBatches        MentorshipBatch[] @relation("AdminCreatedMentorshipBatches")
   updatedMentorshipBatches        MentorshipBatch[] @relation("AdminUpdatedMentorshipBatches")
+  createdBatchTests               BatchTest[] @relation("AdminCreatedBatchTests")
+  updatedBatchTests               BatchTest[] @relation("AdminUpdatedBatchTests")
+  createdBatchNotices             BatchNotice[] @relation("AdminCreatedBatchNotices")
+  updatedBatchNotices             BatchNotice[] @relation("AdminUpdatedBatchNotices")
+  createdBatchSections            BatchSection[] @relation("AdminCreatedBatchSections")
+  updatedBatchSections            BatchSection[] @relation("AdminUpdatedBatchSections")
+  createdBatchComprehensions      BatchComprehension[] @relation("AdminCreatedBatchComprehensions")
+  updatedBatchComprehensions      BatchComprehension[] @relation("AdminUpdatedBatchComprehensions")
+  createdBatchQuestions           BatchQuestion[] @relation("AdminCreatedBatchQuestions")
+  updatedBatchQuestions           BatchQuestion[] @relation("AdminUpdatedBatchQuestions")
   mentorBatchAssignments          MentorBatchAssignment[] @relation("AdminAssignedMentorBatches")
   createdRcTests                  RcTest[] @relation("AdminCreatedRcTests")
   updatedRcTests                  RcTest[] @relation("AdminUpdatedRcTests")
@@ -209,7 +219,8 @@ model Mentor {
   batchAssignments          MentorBatchAssignment[]
   createdBatchTasks         BatchTask[] @relation("MentorCreatedBatchTasks")
   updatedBatchTasks         BatchTask[] @relation("MentorUpdatedBatchTasks")
-  createdBatchNotices       BatchNotice[]
+  createdBatchNotices       BatchNotice[] @relation("MentorCreatedBatchNotices")
+  updatedBatchNotices       BatchNotice[] @relation("MentorUpdatedBatchNotices")
   doubtReplies              DoubtReply[]
   createdLiveSessions       LiveSession[]
   createdBatchTests         BatchTest[] @relation("MentorCreatedBatchTests")
@@ -663,13 +674,14 @@ model StudentMockAccess {
   id           String   @id @default(uuid()) @db.Uuid
   studentId    String   @map("student_id") @db.Uuid
   examTypeId   String   @map("exam_type_id") @db.Uuid
-  purchaseId   String   @map("purchase_id") @db.Uuid
+  purchaseId   String?  @map("purchase_id") @db.Uuid
+  accessSource AccessSource @default(PURCHASE) @map("access_source")
   expiryDate   DateTime @map("expiry_date") @db.Date
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   examType     ExamType @relation(fields: [examTypeId], references: [id], onDelete: Restrict)
-  purchase     Purchase @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  purchase     Purchase? @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
 
   @@unique([studentId, examTypeId, purchaseId])
   @@index([studentId, expiryDate])
@@ -708,15 +720,23 @@ enum ContentType {
   WEBSITE
 }
 
+enum AccessSource {
+  PURCHASE
+  ADMIN
+  TRIAL
+  PROMOTION
+}
+
 model StudentContentAccess {
   id           String   @id @default(uuid()) @db.Uuid
   studentId    String   @map("student_id") @db.Uuid
-  purchaseId   String   @map("purchase_id") @db.Uuid
+  purchaseId   String?  @map("purchase_id") @db.Uuid
+  accessSource AccessSource @default(PURCHASE) @map("access_source")
   expiryDate   DateTime @map("expiry_date") @db.Date
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  purchase     Purchase @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  purchase     Purchase? @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
 
   @@unique([studentId, purchaseId])
   @@index([studentId, expiryDate])
@@ -985,7 +1005,8 @@ model StudentBatchAccess {
   id                 String   @id @default(uuid()) @db.Uuid
   studentId          String   @map("student_id") @db.Uuid
   mentorshipBatchId  String   @map("mentorship_batch_id") @db.Uuid
-  purchaseId         String   @map("purchase_id") @db.Uuid
+  purchaseId         String?  @map("purchase_id") @db.Uuid
+  accessSource       AccessSource @default(PURCHASE) @map("access_source")
   joinedAt           DateTime @default(now()) @map("joined_at") @db.Timestamptz(3)
   expiryDate         DateTime @map("expiry_date") @db.Date
   isActive           Boolean  @default(true) @map("is_active")
@@ -993,7 +1014,7 @@ model StudentBatchAccess {
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   student            Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Restrict)
-  purchase           Purchase @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+  purchase           Purchase? @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
 
   @@unique([studentId, mentorshipBatchId, purchaseId])
   @@index([studentId, isActive, expiryDate])
@@ -1043,11 +1064,17 @@ model BatchNotice {
   title              String   @db.VarChar(255)
   description        String   @db.Text
   attachmentUrl      String?  @map("attachment_url") @db.VarChar(2048)
-  createdById        String   @map("created_by") @db.Uuid
+  createdByMentorId  String?  @map("created_by") @db.Uuid
+  createdByAdminId   String?  @map("created_by_admin") @db.Uuid
+  updatedByMentorId  String?  @map("updated_by") @db.Uuid
+  updatedByAdminId   String?  @map("updated_by_admin") @db.Uuid
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Cascade)
-  createdBy          Mentor   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdByMentor    Mentor?  @relation("MentorCreatedBatchNotices", fields: [createdByMentorId], references: [id], onDelete: Restrict)
+  createdByAdmin     Admin?   @relation("AdminCreatedBatchNotices", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  updatedByMentor    Mentor?  @relation("MentorUpdatedBatchNotices", fields: [updatedByMentorId], references: [id], onDelete: Restrict)
+  updatedByAdmin     Admin?   @relation("AdminUpdatedBatchNotices", fields: [updatedByAdminId], references: [id], onDelete: Restrict)
 
   @@index([mentorshipBatchId, createdAt])
   @@map("batch_notices")
@@ -1139,14 +1166,20 @@ model BatchTest {
   totalMarks               Decimal  @map("total_marks") @db.Decimal(10, 2)
   canGoBackBetweenSections Boolean  @default(false) @map("can_go_back_between_sections")
   isActive                 Boolean  @default(true) @map("is_active")
-  createdById              String   @map("created_by") @db.Uuid
-  updatedById              String   @map("updated_by") @db.Uuid
+  startDatetime            DateTime @map("start_datetime") @db.Timestamptz(3)
+  endDatetime              DateTime @map("end_datetime") @db.Timestamptz(3)
+  createdByMentorId        String?  @map("created_by") @db.Uuid
+  createdByAdminId         String?  @map("created_by_admin") @db.Uuid
+  updatedByMentorId        String?  @map("updated_by") @db.Uuid
+  updatedByAdminId         String?  @map("updated_by_admin") @db.Uuid
   createdAt                DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   mentorshipBatch          MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Cascade)
   difficulty               DifficultyLevel @relation(fields: [difficultyId], references: [id], onDelete: Restrict)
-  createdBy                Mentor   @relation("MentorCreatedBatchTests", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy                Mentor   @relation("MentorUpdatedBatchTests", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdByMentor          Mentor?  @relation("MentorCreatedBatchTests", fields: [createdByMentorId], references: [id], onDelete: Restrict)
+  createdByAdmin           Admin?   @relation("AdminCreatedBatchTests", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  updatedByMentor          Mentor?  @relation("MentorUpdatedBatchTests", fields: [updatedByMentorId], references: [id], onDelete: Restrict)
+  updatedByAdmin           Admin?   @relation("AdminUpdatedBatchTests", fields: [updatedByAdminId], references: [id], onDelete: Restrict)
   sections                 BatchSection[]
   attempts                 BatchAttempt[]
   analytics                BatchTestAnalytics?
@@ -1166,13 +1199,17 @@ model BatchSection {
   durationMinutes             Int?     @map("duration_minutes")
   totalMarks                  Decimal  @map("total_marks") @db.Decimal(10, 2)
   canGoBackToPreviousQuestion Boolean  @default(false) @map("can_go_back_to_previous_question")
-  createdById                 String   @map("created_by") @db.Uuid
-  updatedById                 String   @map("updated_by") @db.Uuid
+  createdByMentorId           String?  @map("created_by") @db.Uuid
+  createdByAdminId            String?  @map("created_by_admin") @db.Uuid
+  updatedByMentorId           String?  @map("updated_by") @db.Uuid
+  updatedByAdminId            String?  @map("updated_by_admin") @db.Uuid
   createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   batchTest                   BatchTest @relation(fields: [batchTestId], references: [id], onDelete: Cascade)
-  createdBy                   Mentor   @relation("MentorCreatedBatchSections", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy                   Mentor   @relation("MentorUpdatedBatchSections", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdByMentor             Mentor?  @relation("MentorCreatedBatchSections", fields: [createdByMentorId], references: [id], onDelete: Restrict)
+  createdByAdmin              Admin?   @relation("AdminCreatedBatchSections", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  updatedByMentor             Mentor?  @relation("MentorUpdatedBatchSections", fields: [updatedByMentorId], references: [id], onDelete: Restrict)
+  updatedByAdmin              Admin?   @relation("AdminUpdatedBatchSections", fields: [updatedByAdminId], references: [id], onDelete: Restrict)
   questions                   BatchQuestion[]
   attemptSections             BatchAttemptSection[]
   attemptAnswers              BatchAttemptAnswer[]
@@ -1186,12 +1223,16 @@ model BatchComprehension {
   id           String   @id @default(uuid()) @db.Uuid
   title        String?  @db.VarChar(255)
   passage      String   @db.Text
-  createdById  String   @map("created_by") @db.Uuid
-  updatedById  String   @map("updated_by") @db.Uuid
+  createdByMentorId  String?  @map("created_by") @db.Uuid
+  createdByAdminId   String?  @map("created_by_admin") @db.Uuid
+  updatedByMentorId  String?  @map("updated_by") @db.Uuid
+  updatedByAdminId   String?  @map("updated_by_admin") @db.Uuid
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-  createdBy    Mentor   @relation("MentorCreatedBatchComprehensions", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy    Mentor   @relation("MentorUpdatedBatchComprehensions", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdByMentor Mentor? @relation("MentorCreatedBatchComprehensions", fields: [createdByMentorId], references: [id], onDelete: Restrict)
+  createdByAdmin Admin? @relation("AdminCreatedBatchComprehensions", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  updatedByMentor Mentor? @relation("MentorUpdatedBatchComprehensions", fields: [updatedByMentorId], references: [id], onDelete: Restrict)
+  updatedByAdmin Admin? @relation("AdminUpdatedBatchComprehensions", fields: [updatedByAdminId], references: [id], onDelete: Restrict)
   questions    BatchQuestion[]
 
   @@map("batch_comprehensions")
@@ -1214,8 +1255,10 @@ model BatchQuestion {
   explanation           String   @db.Text
   imageUrl              String?  @map("image_url") @db.VarChar(2048)
   isActive              Boolean  @default(true) @map("is_active")
-  createdById           String   @map("created_by") @db.Uuid
-  updatedById           String   @map("updated_by") @db.Uuid
+  createdByMentorId     String?  @map("created_by") @db.Uuid
+  createdByAdminId      String?  @map("created_by_admin") @db.Uuid
+  updatedByMentorId     String?  @map("updated_by") @db.Uuid
+  updatedByAdminId      String?  @map("updated_by_admin") @db.Uuid
   createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   batchSection          BatchSection @relation(fields: [batchSectionId], references: [id], onDelete: Cascade)
@@ -1223,8 +1266,10 @@ model BatchQuestion {
   topic                 Topic    @relation(fields: [topicId], references: [id], onDelete: Restrict)
   subtopic              Subtopic @relation(fields: [subtopicId], references: [id], onDelete: Restrict)
   difficulty            DifficultyLevel @relation(fields: [difficultyId], references: [id], onDelete: Restrict)
-  createdBy             Mentor   @relation("MentorCreatedBatchQuestions", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy             Mentor   @relation("MentorUpdatedBatchQuestions", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdByMentor       Mentor?  @relation("MentorCreatedBatchQuestions", fields: [createdByMentorId], references: [id], onDelete: Restrict)
+  createdByAdmin        Admin?   @relation("AdminCreatedBatchQuestions", fields: [createdByAdminId], references: [id], onDelete: Restrict)
+  updatedByMentor       Mentor?  @relation("MentorUpdatedBatchQuestions", fields: [updatedByMentorId], references: [id], onDelete: Restrict)
+  updatedByAdmin        Admin?   @relation("AdminUpdatedBatchQuestions", fields: [updatedByAdminId], references: [id], onDelete: Restrict)
   attemptAnswers        BatchAttemptAnswer[]
   analytics             BatchQuestionAnalytics?
 

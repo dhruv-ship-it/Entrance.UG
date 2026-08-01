@@ -10,7 +10,10 @@ import {
   MentorshipBatchPage,
   MentorshipBatchesPage,
   MentorshipClassesPage,
+  MentorshipClosedTasksPage,
+  MentorshipClosedTestsPage,
   MentorshipNoticesPage,
+  MentorshipPastClassesPage,
   MentorshipProgramsPage,
   MentorshipTasksPage,
   MentorshipTestDetailPage,
@@ -43,9 +46,12 @@ export const App = () => (
         <Route path="mentorship/:programId" element={<MentorshipBatchesPage />} />
         <Route path="mentorship/batches/:batchId" element={<MentorshipBatchPage />} />
         <Route path="mentorship/batches/:batchId/tasks" element={<MentorshipTasksPage />} />
+        <Route path="mentorship/batches/:batchId/tasks/closed" element={<MentorshipClosedTasksPage />} />
         <Route path="mentorship/batches/:batchId/classes" element={<MentorshipClassesPage />} />
+        <Route path="mentorship/batches/:batchId/classes/past" element={<MentorshipPastClassesPage />} />
         <Route path="mentorship/batches/:batchId/doubts" element={<DoubtsPage />} />
         <Route path="mentorship/batches/:batchId/tests" element={<MentorshipTestsPage />} />
+        <Route path="mentorship/batches/:batchId/tests/closed" element={<MentorshipClosedTestsPage />} />
         <Route path="mentorship/batches/:batchId/tests/:testId" element={<MentorshipTestDetailPage />} />
         <Route path="mentorship/batches/:batchId/notices" element={<MentorshipNoticesPage />} />
         <Route path="mentorship/batches/:batchId/analysis" element={<MentorshipAnalysisPage />} />

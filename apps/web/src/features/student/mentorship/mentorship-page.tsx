@@ -187,14 +187,9 @@ const BatchNav = ({ batchId, active }: { batchId: string; active: 'home' | 'task
 };
 
 const MentorAvatar = ({ mentor }: { mentor: Mentor }) => (
-  <div className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white px-3 py-2 shadow-sm">
-    <div className="grid size-9 place-items-center rounded-xl bg-moss-100 text-xs font-bold text-moss-800">
-      {mentor.name.split(' ').map((part) => part[0]).slice(0, 2).join('')}
-    </div>
-    <div>
-      <p className="text-sm font-semibold">{mentor.name}</p>
-      <p className="text-xs text-stone-500">Mentor</p>
-    </div>
+  <div className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2 shadow-sm">
+    <p className="text-sm font-semibold text-ink">{mentor.name}</p>
+    <Badge className="bg-moss-100 text-moss-800">Mentor</Badge>
   </div>
 );
 
@@ -548,9 +543,31 @@ export const MentorshipTasksPage = () => {
         </div>
         <div className="space-y-5">
           <Card className="p-5"><h2 className="mb-4 font-bold">Completed history</h2><div className="space-y-3">{completed.length ? completed.map((task) => <TaskRow key={task.id} task={task} />) : <EmptyPanel icon={CheckCircle2} title="No completed task yet" description="Completed active tasks are saved here." />}</div></Card>
-          <Card className="p-5"><h2 className="mb-4 font-bold">Closed tasks</h2><div className="space-y-3">{groups.past.length ? groups.past.map((task) => <TaskRow key={task.id} task={task} />) : <EmptyPanel icon={Clock3} title="No closed task" description="Past tasks are archived here after their due date." />}</div></Card>
+          <Card className="p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="font-bold">Closed tasks</h2>
+              {groups.past.length > 3 && <Link to={`/student/mentorship/batches/${batchId}/tasks/closed`} className="text-sm font-semibold text-moss-700">View all</Link>}
+            </div>
+            <div className="space-y-3">{groups.past.length ? groups.past.slice(0, 3).map((task) => <TaskRow key={task.id} task={task} />) : <EmptyPanel icon={Clock3} title="No closed task" description="Past tasks are archived here after their due date." />}</div>
+          </Card>
         </div>
       </section>
+    </div>
+  );
+};
+
+export const MentorshipClosedTasksPage = () => {
+  const { batchId = '' } = useParams();
+  const query = useQuery({ queryKey: ['mentor-batch-tasks', batchId], queryFn: () => api<{ tasks: Task[] }>(`/api/v1/mentorship/batches/${batchId}/tasks`) });
+
+  if (query.isLoading) return <Skeleton className="h-[520px]" />;
+  const closedTasks = groupByPhase(query.data?.tasks ?? []).past;
+
+  return (
+    <div className="space-y-6">
+      <BatchBackLink to={`/student/mentorship/batches/${batchId}/tasks`}>Tasks</BatchBackLink>
+      <div><p className="eyebrow">Task history</p><h1 className="text-3xl font-bold">Closed tasks</h1></div>
+      <div className="space-y-3">{closedTasks.length ? closedTasks.map((task) => <TaskRow key={task.id} task={task} />) : <EmptyPanel icon={Clock3} title="No closed task" description="Past tasks are archived here after their due date." />}</div>
     </div>
   );
 };
@@ -626,9 +643,31 @@ export const MentorshipClassesPage = () => {
         <div className="space-y-5">
           <Card className="p-5"><h2 className="mb-4 font-bold">Live now</h2><div className="space-y-3">{groups.live.length ? groups.live.map((session) => <SessionRow key={session.id} session={session} pending={join.isPending} onJoin={() => join.mutate(session.id)} />) : <EmptyPanel icon={Radio} title="No class live now" description="Open sessions will appear here and joining marks attendance once." />}</div></Card>
           <Card className="p-5"><h2 className="mb-4 font-bold">Upcoming</h2><div className="space-y-3">{groups.upcoming.length ? groups.upcoming.map((session) => <SessionRow key={session.id} session={session} />) : <EmptyPanel icon={CalendarDays} title="No upcoming session" description="Mentor scheduled sessions will appear here." />}</div></Card>
-          <Card className="p-5"><h2 className="mb-4 font-bold">Past sessions</h2><div className="space-y-3">{groups.past.length ? groups.past.map((session) => <SessionRow key={session.id} session={session} />) : <EmptyPanel icon={CalendarCheck2} title="No past sessions" description="Completed sessions move here." />}</div></Card>
+          <Card className="p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="font-bold">Past sessions</h2>
+              {groups.past.length > 3 && <Link to={`/student/mentorship/batches/${batchId}/classes/past`} className="text-sm font-semibold text-moss-700">View all</Link>}
+            </div>
+            <div className="space-y-3">{groups.past.length ? groups.past.slice(0, 3).map((session) => <SessionRow key={session.id} session={session} />) : <EmptyPanel icon={CalendarCheck2} title="No past sessions" description="Completed sessions move here." />}</div>
+          </Card>
         </div>
       </section>
+    </div>
+  );
+};
+
+export const MentorshipPastClassesPage = () => {
+  const { batchId = '' } = useParams();
+  const query = useQuery({ queryKey: ['mentor-batch-sessions', batchId], queryFn: () => api<{ sessions: Session[] }>(`/api/v1/mentorship/batches/${batchId}/sessions`) });
+
+  if (query.isLoading) return <Skeleton className="h-[520px]" />;
+  const pastSessions = groupByPhase(query.data?.sessions ?? []).past;
+
+  return (
+    <div className="space-y-6">
+      <BatchBackLink to={`/student/mentorship/batches/${batchId}/classes`}>Classes</BatchBackLink>
+      <div><p className="eyebrow">Attendance history</p><h1 className="text-3xl font-bold">Past sessions</h1></div>
+      <div className="space-y-3">{pastSessions.length ? pastSessions.map((session) => <SessionRow key={session.id} session={session} />) : <EmptyPanel icon={CalendarCheck2} title="No past sessions" description="Completed sessions move here." />}</div>
     </div>
   );
 };
@@ -677,8 +716,30 @@ export const MentorshipTestsPage = () => {
           <Card className="p-5"><h2 className="mb-4 font-bold">Live tests</h2><div className="space-y-3">{groups.live.length ? groups.live.map((test) => <TestRow key={test.id} test={test} batchId={batchId} />) : <EmptyPanel icon={BookOpenCheck} title="No live test" description="Tests can be attempted only inside their active window." />}</div></Card>
           <Card className="p-5"><h2 className="mb-4 font-bold">Upcoming tests</h2><div className="space-y-3">{groups.upcoming.length ? groups.upcoming.map((test) => <TestRow key={test.id} test={test} batchId={batchId} />) : <EmptyPanel icon={Clock3} title="No upcoming test" description="Scheduled tests will appear here." />}</div></Card>
         </div>
-        <Card className="p-5"><h2 className="mb-4 font-bold">Closed tests</h2><div className="space-y-3">{groups.past.length ? groups.past.map((test) => <TestRow key={test.id} test={test} batchId={batchId} />) : <EmptyPanel icon={Trophy} title="No closed test" description="Past tests and analysis links will live here." />}</div></Card>
+        <Card className="p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="font-bold">Closed tests</h2>
+            {groups.past.length > 3 && <Link to={`/student/mentorship/batches/${batchId}/tests/closed`} className="text-sm font-semibold text-moss-700">View all</Link>}
+          </div>
+          <div className="space-y-3">{groups.past.length ? groups.past.slice(0, 3).map((test) => <TestRow key={test.id} test={test} batchId={batchId} />) : <EmptyPanel icon={Trophy} title="No closed test" description="Past tests and analysis links will live here." />}</div>
+        </Card>
       </section>
+    </div>
+  );
+};
+
+export const MentorshipClosedTestsPage = () => {
+  const { batchId = '' } = useParams();
+  const query = useQuery({ queryKey: ['mentor-batch-tests', batchId], queryFn: () => api<{ tests: TestSummary[] }>(`/api/v1/mentorship/batches/${batchId}/tests`) });
+
+  if (query.isLoading) return <Skeleton className="h-[520px]" />;
+  const closedTests = groupByPhase(query.data?.tests ?? []).past;
+
+  return (
+    <div className="space-y-6">
+      <BatchBackLink to={`/student/mentorship/batches/${batchId}/tests`}>Batch tests</BatchBackLink>
+      <div><p className="eyebrow">Test history</p><h1 className="text-3xl font-bold">Closed tests</h1></div>
+      <div className="space-y-3">{closedTests.length ? closedTests.map((test) => <TestRow key={test.id} test={test} batchId={batchId} />) : <EmptyPanel icon={Trophy} title="No closed test" description="Past tests and analysis links will live here." />}</div>
     </div>
   );
 };

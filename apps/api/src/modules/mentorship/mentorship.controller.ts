@@ -47,7 +47,10 @@ export const batchTestDetail = async (request: AuthenticatedRequest, response: R
 };
 
 export const doubts = async (request: AuthenticatedRequest, response: Response) => {
-  response.json({ doubts: await service.listDoubts(request.auth!.sub, String(request.params.batchId)) });
+  response.json({ doubts: await service.listDoubts(request.auth!.sub, String(request.params.batchId), {
+    scope: String(request.query.scope ?? ''),
+    status: String(request.query.status ?? ''),
+  }) });
 };
 
 export const createDoubt = async (request: AuthenticatedRequest, response: Response) => {
@@ -56,7 +59,15 @@ export const createDoubt = async (request: AuthenticatedRequest, response: Respo
 
 export const doubtReplies = async (request: AuthenticatedRequest, response: Response) => {
   const parentReplyId = request.query.parentReplyId ? String(request.query.parentReplyId) : null;
-  response.json({ replies: await service.replies(request.auth!.sub, String(request.params.doubtId), parentReplyId) });
+  response.json({
+    replies: await service.replies(
+      request.auth!.sub,
+      String(request.params.doubtId),
+      parentReplyId,
+      Number(request.query.take ?? 3),
+      Number(request.query.skip ?? 0),
+    ),
+  });
 };
 
 export const createReply = async (request: AuthenticatedRequest, response: Response) => {
@@ -65,4 +76,12 @@ export const createReply = async (request: AuthenticatedRequest, response: Respo
 
 export const satisfied = async (request: AuthenticatedRequest, response: Response) => {
   response.json({ doubt: await service.setSatisfied(request.auth!.sub, String(request.params.doubtId), request.body.isSatisfied) });
+};
+
+export const doubtStatus = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ doubt: await service.setDoubtStatus(request.auth!.sub, String(request.params.doubtId), request.body.status) });
+};
+
+export const replyPinned = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ reply: await service.setReplyPinned(request.auth!.sub, String(request.params.replyId), request.body.isPinned) });
 };

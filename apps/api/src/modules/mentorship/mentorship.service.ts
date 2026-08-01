@@ -32,7 +32,7 @@ const requireBatchAccess = async (studentId: string, batchId: string) => {
       mentorshipProgram: { select: { id: true, name: true } },
       mentorAssignments: {
         where: { isActive: true },
-        include: { mentor: { select: { id: true, name: true, qualification: true, profileImage: true } } },
+        include: { mentor: { select: { id: true, name: true, profileImage: true } } },
       },
     },
   });
@@ -55,7 +55,7 @@ export const batches = async (studentId: string, programId: string) => prisma.me
   include: {
     mentorAssignments: {
       where: { isActive: true },
-      include: { mentor: { select: { id: true, name: true, qualification: true, profileImage: true } } },
+      include: { mentor: { select: { id: true, name: true, profileImage: true } } },
     },
     studentAccesses: { where: activeMembership(studentId), select: { expiryDate: true, joinedAt: true, accessSource: true } },
     _count: { select: { tasks: true, liveSessions: true, tests: true } },
@@ -73,7 +73,15 @@ export const overview = async (studentId: string, batchId: string) => {
       take: 3,
       include: { completions: { where: { studentId }, select: { status: true, completedAt: true } } },
     }),
-    prisma.batchNotice.findMany({ where: { mentorshipBatchId: batchId }, orderBy: { createdAt: 'desc' }, take: 5 }),
+    prisma.batchNotice.findMany({
+      where: { mentorshipBatchId: batchId },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      include: {
+        createdByMentor: { select: { id: true, name: true, profileImage: true } },
+        createdByAdmin: { select: { id: true, name: true, role: true } },
+      },
+    }),
     prisma.liveSession.findMany({
       where: { mentorshipBatchId: batchId, startDatetime: { lte: current }, endDatetime: { gte: current } },
       orderBy: { endDatetime: 'asc' },
@@ -261,7 +269,7 @@ export const notices = async (studentId: string, batchId: string, take = 20) => 
     take: Math.min(Math.max(take, 1), 50),
     include: {
       createdByMentor: { select: { id: true, name: true, profileImage: true } },
-      createdByAdmin: { select: { id: true, name: true } },
+      createdByAdmin: { select: { id: true, name: true, role: true } },
     },
   });
 };
@@ -309,7 +317,7 @@ export const testDetail = async (studentId: string, batchId: string, testId: str
     include: {
       difficulty: { select: { name: true, description: true } },
       createdByMentor: { select: { id: true, name: true, profileImage: true } },
-      createdByAdmin: { select: { id: true, name: true } },
+      createdByAdmin: { select: { id: true, name: true, role: true } },
       sections: {
         orderBy: { sequenceNumber: 'asc' },
         include: {
@@ -366,11 +374,17 @@ export const testDetail = async (studentId: string, batchId: string, testId: str
   };
 };
 
-export const listDoubts = async (studentId: string, batchId: string) => {
+export const listDoubts = async (studentId: string, batchId: string, options: { scope?: string; status?: string } = {}) => {
   await requireBatchAccess(studentId, batchId);
+  const status = ['OPEN', 'ANSWERED', 'CLOSED'].includes(options.status ?? '') ? options.status as 'OPEN' | 'ANSWERED' | 'CLOSED' : undefined;
+  const scopeWhere = options.scope === 'public'
+    ? { visibility: 'PUBLIC' as const, ...(status ? { status } : {}) }
+    : options.scope === 'mine'
+      ? { studentId, ...(status ? { status } : {}) }
+      : { ...visibleDoubt(studentId), ...(status ? { status } : {}) };
   return prisma.doubt.findMany({
-    where: { mentorshipBatchId: batchId, ...visibleDoubt(studentId) },
-    orderBy: [{ lastReplyAt: 'desc' }, { createdAt: 'desc' }],
+    where: { mentorshipBatchId: batchId, ...scopeWhere },
+    orderBy: [{ isPinned: 'desc' }, { lastReplyAt: 'desc' }, { createdAt: 'desc' }],
     include: {
       student: { select: { id: true, name: true, profileImage: true } },
       _count: { select: { replies: true } },
@@ -386,7 +400,7 @@ export const createDoubt = async (studentId: string, batchId: string, data: { ti
   });
 };
 
-export const replies = async (studentId: string, doubtId: string, parentReplyId?: string | null) => {
+export const replies = async (studentId: string, doubtId: string, parentReplyId?: string | null, take = 3, skip = 0) => {
   const doubt = await prisma.doubt.findFirst({
     where: { id: doubtId, mentorshipBatch: { studentAccesses: { some: activeMembership(studentId) } }, ...visibleDoubt(studentId) },
     select: { id: true },
@@ -395,11 +409,13 @@ export const replies = async (studentId: string, doubtId: string, parentReplyId?
 
   return prisma.doubtReply.findMany({
     where: { doubtId, parentReplyId: parentReplyId ?? null },
-    orderBy: { createdAt: 'asc' },
-    take: 20,
+    orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
+    skip: Math.max(skip, 0),
+    take: Math.min(Math.max(take, 1), 20),
     include: {
       student: { select: { id: true, name: true, profileImage: true } },
       mentor: { select: { id: true, name: true, profileImage: true } },
+      admin: { select: { id: true, name: true, role: true } },
       _count: { select: { childReplies: true } },
     },
   });
@@ -410,6 +426,7 @@ export const addReply = async (studentId: string, doubtId: string, data: { reply
     where: { id: doubtId, mentorshipBatch: { studentAccesses: { some: activeMembership(studentId) } }, ...visibleDoubt(studentId) },
   });
   if (!doubt) throw new AppError(404, 'Doubt not found.');
+  if (doubt.status === 'CLOSED') throw new AppError(409, 'Closed doubts cannot receive new replies.');
 
   if (data.parentReplyId) {
     const parent = await tx.doubtReply.findFirst({ where: { id: data.parentReplyId, doubtId }, select: { id: true } });
@@ -421,10 +438,11 @@ export const addReply = async (studentId: string, doubtId: string, data: { reply
     include: {
       student: { select: { id: true, name: true, profileImage: true } },
       mentor: { select: { id: true, name: true, profileImage: true } },
+      admin: { select: { id: true, name: true, role: true } },
       _count: { select: { childReplies: true } },
     },
   });
-  await tx.doubt.update({ where: { id: doubtId }, data: { lastReplyAt: new Date(), status: 'ANSWERED' } });
+  await tx.doubt.update({ where: { id: doubtId }, data: { lastReplyAt: new Date() } });
   return reply;
 });
 
@@ -432,4 +450,28 @@ export const setSatisfied = async (studentId: string, doubtId: string, isSatisfi
   const doubt = await prisma.doubt.findFirst({ where: { id: doubtId, studentId }, select: { id: true } });
   if (!doubt) throw new AppError(404, 'Doubt not found.');
   return prisma.doubt.update({ where: { id: doubtId }, data: { isSatisfied } });
+};
+
+export const setDoubtStatus = async (studentId: string, doubtId: string, status: 'OPEN' | 'ANSWERED' | 'CLOSED') => {
+  const doubt = await prisma.doubt.findFirst({ where: { id: doubtId, studentId }, select: { id: true } });
+  if (!doubt) throw new AppError(404, 'Doubt not found.');
+  return prisma.doubt.update({ where: { id: doubtId }, data: { status, isSatisfied: status === 'ANSWERED' ? true : undefined } });
+};
+
+export const setReplyPinned = async (studentId: string, replyId: string, isPinned: boolean) => {
+  const reply = await prisma.doubtReply.findFirst({
+    where: { id: replyId, doubt: { studentId, mentorshipBatch: { studentAccesses: { some: activeMembership(studentId) } } } },
+    select: { id: true },
+  });
+  if (!reply) throw new AppError(404, 'Reply not found.');
+  return prisma.doubtReply.update({
+    where: { id: replyId },
+    data: { isPinned },
+    include: {
+      student: { select: { id: true, name: true, profileImage: true } },
+      mentor: { select: { id: true, name: true, profileImage: true } },
+      admin: { select: { id: true, name: true, role: true } },
+      _count: { select: { childReplies: true } },
+    },
+  });
 };

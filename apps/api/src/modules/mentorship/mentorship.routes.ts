@@ -12,15 +12,17 @@ import {
   batchTests,
   createDoubt,
   createReply,
+  doubtStatus,
   doubtReplies,
   doubts,
   listBatches,
   listPrograms,
+  replyPinned,
   satisfied,
   sessionJoin,
   taskCompletion,
 } from './mentorship.controller.js';
-import { doubtSchema, replySchema, satisfiedSchema } from './mentorship.schemas.js';
+import { doubtSchema, doubtStatusSchema, replyPinSchema, replySchema, satisfiedSchema } from './mentorship.schemas.js';
 
 export const mentorshipRouter = Router();
 
@@ -45,3 +47,5 @@ mentorshipRouter.post('/sessions/:sessionId/join', sessionJoin);
 mentorshipRouter.get('/doubts/:doubtId/replies', doubtReplies);
 mentorshipRouter.post('/doubts/:doubtId/replies', validateBody(replySchema), createReply);
 mentorshipRouter.patch('/doubts/:doubtId/satisfied', validateBody(satisfiedSchema), satisfied);
+mentorshipRouter.patch('/doubts/:doubtId/status', validateBody(doubtStatusSchema), doubtStatus);
+mentorshipRouter.patch('/replies/:replyId/pinned', validateBody(replyPinSchema), replyPinned);

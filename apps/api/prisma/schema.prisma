@@ -184,6 +184,7 @@ model Admin {
   updatedBatchComprehensions      BatchComprehension[] @relation("AdminUpdatedBatchComprehensions")
   createdBatchQuestions           BatchQuestion[] @relation("AdminCreatedBatchQuestions")
   updatedBatchQuestions           BatchQuestion[] @relation("AdminUpdatedBatchQuestions")
+  doubtReplies                    DoubtReply[] @relation("AdminDoubtReplies")
   mentorBatchAssignments          MentorBatchAssignment[] @relation("AdminAssignedMentorBatches")
   createdRcTests                  RcTest[] @relation("AdminCreatedRcTests")
   updatedRcTests                  RcTest[] @relation("AdminUpdatedRcTests")
@@ -1089,6 +1090,7 @@ model Doubt {
   visibility         DoubtVisibility @default(PUBLIC)
   status             DoubtStatus @default(OPEN)
   isSatisfied        Boolean  @default(false) @map("is_satisfied")
+  isPinned           Boolean  @default(false) @map("is_pinned")
   lastReplyAt        DateTime? @map("last_reply_at") @db.Timestamptz(3)
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
@@ -1097,6 +1099,7 @@ model Doubt {
   replies            DoubtReply[]
 
   @@index([mentorshipBatchId, visibility, status])
+  @@index([mentorshipBatchId, visibility, status, isPinned])
   @@index([studentId, status])
   @@map("doubts")
 }
@@ -1107,9 +1110,11 @@ model DoubtReply {
   parentReplyId  String?  @map("parent_reply_id") @db.Uuid
   mentorId       String?  @map("mentor_id") @db.Uuid
   studentId      String?  @map("student_id") @db.Uuid
+  adminId        String?  @map("admin_id") @db.Uuid
   replyText      String   @map("reply_text") @db.Text
   attachmentUrl  String?  @map("attachment_url") @db.VarChar(2048)
   isEdited       Boolean  @default(false) @map("is_edited")
+  isPinned       Boolean  @default(false) @map("is_pinned")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   doubt          Doubt    @relation(fields: [doubtId], references: [id], onDelete: Cascade)
@@ -1117,8 +1122,10 @@ model DoubtReply {
   childReplies   DoubtReply[] @relation("DoubtReplyThread")
   mentor         Mentor?  @relation(fields: [mentorId], references: [id], onDelete: SetNull)
   student        Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  admin          Admin?   @relation("AdminDoubtReplies", fields: [adminId], references: [id], onDelete: SetNull)
 
   @@index([doubtId, parentReplyId, createdAt])
+  @@index([doubtId, parentReplyId, isPinned, createdAt])
   @@map("doubt_replies")
 }
 

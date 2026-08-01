@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
@@ -192,10 +193,22 @@ const MentorAvatar = ({ mentor }: { mentor: Mentor }) => (
     </div>
     <div>
       <p className="text-sm font-semibold">{mentor.name}</p>
-      {mentor.qualification && <p className="text-xs text-stone-500">{mentor.qualification}</p>}
+      <p className="text-xs text-stone-500">Mentor</p>
     </div>
   </div>
 );
+
+const PersonBadge = ({ name, role = 'MENTOR' }: { name?: string; role?: string }) => {
+  const label = role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'SUB_ADMIN' ? 'Sub Admin' : role === 'STUDENT' ? 'Student' : 'Mentor';
+  const color = role === 'SUPER_ADMIN'
+    ? 'bg-purple-100 text-purple-800'
+    : role === 'SUB_ADMIN'
+      ? 'bg-indigo-100 text-indigo-800'
+      : role === 'STUDENT'
+        ? 'bg-sky-100 text-sky-800'
+        : 'bg-moss-100 text-moss-800';
+  return <Badge className={color}>{name ? `${name} · ${label}` : label}</Badge>;
+};
 
 const EmptyPanel = ({ icon, title, description }: { icon: typeof CalendarDays; title: string; description: string }) => (
   <EmptyState compact icon={icon} title={title} description={description} />
@@ -215,8 +228,8 @@ const TaskRow = ({ task, onToggle, pending }: { task: Task; onToggle?: (done: bo
           <p className="mt-1 text-sm leading-6 text-stone-600">{task.description}</p>
           <div className="mt-3 flex flex-wrap gap-3 text-xs font-medium text-stone-500">
             <span>Starts {formatDateTime(task.startDatetime)}</span>
-            <span>Due {formatDateTime(task.endDatetime)}</span>
-            {task.createdBy && <span>By {task.createdBy.name}</span>}
+            <span>Ends {formatDateTime(task.endDatetime)}</span>
+            {task.createdBy && <PersonBadge name={task.createdBy.name} role="MENTOR" />}
           </div>
         </div>
         {task.canUpdate && onToggle ? (
@@ -230,8 +243,8 @@ const TaskRow = ({ task, onToggle, pending }: { task: Task; onToggle?: (done: bo
             <CheckCircle2 size={15} /> {completed ? 'Undo' : 'Mark complete'}
           </Button>
         ) : (
-          <Badge className={task.phase === 'PAST' ? 'bg-stone-100 text-stone-600' : 'bg-sky-100 text-sky-800'}>
-            {task.phase === 'PAST' ? 'Locked after due date' : 'Opens later'}
+          <Badge className={task.phase === 'PAST' ? (completed ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-600') : 'bg-sky-100 text-sky-800'}>
+            {task.phase === 'PAST' ? (completed ? 'Completed on time' : 'Not completed') : 'Opens later'}
           </Badge>
         )}
       </div>
@@ -250,17 +263,24 @@ const SessionRow = ({ session, onJoin, pending }: { session: Session; onJoin?: (
         </div>
         <p className="mt-1 text-sm leading-6 text-stone-600">{session.description}</p>
         <div className="mt-3 flex flex-wrap gap-3 text-xs font-medium text-stone-500">
-          <span>{formatDateTime(session.startDatetime)}</span>
+          <span>Starts {formatDateTime(session.startDatetime)}</span>
           <span>Ends {formatDateTime(session.endDatetime)}</span>
-          {session.createdBy && <span>By {session.createdBy.name}</span>}
+          {session.createdBy && <PersonBadge name={session.createdBy.name} role="MENTOR" />}
         </div>
       </div>
       {session.phase === 'LIVE' && onJoin ? (
-        <Button size="sm" disabled={pending} onClick={onJoin} className="shrink-0">
-          <PlayCircle size={15} /> Join class
-        </Button>
+        <div className="flex shrink-0 flex-col gap-2">
+          <Button size="sm" disabled={pending} onClick={onJoin}>
+            <PlayCircle size={15} /> Join class
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => void navigator.clipboard.writeText(session.meetingLink)}>
+            Copy link
+          </Button>
+        </div>
       ) : (
-        <Badge className={phaseBadgeClass(session.phase)}>{session.phase === 'PAST' ? 'Replay not added' : 'Not open yet'}</Badge>
+        <Badge className={session.phase === 'PAST' ? (session.attended ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-600') : phaseBadgeClass(session.phase)}>
+          {session.phase === 'PAST' ? (session.attended ? 'Attended' : 'Not attended') : 'Not open yet'}
+        </Badge>
       )}
     </div>
   </div>
@@ -281,12 +301,14 @@ const TestRow = ({ test, batchId }: { test: TestSummary; batchId: string }) => (
         </div>
         <p className="mt-1 line-clamp-2 text-sm leading-6 text-stone-600">{test.description}</p>
         <div className="mt-3 flex flex-wrap gap-3 text-xs font-medium text-stone-500">
+          <span>Ends {formatDateTime(test.endDatetime)}</span>
           <span>{test.questionCount} questions</span>
           {test.sectionCount ? <span>{test.sectionCount} sections</span> : null}
           <span>{test.totalMarks} marks</span>
           <span>{test.durationMinutes} min</span>
           <span>{test.difficulty}</span>
         </div>
+        {test.phase === 'PAST' && <p className="mt-2 text-xs font-semibold text-moss-700">{test.attempted ? 'Analysis available after engine is connected' : 'Not attempted'}</p>}
       </div>
       <ArrowRight className="shrink-0 text-stone-400" size={19} />
     </div>
@@ -417,18 +439,23 @@ export const MentorshipBatchPage = () => {
             </div>
           </div>
         </section>
-        <BatchNav batchId={batch.id} active="home" />
       </div>
 
-      <section className="grid gap-4 lg:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <Link to={`/student/mentorship/batches/${batch.id}/tasks`} className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-px hover:shadow-card">
           <ClipboardCheck className="text-amber" /><p className="mt-4 font-bold">Tasks</p><p className="mt-1 text-sm text-stone-500">Active, upcoming and completed work.</p>
         </Link>
         <Link to={`/student/mentorship/batches/${batch.id}/classes`} className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-px hover:shadow-card">
           <CalendarCheck2 className="text-sky-600" /><p className="mt-4 font-bold">Live classes</p><p className="mt-1 text-sm text-stone-500">Join sessions and track attendance.</p>
         </Link>
+        <Link to={`/student/mentorship/batches/${batch.id}/doubts`} className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-px hover:shadow-card">
+          <MessageCircleQuestion className="text-indigo-600" /><p className="mt-4 font-bold">Doubts</p><p className="mt-1 text-sm text-stone-500">Ask privately or discuss publicly.</p>
+        </Link>
         <Link to={`/student/mentorship/batches/${batch.id}/tests`} className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-px hover:shadow-card">
           <BookOpenCheck className="text-moss-700" /><p className="mt-4 font-bold">Batch tests</p><p className="mt-1 text-sm text-stone-500">Live tests, past tests and details.</p>
+        </Link>
+        <Link to={`/student/mentorship/batches/${batch.id}/notices`} className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm transition hover:-translate-y-px hover:shadow-card">
+          <FileText className="text-coral" /><p className="mt-4 font-bold">Notices</p><p className="mt-1 text-sm text-stone-500">Batch updates and attachments.</p>
         </Link>
         <Link to={`/student/mentorship/batches/${batch.id}/analysis`} className="rounded-3xl border border-stone-200 bg-[#fbfff3] p-5 shadow-sm transition hover:-translate-y-px hover:shadow-card">
           <BarChart3 className="text-moss-700" /><p className="mt-4 font-bold">Analyze yourself</p><p className="mt-1 text-sm text-stone-500">Reserved for detailed mentor analytics.</p>
@@ -513,7 +540,6 @@ export const MentorshipTasksPage = () => {
   return (
     <div className="space-y-6">
       <BatchBackLink to={`/student/mentorship/batches/${batchId}`}>Batch dashboard</BatchBackLink>
-      <BatchNav batchId={batchId} active="tasks" />
       <div><p className="eyebrow">Batch work</p><h1 className="text-3xl font-bold">Tasks</h1></div>
       <section className="grid gap-5 xl:grid-cols-[1fr_.7fr]">
         <div className="space-y-5">
@@ -532,7 +558,7 @@ export const MentorshipTasksPage = () => {
 export const MentorshipClassesPage = () => {
   const { batchId = '' } = useParams();
   const client = useQueryClient();
-  const month = new Date().toISOString().slice(0, 7);
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
   const sessionsQuery = useQuery({ queryKey: ['mentor-batch-sessions', batchId], queryFn: () => api<{ sessions: Session[] }>(`/api/v1/mentorship/batches/${batchId}/sessions`) });
   const calendarQuery = useQuery({ queryKey: ['mentor-batch-calendar', batchId, month], queryFn: () => api<{ calendar: { month: string; days: CalendarDay[] } }>(`/api/v1/mentorship/batches/${batchId}/attendance-calendar?month=${month}`) });
   const join = useMutation({
@@ -552,11 +578,17 @@ export const MentorshipClassesPage = () => {
   return (
     <div className="space-y-6">
       <BatchBackLink to={`/student/mentorship/batches/${batchId}`}>Batch dashboard</BatchBackLink>
-      <BatchNav batchId={batchId} active="classes" />
       <div><p className="eyebrow">Live learning</p><h1 className="text-3xl font-bold">Classes and attendance</h1></div>
       <section className="grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
         <Card className="p-5">
-          <div className="flex items-center justify-between"><h2 className="font-bold">This month</h2><Badge>{month}</Badge></div>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="font-bold">Attendance calendar</h2>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setMonth((value) => { const date = new Date(`${value}-01T00:00:00`); date.setMonth(date.getMonth() - 1); return date.toISOString().slice(0, 7); })}>Prev</Button>
+              <Badge>{month}</Badge>
+              <Button size="sm" variant="outline" onClick={() => setMonth((value) => { const date = new Date(`${value}-01T00:00:00`); date.setMonth(date.getMonth() + 1); return date.toISOString().slice(0, 7); })}>Next</Button>
+            </div>
+          </div>
           <div className="mt-5 grid grid-cols-7 gap-2 text-center text-xs font-bold text-stone-400">
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => <span key={day}>{day}</span>)}
           </div>
@@ -578,6 +610,18 @@ export const MentorshipClassesPage = () => {
               </div>
             ))}
           </div>
+          <div className="mt-5 rounded-2xl bg-stone-50 p-4">
+            <h3 className="text-sm font-bold">Attendance history</h3>
+            <div className="mt-3 space-y-2">
+              {days.filter((day) => day.sessionCount > 0).slice(0, 6).map((day) => (
+                <div key={day.date} className="flex items-center justify-between gap-3 text-sm">
+                  <span className="font-medium text-stone-700">{new Date(`${day.date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                  <span className={cn('rounded-full px-2.5 py-1 text-xs font-bold', day.attendedCount > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-stone-600')}>{day.attendedCount}/{day.sessionCount} attended</span>
+                </div>
+              ))}
+              {!days.some((day) => day.sessionCount > 0) && <p className="text-sm text-stone-500">No sessions scheduled this month.</p>}
+            </div>
+          </div>
         </Card>
         <div className="space-y-5">
           <Card className="p-5"><h2 className="mb-4 font-bold">Live now</h2><div className="space-y-3">{groups.live.length ? groups.live.map((session) => <SessionRow key={session.id} session={session} pending={join.isPending} onJoin={() => join.mutate(session.id)} />) : <EmptyPanel icon={Radio} title="No class live now" description="Open sessions will appear here and joining marks attendance once." />}</div></Card>
@@ -598,7 +642,6 @@ export const MentorshipNoticesPage = () => {
   return (
     <div className="space-y-6">
       <BatchBackLink to={`/student/mentorship/batches/${batchId}`}>Batch dashboard</BatchBackLink>
-      <BatchNav batchId={batchId} active="notices" />
       <div><p className="eyebrow">Batch updates</p><h1 className="text-3xl font-bold">Notices</h1></div>
       <div className="space-y-4">
         {query.data?.notices.length ? query.data.notices.map((notice) => (
@@ -628,7 +671,6 @@ export const MentorshipTestsPage = () => {
   return (
     <div className="space-y-6">
       <BatchBackLink to={`/student/mentorship/batches/${batchId}`}>Batch dashboard</BatchBackLink>
-      <BatchNav batchId={batchId} active="tests" />
       <div><p className="eyebrow">Mentor assessments</p><h1 className="text-3xl font-bold">Batch tests</h1></div>
       <section className="grid gap-5 xl:grid-cols-[1fr_.75fr]">
         <div className="space-y-5">
@@ -654,7 +696,6 @@ export const MentorshipTestDetailPage = () => {
   return (
     <div className="space-y-6">
       <BatchBackLink to={`/student/mentorship/batches/${batchId}/tests`}>Batch tests</BatchBackLink>
-      <BatchNav batchId={batchId} active="tests" />
       <section className="grid gap-5 xl:grid-cols-[1fr_360px]">
         <Card className="p-6">
           <div className="flex flex-wrap items-center gap-2"><Badge className={phaseBadgeClass(test.phase)}>{phaseLabel(test.phase)}</Badge><Badge>{test.difficulty.name}</Badge></div>
@@ -710,7 +751,6 @@ export const MentorshipAnalysisPage = () => {
   return (
     <div className="space-y-6">
       <BatchBackLink to={`/student/mentorship/batches/${batchId}`}>Batch dashboard</BatchBackLink>
-      <BatchNav batchId={batchId} active="analysis" />
       <Card className="overflow-hidden p-0">
         <div className="grid gap-6 bg-moss-800 p-7 text-white lg:grid-cols-[1fr_280px]">
           <div>

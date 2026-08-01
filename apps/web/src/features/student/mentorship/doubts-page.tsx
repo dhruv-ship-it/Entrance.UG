@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft, LockKeyhole, MessageCirclePlus, MessageSquareReply, Send, ShieldCheck, UsersRound } from 'lucide-react';
+import { ChevronLeft, LockKeyhole, MessageCirclePlus, MessageSquareReply, Pin, Send, ShieldCheck, UsersRound } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { EmptyState } from '../../../components/empty-state';
 import { Badge } from '../../../components/ui/badge';
@@ -10,13 +10,15 @@ import { Skeleton } from '../../../components/ui/skeleton';
 import { api } from '../../../lib/api';
 import { cn, formatDateTime } from '../../../lib/utils';
 
+type DoubtStatus = 'OPEN' | 'ANSWERED' | 'CLOSED';
 type Doubt = {
   id: string;
   title: string;
   description: string;
   visibility: 'PUBLIC' | 'PRIVATE';
-  status: 'OPEN' | 'ANSWERED' | 'CLOSED';
+  status: DoubtStatus;
   isSatisfied: boolean;
+  isPinned: boolean;
   createdAt: string;
   student: { id: string; name: string; profileImage?: string | null };
   _count: { replies: number };
@@ -25,39 +27,46 @@ type Doubt = {
 type Reply = {
   id: string;
   replyText: string;
+  isPinned: boolean;
   createdAt: string;
   student?: { id: string; name: string; profileImage?: string | null } | null;
   mentor?: { id: string; name: string; profileImage?: string | null } | null;
+  admin?: { id: string; name: string; role: 'SUPER_ADMIN' | 'SUB_ADMIN' } | null;
   _count: { childReplies: number };
 };
 
-const AuthorPill = ({ reply }: { reply: Reply }) => {
-  const author = reply.mentor ?? reply.student;
-  const isMentor = Boolean(reply.mentor);
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full bg-stone-50 px-2.5 py-1 text-xs font-semibold text-stone-600">
-      <span className={cn('grid size-5 place-items-center rounded-full text-[10px] text-white', isMentor ? 'bg-moss-700' : 'bg-sky-600')}>
-        {author?.name.split(' ').map((part) => part[0]).slice(0, 2).join('') ?? 'U'}
-      </span>
-      {author?.name ?? 'User'} {isMentor ? 'Mentor' : 'Student'}
-    </div>
-  );
+const RoleBadge = ({ name, role }: { name?: string; role: 'STUDENT' | 'MENTOR' | 'SUPER_ADMIN' | 'SUB_ADMIN' }) => {
+  const label = role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'SUB_ADMIN' ? 'Sub Admin' : role === 'MENTOR' ? 'Mentor' : 'Student';
+  const className = role === 'SUPER_ADMIN'
+    ? 'bg-purple-100 text-purple-800'
+    : role === 'SUB_ADMIN'
+      ? 'bg-indigo-100 text-indigo-800'
+      : role === 'MENTOR'
+        ? 'bg-moss-100 text-moss-800'
+        : 'bg-sky-100 text-sky-800';
+  return <Badge className={className}>{name ? `${name} · ${label}` : label}</Badge>;
 };
 
-const ReplyComposer = ({ onSubmit, pending, placeholder = 'Write a reply...' }: { onSubmit: (value: string) => void; pending?: boolean; placeholder?: string }) => {
-  const [value, setValue] = useState('');
+const ReplyAuthor = ({ reply }: { reply: Reply }) => {
+  if (reply.admin) return <RoleBadge name={reply.admin.name} role={reply.admin.role} />;
+  if (reply.mentor) return <RoleBadge name={reply.mentor.name} role="MENTOR" />;
+  return <RoleBadge name={reply.student?.name ?? 'Student'} role="STUDENT" />;
+};
 
+const ReplyComposer = ({ onSubmit, pending, disabled, placeholder = 'Write a reply...' }: { onSubmit: (value: string) => void; pending?: boolean; disabled?: boolean; placeholder?: string }) => {
+  const [value, setValue] = useState('');
   return (
     <div className="mt-3 flex gap-2">
       <input
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        className="focus-ring min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm"
-        placeholder={placeholder}
+        disabled={disabled}
+        className="focus-ring min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2.5 text-sm disabled:bg-stone-50 disabled:text-stone-400"
+        placeholder={disabled ? 'Closed doubts cannot receive replies' : placeholder}
       />
       <Button
         size="sm"
-        disabled={!value.trim() || pending}
+        disabled={disabled || !value.trim() || pending}
         onClick={() => {
           onSubmit(value);
           setValue('');
@@ -69,23 +78,31 @@ const ReplyComposer = ({ onSubmit, pending, placeholder = 'Write a reply...' }: 
   );
 };
 
-const ReplyThread = ({ doubtId, parentReplyId }: { doubtId: string; parentReplyId?: string | null }) => {
+const ReplyThread = ({ doubt, canPin, parentReplyId }: { doubt: Doubt; canPin: boolean; parentReplyId?: string | null }) => {
   const client = useQueryClient();
-  const queryKey = ['mentorship-doubt-replies', doubtId, parentReplyId ?? 'root'];
+  const [take, setTake] = useState(3);
+  const [expandedChildren, setExpandedChildren] = useState<Record<string, boolean>>({});
+  const queryKey = ['mentorship-doubt-replies', doubt.id, parentReplyId ?? 'root', take];
   const replies = useQuery({
     queryKey,
-    queryFn: () => api<{ replies: Reply[] }>(`/api/v1/mentorship/doubts/${doubtId}/replies${parentReplyId ? `?parentReplyId=${parentReplyId}` : ''}`),
+    queryFn: () => api<{ replies: Reply[] }>(`/api/v1/mentorship/doubts/${doubt.id}/replies?take=${take}${parentReplyId ? `&parentReplyId=${parentReplyId}` : ''}`),
   });
-  const [expandedChildren, setExpandedChildren] = useState<Record<string, boolean>>({});
   const addReply = useMutation({
-    mutationFn: ({ replyText, parentId }: { replyText: string; parentId?: string | null }) => api<{ reply: Reply }>(`/api/v1/mentorship/doubts/${doubtId}/replies`, {
+    mutationFn: ({ replyText, parentId }: { replyText: string; parentId?: string | null }) => api<{ reply: Reply }>(`/api/v1/mentorship/doubts/${doubt.id}/replies`, {
       method: 'POST',
       body: JSON.stringify({ replyText, parentReplyId: parentId ?? null }),
     }),
     onSuccess: (_, variables) => {
       client.invalidateQueries({ queryKey: ['mentorship-doubts'] });
-      client.invalidateQueries({ queryKey: ['mentorship-doubt-replies', doubtId, variables.parentId ?? 'root'] });
+      client.invalidateQueries({ queryKey: ['mentorship-doubt-replies', doubt.id, variables.parentId ?? 'root'] });
     },
+  });
+  const pinReply = useMutation({
+    mutationFn: ({ replyId, isPinned }: { replyId: string; isPinned: boolean }) => api(`/api/v1/mentorship/replies/${replyId}/pinned`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isPinned }),
+    }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['mentorship-doubt-replies', doubt.id] }),
   });
 
   if (replies.isLoading) return <Skeleton className="mt-4 h-24" />;
@@ -93,34 +110,45 @@ const ReplyThread = ({ doubtId, parentReplyId }: { doubtId: string; parentReplyI
   return (
     <div className={cn('space-y-3', parentReplyId ? 'mt-3 border-l border-stone-200 pl-4' : 'mt-4')}>
       {replies.data?.replies.map((reply) => (
-        <div key={reply.id} className="rounded-2xl border border-stone-200 bg-white p-4">
+        <div key={reply.id} className={cn('rounded-2xl border bg-white p-4', reply.isPinned ? 'border-lime/70 shadow-sm' : 'border-stone-200')}>
           <div className="flex flex-wrap items-center gap-2">
-            <AuthorPill reply={reply} />
+            <ReplyAuthor reply={reply} />
+            {reply.isPinned && <Badge className="bg-lime/40 text-moss-900"><Pin size={12} /> Pinned</Badge>}
             <span className="text-xs font-medium text-stone-400">{formatDateTime(reply.createdAt)}</span>
           </div>
           <p className="mt-3 text-sm leading-6 text-stone-600">{reply.replyText}</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {canPin && (
+              <button className="text-xs font-bold text-moss-700" onClick={() => pinReply.mutate({ replyId: reply.id, isPinned: !reply.isPinned })}>
+                {reply.isPinned ? 'Unpin reply' : 'Pin reply'}
+              </button>
+            )}
+            {reply._count.childReplies > 0 && (
+              <button className="text-xs font-bold text-moss-700" onClick={() => setExpandedChildren((state) => ({ ...state, [reply.id]: !state[reply.id] }))}>
+                {expandedChildren[reply.id] ? 'Hide replies' : `Show ${reply._count.childReplies} replies`}
+              </button>
+            )}
+          </div>
           <ReplyComposer
+            disabled={doubt.status === 'CLOSED'}
             pending={addReply.isPending}
             placeholder="Reply to this message..."
             onSubmit={(replyText) => addReply.mutate({ replyText, parentId: reply.id })}
           />
-          {reply._count.childReplies > 0 && (
-            <button
-              className="mt-3 text-xs font-bold text-moss-700"
-              onClick={() => setExpandedChildren((state) => ({ ...state, [reply.id]: !state[reply.id] }))}
-            >
-              {expandedChildren[reply.id] ? 'Hide replies' : `Show ${reply._count.childReplies} replies`}
-            </button>
-          )}
-          {expandedChildren[reply.id] && <ReplyThread doubtId={doubtId} parentReplyId={reply.id} />}
+          {expandedChildren[reply.id] && <ReplyThread doubt={doubt} canPin={canPin} parentReplyId={reply.id} />}
         </div>
       ))}
       {!parentReplyId && !replies.data?.replies.length && <p className="text-sm text-stone-500">No replies yet.</p>}
+      {!parentReplyId && doubt._count.replies > take && (
+        <button className="text-sm font-bold text-moss-700" onClick={() => setTake((value) => value + 3)}>
+          Load more replies
+        </button>
+      )}
     </div>
   );
 };
 
-const DoubtCard = ({ doubt, batchId }: { doubt: Doubt; batchId: string }) => {
+const DoubtCard = ({ doubt, batchId, isMine }: { doubt: Doubt; batchId: string; isMine: boolean }) => {
   const client = useQueryClient();
   const [openReplies, setOpenReplies] = useState(false);
   const addReply = useMutation({
@@ -131,14 +159,11 @@ const DoubtCard = ({ doubt, batchId }: { doubt: Doubt; batchId: string }) => {
     onSuccess: () => {
       setOpenReplies(true);
       client.invalidateQueries({ queryKey: ['mentorship-doubts', batchId] });
-      client.invalidateQueries({ queryKey: ['mentorship-doubt-replies', doubt.id, 'root'] });
+      client.invalidateQueries({ queryKey: ['mentorship-doubt-replies', doubt.id] });
     },
   });
-  const satisfy = useMutation({
-    mutationFn: (isSatisfied: boolean) => api(`/api/v1/mentorship/doubts/${doubt.id}/satisfied`, {
-      method: 'PATCH',
-      body: JSON.stringify({ isSatisfied }),
-    }),
+  const setStatus = useMutation({
+    mutationFn: (status: DoubtStatus) => api(`/api/v1/mentorship/doubts/${doubt.id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
     onSuccess: () => client.invalidateQueries({ queryKey: ['mentorship-doubts', batchId] }),
   });
 
@@ -151,32 +176,34 @@ const DoubtCard = ({ doubt, batchId }: { doubt: Doubt; batchId: string }) => {
               <Badge className={doubt.visibility === 'PUBLIC' ? 'bg-sky-100 text-sky-800' : 'bg-stone-100 text-stone-700'}>
                 {doubt.visibility === 'PUBLIC' ? <UsersRound size={12} /> : <LockKeyhole size={12} />} {doubt.visibility}
               </Badge>
-              <Badge className={doubt.isSatisfied ? 'bg-emerald-100 text-emerald-800' : 'bg-amber/20 text-[#93620c]'}>
-                {doubt.isSatisfied ? 'Satisfied' : doubt.status}
+              <Badge className={doubt.status === 'CLOSED' ? 'bg-stone-100 text-stone-700' : doubt.status === 'ANSWERED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber/20 text-[#93620c]'}>
+                {doubt.status}
               </Badge>
+              {doubt.isPinned && <Badge className="bg-lime/40 text-moss-900"><Pin size={12} /> Pinned</Badge>}
             </div>
             <h2 className="mt-3 text-lg font-bold text-ink">{doubt.title}</h2>
           </div>
-          <Button
-            size="sm"
-            variant={doubt.isSatisfied ? 'secondary' : 'outline'}
-            disabled={satisfy.isPending}
-            onClick={() => satisfy.mutate(!doubt.isSatisfied)}
-          >
-            <ShieldCheck size={14} /> {doubt.isSatisfied ? 'Undo satisfied' : 'Mark satisfied'}
-          </Button>
+          {isMine && (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" disabled={setStatus.isPending} onClick={() => setStatus.mutate('OPEN')}>Reopen</Button>
+              <Button size="sm" variant="secondary" disabled={setStatus.isPending} onClick={() => setStatus.mutate('ANSWERED')}><ShieldCheck size={14} /> Answered</Button>
+              <Button size="sm" variant="outline" disabled={setStatus.isPending} onClick={() => setStatus.mutate('CLOSED')}>Close</Button>
+            </div>
+          )}
         </div>
         <p className="mt-3 text-sm leading-6 text-stone-600">{doubt.description}</p>
-        <p className="mt-4 text-xs font-medium text-stone-400">
-          Asked by {doubt.student.name} · {formatDateTime(doubt.createdAt)} · {doubt._count.replies} replies
-        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-medium text-stone-400">
+          <RoleBadge name={doubt.student.name} role="STUDENT" />
+          <span>{formatDateTime(doubt.createdAt)}</span>
+          <span>{doubt._count.replies} replies</span>
+        </div>
       </div>
       <div className="bg-stone-50/60 p-5">
         <button className="inline-flex items-center gap-2 text-sm font-bold text-moss-700" onClick={() => setOpenReplies((value) => !value)}>
           <MessageSquareReply size={16} /> {openReplies ? 'Hide thread' : 'Open thread'}
         </button>
-        <ReplyComposer pending={addReply.isPending} onSubmit={(replyText) => addReply.mutate(replyText)} />
-        {openReplies && <ReplyThread doubtId={doubt.id} />}
+        <ReplyComposer disabled={doubt.status === 'CLOSED'} pending={addReply.isPending} onSubmit={(replyText) => addReply.mutate(replyText)} />
+        {openReplies && <ReplyThread doubt={doubt} canPin={isMine} />}
       </div>
     </Card>
   );
@@ -189,20 +216,18 @@ export const DoubtsPage = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'PUBLIC' | 'PRIVATE'>('PUBLIC');
+  const [scope, setScope] = useState<'mine' | 'public'>('mine');
+  const [status, setStatus] = useState<'ALL' | DoubtStatus>('ALL');
 
-  const doubts = useQuery({
-    queryKey: ['mentorship-doubts', batchId],
-    queryFn: () => api<{ doubts: Doubt[] }>(`/api/v1/mentorship/batches/${batchId}/doubts`),
-  });
+  const queryPath = `/api/v1/mentorship/batches/${batchId}/doubts?scope=${scope}${scope === 'public' && status !== 'ALL' ? `&status=${status}` : ''}`;
+  const doubts = useQuery({ queryKey: ['mentorship-doubts', batchId, scope, status], queryFn: () => api<{ doubts: Doubt[] }>(queryPath) });
   const create = useMutation({
-    mutationFn: () => api(`/api/v1/mentorship/batches/${batchId}/doubts`, {
-      method: 'POST',
-      body: JSON.stringify({ title, description, visibility }),
-    }),
+    mutationFn: () => api(`/api/v1/mentorship/batches/${batchId}/doubts`, { method: 'POST', body: JSON.stringify({ title, description, visibility }) }),
     onSuccess: () => {
       setOpen(false);
       setTitle('');
       setDescription('');
+      setScope('mine');
       client.invalidateQueries({ queryKey: ['mentorship-doubts', batchId] });
     },
   });
@@ -218,49 +243,44 @@ export const DoubtsPage = () => {
           </Link>
           <p className="mt-4 eyebrow">Batch discussion</p>
           <h1 className="text-3xl font-bold">Doubts</h1>
-          <p className="mt-2 text-sm text-stone-500">Public doubts are visible to the batch. Private doubts stay between you and assigned mentors.</p>
+          <p className="mt-2 text-sm text-stone-500">Your private doubts stay with mentors. Public doubts are visible to the batch until closed.</p>
         </div>
         <Button onClick={() => setOpen((value) => !value)}><MessageCirclePlus size={16} />Ask a doubt</Button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" variant={scope === 'mine' ? 'primary' : 'outline'} onClick={() => setScope('mine')}>My doubts</Button>
+        <Button size="sm" variant={scope === 'public' ? 'primary' : 'outline'} onClick={() => setScope('public')}>Public doubts</Button>
+        {scope === 'public' && (
+          <select value={status} onChange={(event) => setStatus(event.target.value as 'ALL' | DoubtStatus)} className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm">
+            <option value="ALL">All public</option>
+            <option value="OPEN">Open</option>
+            <option value="ANSWERED">Answered</option>
+            <option value="CLOSED">Closed</option>
+          </select>
+        )}
       </div>
 
       {open && (
         <Card className="p-5">
           <div className="grid gap-3 lg:grid-cols-[1fr_260px]">
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              className="focus-ring rounded-xl border border-stone-200 px-3 py-2.5"
-              placeholder="Write a clear title"
-            />
-            <select
-              value={visibility}
-              onChange={(event) => setVisibility(event.target.value as 'PUBLIC' | 'PRIVATE')}
-              className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm"
-            >
+            <input value={title} onChange={(event) => setTitle(event.target.value)} className="focus-ring rounded-xl border border-stone-200 px-3 py-2.5" placeholder="Write a clear title" />
+            <select value={visibility} onChange={(event) => setVisibility(event.target.value as 'PUBLIC' | 'PRIVATE')} className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm">
               <option value="PUBLIC">Public to batch</option>
               <option value="PRIVATE">Private with mentors</option>
             </select>
           </div>
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            className="focus-ring mt-3 min-h-32 w-full rounded-xl border border-stone-200 p-3"
-            placeholder="Describe your question with context, what you tried, and where you are stuck."
-          />
+          <textarea value={description} onChange={(event) => setDescription(event.target.value)} className="focus-ring mt-3 min-h-32 w-full rounded-xl border border-stone-200 p-3" placeholder="Describe your question with context, what you tried, and where you are stuck." />
           <div className="mt-3 flex justify-end">
-            <Button disabled={!title.trim() || !description.trim() || create.isPending} onClick={() => create.mutate()}>
-              {create.isPending ? 'Posting...' : 'Post doubt'}
-            </Button>
+            <Button disabled={!title.trim() || !description.trim() || create.isPending} onClick={() => create.mutate()}>{create.isPending ? 'Posting...' : 'Post doubt'}</Button>
           </div>
         </Card>
       )}
 
       {doubts.data?.doubts.length ? (
-        <div className="space-y-4">
-          {doubts.data.doubts.map((doubt) => <DoubtCard key={doubt.id} doubt={doubt} batchId={batchId} />)}
-        </div>
+        <div className="space-y-4">{doubts.data.doubts.map((doubt) => <DoubtCard key={doubt.id} doubt={doubt} batchId={batchId} isMine={scope === 'mine'} />)}</div>
       ) : (
-        <EmptyState icon={MessageCirclePlus} title="No doubts yet" description="Start the conversation when you need help with a concept or question." />
+        <EmptyState icon={MessageCirclePlus} title="No doubts found" description="Try another filter or start a new discussion." />
       )}
     </div>
   );

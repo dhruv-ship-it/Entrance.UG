@@ -5,7 +5,17 @@ import { SignupPage } from './features/auth/signup-page';
 import { LandingPage, RolePendingPage } from './features/misc-pages';
 import { MockExamTypesPage } from './features/student/mock-tests/exam-types-page';
 import { ContentPage } from './features/student/content/content-page';
-import { MentorshipBatchPage, MentorshipBatchesPage, MentorshipProgramsPage } from './features/student/mentorship/mentorship-page';
+import {
+  MentorshipAnalysisPage,
+  MentorshipBatchPage,
+  MentorshipBatchesPage,
+  MentorshipClassesPage,
+  MentorshipNoticesPage,
+  MentorshipProgramsPage,
+  MentorshipTasksPage,
+  MentorshipTestDetailPage,
+  MentorshipTestsPage,
+} from './features/student/mentorship/mentorship-page';
 import { DoubtsPage } from './features/student/mentorship/doubts-page';
 import { MockCategoriesPage } from './features/student/mock-tests/mock-categories-page';
 import { MockExamDetailPage } from './features/student/mock-tests/exam-detail-page';
@@ -32,7 +42,13 @@ export const App = () => (
         <Route path="mentorship" element={<MentorshipProgramsPage />} />
         <Route path="mentorship/:programId" element={<MentorshipBatchesPage />} />
         <Route path="mentorship/batches/:batchId" element={<MentorshipBatchPage />} />
+        <Route path="mentorship/batches/:batchId/tasks" element={<MentorshipTasksPage />} />
+        <Route path="mentorship/batches/:batchId/classes" element={<MentorshipClassesPage />} />
         <Route path="mentorship/batches/:batchId/doubts" element={<DoubtsPage />} />
+        <Route path="mentorship/batches/:batchId/tests" element={<MentorshipTestsPage />} />
+        <Route path="mentorship/batches/:batchId/tests/:testId" element={<MentorshipTestDetailPage />} />
+        <Route path="mentorship/batches/:batchId/notices" element={<MentorshipNoticesPage />} />
+        <Route path="mentorship/batches/:batchId/analysis" element={<MentorshipAnalysisPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route index element={<Navigate to="dashboard" replace />} />

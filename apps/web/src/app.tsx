@@ -26,6 +26,7 @@ import { MockExamsPage } from './features/student/mock-tests/mock-exams-page';
 import { NotificationsPage } from './features/student/notifications-page';
 import { OverviewPage } from './features/student/overview-page';
 import { ProfilePage } from './features/student/profile-page';
+import { RcAttemptDetailPage, RcAttemptsPage, RcPage, RcTestDetailPage, RcTestsPage } from './features/student/rc/rc-page';
 import { StudentLayout } from './features/student/student-layout';
 
 export const App = () => (
@@ -42,6 +43,11 @@ export const App = () => (
         <Route path="mock-tests/:examTypeId/:mockExamTypeId" element={<MockExamsPage />} />
         <Route path="mock-tests/:examTypeId/:mockExamTypeId/:examId" element={<MockExamDetailPage />} />
         <Route path="content" element={<ContentPage />} />
+        <Route path="rc" element={<RcPage />} />
+        <Route path="rc/tests" element={<RcTestsPage />} />
+        <Route path="rc/tests/:testId" element={<RcTestDetailPage />} />
+        <Route path="rc/attempts" element={<RcAttemptsPage />} />
+        <Route path="rc/attempts/:attemptId" element={<RcAttemptDetailPage />} />
         <Route path="mentorship" element={<MentorshipProgramsPage />} />
         <Route path="mentorship/:programId" element={<MentorshipBatchesPage />} />
         <Route path="mentorship/batches/:batchId" element={<MentorshipBatchPage />} />

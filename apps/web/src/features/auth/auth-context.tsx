@@ -2,12 +2,12 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { api, ApiError } from '../../lib/api';
 
 export type Role = 'STUDENT' | 'PARENT' | 'MENTOR' | 'ADMIN';
-export type AuthUser = { id: string; name: string; email: string; role: Role; profileImage: string | null; adminRole: string | null };
+export type AuthUser = { id: string; name: string; username: string; email: string; emailVerified: boolean; role: Role; profileImage: string | null; adminRole: string | null };
 
 type AuthContextValue = {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (input: { role: Role; email: string; password: string }) => Promise<AuthUser>;
+  login: (input: { role: Role; username: string; password: string }) => Promise<AuthUser>;
   signup: (input: Record<string, unknown>) => Promise<AuthUser>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => { void refresh(); }, []);
 
-  const login = async (input: { role: Role; email: string; password: string }) => {
+  const login = async (input: { role: Role; username: string; password: string }) => {
     const result = await api<{ user: AuthUser }>('/api/v1/auth/login', { method: 'POST', body: JSON.stringify(input) });
     setUser(result.user);
     return result.user;
@@ -55,4 +55,3 @@ export const useAuth = () => {
   if (!context) throw new Error('useAuth must be used inside AuthProvider.');
   return context;
 };
-

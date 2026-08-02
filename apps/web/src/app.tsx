@@ -4,6 +4,7 @@ import { ProtectedStudentRoute } from './features/auth/protected-route';
 import { SignupPage } from './features/auth/signup-page';
 import { LandingPage, RolePendingPage } from './features/misc-pages';
 import { MockExamTypesPage } from './features/student/mock-tests/exam-types-page';
+import { AccountPage } from './features/student/account-page';
 import { ContentPage } from './features/student/content/content-page';
 import {
   MentorshipAnalysisPage,
@@ -62,6 +63,7 @@ export const App = () => (
         <Route path="mentorship/batches/:batchId/notices" element={<MentorshipNoticesPage />} />
         <Route path="mentorship/batches/:batchId/analysis" element={<MentorshipAnalysisPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>

@@ -200,6 +200,7 @@ model Admin {
 model Mentor {
   id                        String   @id @default(uuid()) @db.Uuid
   name                      String   @db.VarChar(150)
+  username                  String   @unique @db.VarChar(50)
   email                     String   @unique @db.VarChar(320)
   emailVerified             Boolean  @default(false) @map("email_verified")
   emailVerifiedAt           DateTime? @map("email_verified_at") @db.Timestamptz(3)
@@ -239,6 +240,7 @@ model Mentor {
 model Student {
   id                       String   @id @default(uuid()) @db.Uuid
   name                     String   @db.VarChar(150)
+  username                 String   @unique @db.VarChar(50)
   email                    String   @unique @db.VarChar(320)
   emailVerified            Boolean  @default(false) @map("email_verified")
   emailVerifiedAt          DateTime? @map("email_verified_at") @db.Timestamptz(3)
@@ -283,6 +285,7 @@ model Student {
 model Parent {
   id                String   @id @default(uuid()) @db.Uuid
   name              String   @db.VarChar(150)
+  username          String   @unique @db.VarChar(50)
   email             String   @unique @db.VarChar(320)
   emailVerified     Boolean  @default(false) @map("email_verified")
   emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz(3)

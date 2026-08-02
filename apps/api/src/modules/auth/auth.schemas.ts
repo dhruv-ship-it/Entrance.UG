@@ -6,6 +6,7 @@ const optionalText = (maxLength: number) => z.string().trim().max(maxLength).opt
 
 export const signupSchema = z.object({
   name: z.string().trim().min(2).max(150),
+  username: z.string().trim().toLowerCase().min(3).max(50).regex(/^[a-z0-9_]+$/, 'Username can contain lowercase letters, numbers and underscores only.'),
   email: z.string().trim().email().max(320).transform((value) => value.toLowerCase()),
   phoneNumber: z.string().trim().regex(/^\+?[1-9]\d{7,14}$/, 'Use an international phone number.'),
   password: z.string().min(10).max(128),
@@ -19,10 +20,9 @@ export const signupSchema = z.object({
 
 export const loginSchema = z.object({
   role: z.enum(authRoles),
-  email: z.string().trim().email().max(320).transform((value) => value.toLowerCase()),
+  username: z.string().trim().toLowerCase().min(3).max(50),
   password: z.string().min(1).max(128),
 });
 
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
-

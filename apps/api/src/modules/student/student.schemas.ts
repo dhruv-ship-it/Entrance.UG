@@ -15,3 +15,34 @@ export const updateProfileSchema = z.object({
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+export const parentSearchSchema = z.object({
+  query: z.string().trim().toLowerCase().min(3).max(50).regex(/^[a-z0-9_]+$/, 'Enter the parent username.'),
+});
+
+export const parentLinkSchema = z.object({
+  parentId: z.string().uuid(),
+  relationship: z.enum(['FATHER', 'MOTHER', 'GUARDIAN']),
+});
+
+export const parentRelationshipSchema = z.object({
+  relationship: z.enum(['FATHER', 'MOTHER', 'GUARDIAN']),
+});
+
+export const feedbackSchema = z.object({
+  rating: z.coerce.number().int().min(1).max(5),
+  title: z.string().trim().min(3).max(255),
+  comment: z.string().trim().min(5).max(5000),
+});
+
+export const emailOtpSchema = z.object({
+  otp: z.string().trim().regex(/^\d{6}$/, 'Enter the 6 digit OTP.'),
+});
+
+export const emailChangeRequestSchema = z.object({
+  email: z.string().trim().email().max(320).transform((value) => value.toLowerCase()),
+});
+
+export const emailChangeVerifySchema = emailChangeRequestSchema.extend({
+  otp: z.string().trim().regex(/^\d{6}$/, 'Enter the 6 digit OTP.'),
+});

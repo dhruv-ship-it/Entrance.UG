@@ -11,7 +11,7 @@ const days = (offset: number, hour = 18) => new Date(now.getFullYear(), now.getM
 const ensureProgram = (adminId: string, name: string, description: string) => prisma.mentorshipProgram.upsert({ where: { name }, update: { description, isActive: true, updatedById: adminId }, create: { name, description, isActive: true, createdById: adminId, updatedById: adminId } });
 const ensureBatch = (adminId: string, programId: string, name: string, description: string, maximumStudents: number) => prisma.mentorshipBatch.upsert({ where: { mentorshipProgramId_name: { mentorshipProgramId: programId, name } }, update: { description, maximumStudents, isActive: true, updatedById: adminId }, create: { mentorshipProgramId: programId, name, description, maximumStudents, isActive: true, createdById: adminId, updatedById: adminId } });
 
-async function ensureMentor(adminId: string, input: { name: string; email: string; phoneNumber: string; qualification: string; experienceYears: number; bio: string }) {
+async function ensureMentor(adminId: string, input: { name: string; username: string; email: string; phoneNumber: string; qualification: string; experienceYears: number; bio: string }) {
   const passwordHash = await bcrypt.hash('Mentor@12345', 12);
   return prisma.mentor.upsert({ where: { email: input.email }, update: { ...input, passwordHash, emailVerified: true, isActive: true, updatedById: adminId }, create: { ...input, passwordHash, emailVerified: true, emailVerifiedAt: now, isActive: true, createdById: adminId, updatedById: adminId } });
 }
@@ -67,9 +67,9 @@ async function main() {
     ensureProgram(admin.id, 'CUET Premium Mentorship', 'Complete CUET preparation program with guided learning and assessments.'),
   ]);
   const [rahul, priya, ankit] = await Promise.all([
-    ensureMentor(admin.id, { name: 'Rahul Sharma', email: 'rahul.sharma@entranceug.local', phoneNumber: '+919810000101', qualification: 'MBA, IIM Indore', experienceYears: 8, bio: 'Quantitative Aptitude mentor focused on clear concepts and efficient problem solving.' }),
-    ensureMentor(admin.id, { name: 'Priya Verma', email: 'priya.verma@entranceug.local', phoneNumber: '+919810000102', qualification: 'MBA, IIM Rohtak', experienceYears: 7, bio: 'Logical Reasoning mentor who teaches structured analytical approaches.' }),
-    ensureMentor(admin.id, { name: 'Ankit Gupta', email: 'ankit.gupta@entranceug.local', phoneNumber: '+919810000103', qualification: 'MA English', experienceYears: 9, bio: 'Verbal Ability mentor specialising in reading comprehension and communication.' }),
+    ensureMentor(admin.id, { name: 'Rahul Sharma', username: 'mentor_rahul', email: 'rahul.sharma@entranceug.local', phoneNumber: '+919810000101', qualification: 'MBA, IIM Indore', experienceYears: 8, bio: 'Quantitative Aptitude mentor focused on clear concepts and efficient problem solving.' }),
+    ensureMentor(admin.id, { name: 'Priya Verma', username: 'mentor_priya', email: 'priya.verma@entranceug.local', phoneNumber: '+919810000102', qualification: 'MBA, IIM Rohtak', experienceYears: 7, bio: 'Logical Reasoning mentor who teaches structured analytical approaches.' }),
+    ensureMentor(admin.id, { name: 'Ankit Gupta', username: 'mentor_ankit', email: 'ankit.gupta@entranceug.local', phoneNumber: '+919810000103', qualification: 'MA English', experienceYears: 9, bio: 'Verbal Ability mentor specialising in reading comprehension and communication.' }),
   ]);
   const [hausla, udaan, pratigya] = await Promise.all([
     ensureBatch(admin.id, ipmat.id, 'Hausla Batch', 'A focused IPMAT cohort building confidence through consistent guided practice.', 50),

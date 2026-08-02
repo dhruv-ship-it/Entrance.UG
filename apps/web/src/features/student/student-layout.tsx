@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, BookOpenCheck, BookOpenText, ChevronDown, CircleUserRound, ClipboardList, GraduationCap, LayoutDashboard, LogOut, Menu, PanelLeftClose, PanelLeftOpen, ScrollText, ShieldCheck, UsersRound } from 'lucide-react';
+import { Bell, BookOpenCheck, BookOpenText, ChevronDown, CircleUserRound, ClipboardList, GraduationCap, LayoutDashboard, LogOut, Menu, ScrollText, ShieldCheck, UsersRound } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
@@ -9,7 +9,7 @@ import { api } from '../../lib/api';
 import { cn, relativeTime } from '../../lib/utils';
 import { useAuth } from '../auth/auth-context';
 
-type Notification = { id: string; title: string; description: string; type: string; isRead: boolean; createdAt: string; isSystemNotice: boolean };
+type Notification = { id: string; title: string; description: string; type: string; isRead: boolean; createdAt: string; isDashboardNotification: boolean };
 type NotificationResponse = { notifications: Notification[]; unreadCount: number };
 
 const navigation = [
@@ -26,7 +26,6 @@ export const StudentLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  const [isDesktopSidebarVisible, setIsDesktopSidebarVisible] = useState(true);
   const notifications = useQuery({ queryKey: ['student-notifications'], queryFn: () => api<NotificationResponse>('/api/v1/students/notifications') });
 
   const signOut = async () => {
@@ -37,30 +36,27 @@ export const StudentLayout = () => {
   if (!user) return null;
 
   const sidebar = (
-    <aside className={cn('flex h-full w-[272px] flex-col overflow-hidden border-r border-moss-900/20 bg-moss-900 px-4 py-5 text-moss-100 transition-[width] duration-200', !isDesktopSidebarVisible && 'lg:w-[76px]')}>
+    <aside className="flex h-full w-[272px] flex-col overflow-hidden border-r border-moss-900/20 bg-moss-900 px-4 py-5 text-moss-100">
       <div className="flex items-center justify-between">
         <Link to="/student/dashboard" className="flex items-center gap-3 px-3 py-2">
           <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-lime text-moss-900"><GraduationCap size={22} strokeWidth={2.3} /></span>
-          <span className={cn(!isDesktopSidebarVisible && 'lg:hidden')}>
+          <span>
             <span className="block text-base font-bold text-white">Entrance UG</span>
             <span className="text-[10px] font-semibold uppercase tracking-[.18em] text-moss-200">Student portal</span>
           </span>
         </Link>
-        <button onClick={() => setIsDesktopSidebarVisible((visible) => !visible)} className="hidden shrink-0 rounded-xl p-2 text-moss-100/70 hover:bg-white/10 hover:text-white lg:block" aria-label={isDesktopSidebarVisible ? 'Collapse sidebar' : 'Expand sidebar'}>
-          {isDesktopSidebarVisible ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
-        </button>
       </div>
 
       <nav className="mt-9 space-y-1">
         {navigation.map(({ to, label, icon: Icon }) => (
           <NavLink key={to} to={to} end={to === '/student/mock-tests' || to === '/student/content'} onClick={() => setIsOpen(false)} className={({ isActive }) => cn('flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition', isActive ? 'bg-white/12 text-white shadow-sm' : 'text-moss-100/75 hover:bg-white/8 hover:text-white')}>
             <Icon size={18} />
-            <span className={cn(!isDesktopSidebarVisible && 'lg:hidden')}>{label}</span>
+            <span>{label}</span>
           </NavLink>
         ))}
       </nav>
 
-      <div className={cn('mt-8 px-3', !isDesktopSidebarVisible && 'lg:hidden')}>
+      <div className="mt-8 px-3">
         <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-moss-200/70">Your preparation</p>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <BookOpenCheck size={19} className="text-lime" />
@@ -71,11 +67,11 @@ export const StudentLayout = () => {
 
       <div className="mt-auto space-y-2 border-t border-white/10 pt-4">
         <Link to="/student/notifications" onClick={() => setIsOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-moss-100/80 transition hover:bg-white/8 hover:text-white">
-          <span className="flex items-center gap-3"><Bell size={18} /><span className={cn(!isDesktopSidebarVisible && 'lg:hidden')}>Notifications</span></span>
+          <span className="flex items-center gap-3"><Bell size={18} /><span>Notifications</span></span>
           {(notifications.data?.unreadCount ?? 0) > 0 && <Badge className="bg-lime px-2 text-moss-900">{notifications.data?.unreadCount}</Badge>}
         </Link>
         <button onClick={() => void signOut()} className="focus-ring flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-moss-100/80 transition hover:bg-white/8 hover:text-white">
-          <LogOut size={18} /><span className={cn(!isDesktopSidebarVisible && 'lg:hidden')}>Sign out</span>
+          <LogOut size={18} /><span>Sign out</span>
         </button>
       </div>
     </aside>
@@ -88,7 +84,7 @@ export const StudentLayout = () => {
         <div className="h-full w-[272px]" onClick={(event) => event.stopPropagation()}>{sidebar}</div>
       </div>
 
-      <div className={cn('min-w-0 flex-1 transition-[padding] duration-200', isDesktopSidebarVisible ? 'lg:pl-[272px]' : 'lg:pl-[76px]')}>
+      <div className="min-w-0 flex-1 lg:pl-[272px]">
         <header className="sticky top-0 z-10 flex h-[76px] items-center justify-between border-b border-stone-200/80 bg-canvas/85 px-5 backdrop-blur-xl sm:px-8">
           <div className="flex items-center gap-3">
             <button className="focus-ring grid size-10 place-items-center rounded-xl bg-white text-moss-800 shadow-card lg:hidden" onClick={() => setIsOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>

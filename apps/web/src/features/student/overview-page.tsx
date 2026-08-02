@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowUpRight, BookOpen, CalendarDays, CheckCircle2, ClipboardCheck, FileBarChart2, GraduationCap, Megaphone, PlayCircle, Sparkles } from 'lucide-react';
+import { ArrowUpRight, BookOpen, CalendarDays, CheckCircle2, ClipboardCheck, FileBarChart2, GraduationCap, PlayCircle, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { EmptyState } from '../../components/empty-state';
@@ -7,7 +7,7 @@ import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
 import { Skeleton } from '../../components/ui/skeleton';
 import { api } from '../../lib/api';
-import { cn, formatDateTime, relativeTime } from '../../lib/utils';
+import { formatDateTime, relativeTime } from '../../lib/utils';
 
 type Overview = {
   student: { name: string; profileImage: string | null };
@@ -24,7 +24,6 @@ type Overview = {
   upcomingSessions: { id: string; title: string; startDatetime: string; endDatetime: string; batchName: string }[];
   recentScores: { id: string; examName: string; score: number; totalMarks: number; accuracy: number; submittedAt: string | null }[];
   activity: { id: string; type: 'MOCK' | 'CONTENT' | 'MENTORSHIP'; title: string; detail: string; occurredAt: string }[];
-  dashboardNotices: { id: string; title: string; description: string; priority: 'LOW' | 'MEDIUM' | 'HIGH'; startDatetime: string; endDatetime: string; createdAt: string }[];
 };
 
 const metricDefinitions = [
@@ -33,12 +32,6 @@ const metricDefinitions = [
   { key: 'tasksCompleted', label: 'Tasks completed', icon: ClipboardCheck, color: 'bg-amber/15 text-[#9a6810]', value: (data: Overview) => data.metrics.tasksCompleted, note: 'Across mentorship batches' },
   { key: 'averageMockAccuracy', label: 'Mock accuracy', icon: CheckCircle2, color: 'bg-coral/15 text-[#b54c3a]', value: (data: Overview) => `${Math.round(data.metrics.averageMockAccuracy)}%`, note: 'From submitted mocks' },
 ] as const;
-
-const noticeTone = {
-  HIGH: 'border-coral/30 bg-coral/10 text-[#9c3d2d]',
-  MEDIUM: 'border-amber/35 bg-amber/15 text-[#8e610d]',
-  LOW: 'border-moss-100 bg-moss-50 text-moss-800',
-};
 
 export const OverviewPage = () => {
   const overview = useQuery({ queryKey: ['student-overview'], queryFn: () => api<Overview>('/api/v1/students/dashboard') });
@@ -51,18 +44,12 @@ export const OverviewPage = () => {
 
   return (
     <div className="space-y-7">
-      <section className="relative overflow-hidden rounded-4xl bg-moss-800 px-6 py-7 text-white shadow-card sm:px-8">
+      <section className="relative overflow-hidden rounded-4xl bg-moss-800 px-6 py-8 text-white shadow-card sm:px-8">
         <div className="absolute -right-12 -top-20 size-72 rounded-full bg-lime/15 blur-3xl" />
-        <div className="relative flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div>
-            <Badge className="bg-white/12 text-lime">STUDENT OVERVIEW</Badge>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">{greeting}, {data.student.name.split(' ')[0]}.</h1>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-moss-100/75">Your focused preparation space is ready. Small, consistent progress compounds.</p>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur">
-            <p className="text-xs font-medium text-moss-100/65">Active mentorship</p>
-            <p className="mt-1 text-xl font-semibold">{data.metrics.activeBatches} {data.metrics.activeBatches === 1 ? 'batch' : 'batches'}</p>
-          </div>
+        <div className="relative max-w-3xl">
+          <Badge className="bg-white/12 text-lime">STUDENT OVERVIEW</Badge>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">{greeting}, {data.student.name.split(' ')[0]}.</h1>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-moss-100/75">Your focused preparation space is ready. Small, consistent progress compounds.</p>
         </div>
       </section>
 
@@ -83,33 +70,6 @@ export const OverviewPage = () => {
           );
         })}
       </section>
-
-      {data.dashboardNotices.length > 0 && (
-        <section className="rounded-4xl border border-moss-100 bg-white p-5 shadow-card sm:p-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="grid size-11 place-items-center rounded-2xl bg-lime/35 text-moss-800"><Megaphone size={20} /></span>
-              <div>
-                <p className="eyebrow">From Entrance UG</p>
-                <h2 className="text-xl font-semibold">Dashboard notices</h2>
-              </div>
-            </div>
-            <Link to="/student/notifications" className="text-sm font-semibold text-moss-800 hover:text-moss-900">View notifications</Link>
-          </div>
-          <div className="mt-5 grid gap-3 lg:grid-cols-3">
-            {data.dashboardNotices.map((notice) => (
-              <article key={notice.id} className={cn('rounded-3xl border p-4', noticeTone[notice.priority])}>
-                <div className="flex items-center justify-between gap-3">
-                  <Badge className="bg-white/70 text-inherit">{notice.priority}</Badge>
-                  <span className="text-xs font-semibold opacity-70">Until {new Date(notice.endDatetime).toLocaleDateString('en-IN')}</span>
-                </div>
-                <h3 className="mt-3 font-bold text-ink">{notice.title}</h3>
-                <p className="mt-2 line-clamp-3 text-sm leading-6 text-stone-600">{notice.description}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section className="grid gap-6 xl:grid-cols-[1.3fr_.7fr]">
         <Card className="p-6 sm:p-7">

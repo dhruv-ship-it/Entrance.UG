@@ -190,8 +190,8 @@ model Admin {
   updatedRcTests                  RcTest[] @relation("AdminUpdatedRcTests")
   createdPlans                    Plan[] @relation("AdminCreatedPlans")
   updatedPlans                    Plan[] @relation("AdminUpdatedPlans")
-  createdDashboardNotices         DashboardNotice[] @relation("AdminCreatedDashboardNotices")
-  updatedDashboardNotices         DashboardNotice[] @relation("AdminUpdatedDashboardNotices")
+  createdDashboardNotifications   DashboardNotification[] @relation("AdminCreatedDashboardNotifications")
+  updatedDashboardNotifications   DashboardNotification[] @relation("AdminUpdatedDashboardNotifications")
   updatedWebsiteSettings          WebsiteSettings[] @relation("AdminUpdatedWebsiteSettings")
 
   @@map("admins")
@@ -277,6 +277,7 @@ model Student {
   purchases                Purchase[]
   feedback                 Feedback[]
   notifications            StudentNotification[]
+  seenDashboardNotifications StudentDashboardNotificationSeen[]
 
   @@index([isActive])
   @@map("students")
@@ -1694,7 +1695,7 @@ model StudentNotification {
   @@map("student_notifications")
 }
 
-model DashboardNotice {
+model DashboardNotification {
   id              String   @id @default(uuid()) @db.Uuid
   title           String   @db.VarChar(255)
   description     String   @db.Text
@@ -1706,11 +1707,25 @@ model DashboardNotice {
   updatedById     String   @map("updated_by") @db.Uuid
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-  createdBy       Admin    @relation("AdminCreatedDashboardNotices", fields: [createdById], references: [id], onDelete: Restrict)
-  updatedBy       Admin    @relation("AdminUpdatedDashboardNotices", fields: [updatedById], references: [id], onDelete: Restrict)
+  createdBy       Admin    @relation("AdminCreatedDashboardNotifications", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy       Admin    @relation("AdminUpdatedDashboardNotifications", fields: [updatedById], references: [id], onDelete: Restrict)
+  seenBy          StudentDashboardNotificationSeen[]
 
   @@index([isActive, startDatetime, endDatetime])
-  @@map("dashboard_notices")
+  @@map("dashboard_notifications")
+}
+
+model StudentDashboardNotificationSeen {
+  id                      String   @id @default(uuid()) @db.Uuid
+  studentId               String   @map("student_id") @db.Uuid
+  dashboardNotificationId String   @map("dashboard_notification_id") @db.Uuid
+  seenAt                  DateTime @default(now()) @map("seen_at") @db.Timestamptz(3)
+  student                 Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  dashboardNotification   DashboardNotification @relation(fields: [dashboardNotificationId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, dashboardNotificationId])
+  @@index([studentId, seenAt])
+  @@map("student_dashboard_notification_seen")
 }
 
 model Feedback {

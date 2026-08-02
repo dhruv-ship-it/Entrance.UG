@@ -45,9 +45,9 @@ async function main() {
 
   const startDatetime = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const endDatetime = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
-  const existingNotice = await prisma.dashboardNotice.findFirst({ where: { title: 'Welcome to your Entrance UG dashboard' } });
+  const existingNotice = await prisma.dashboardNotification.findFirst({ where: { title: 'Welcome to your Entrance UG dashboard' } });
   if (existingNotice) {
-    await prisma.dashboardNotice.update({
+    await prisma.dashboardNotification.update({
       where: { id: existingNotice.id },
       data: {
         description: 'Your mock tests, learning content, mentorship updates and RC practice now come together in one student workspace.',
@@ -59,7 +59,7 @@ async function main() {
       },
     });
   } else {
-    await prisma.dashboardNotice.create({
+    await prisma.dashboardNotification.create({
       data: {
         title: 'Welcome to your Entrance UG dashboard',
         description: 'Your mock tests, learning content, mentorship updates and RC practice now come together in one student workspace.',

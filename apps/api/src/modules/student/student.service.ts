@@ -46,7 +46,7 @@ export const getOverview = async (studentId: string) => {
   const now = new Date();
   const submittedStatuses = [AttemptStatus.SUBMITTED, AttemptStatus.AUTO_SUBMITTED];
 
-  const [student, mockCount, mockAccuracy, completedContent, totalContent, completedTasks, activeBatches, upcomingSessions, unreadNotifications, mockAttempts, contentCompletions, recentTasks, notices] = await prisma.$transaction([
+  const [student, mockCount, mockAccuracy, completedContent, totalContent, completedTasks, activeBatches, upcomingSessions, unreadNotifications, mockAttempts, contentCompletions, recentTasks, unreadDashboardNotifications] = await prisma.$transaction([
     prisma.student.findUnique({ where: { id: studentId }, select: { name: true, profileImage: true } }),
     prisma.mockAttempt.count({ where: { studentId, status: { in: submittedStatuses } } }),
     prisma.mockAttempt.aggregate({ where: { studentId, status: { in: submittedStatuses } }, _avg: { accuracy: true } }),
@@ -82,10 +82,13 @@ export const getOverview = async (studentId: string) => {
       take: 3,
       select: { id: true, completedAt: true, batchTask: { select: { title: true } } },
     }),
-    prisma.dashboardNotice.findMany({
-      where: { isActive: true, startDatetime: { lte: now }, endDatetime: { gte: now } },
-      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
-      take: 3,
+    prisma.dashboardNotification.count({
+      where: {
+        isActive: true,
+        startDatetime: { lte: now },
+        endDatetime: { gte: now },
+        seenBy: { none: { studentId } },
+      },
     }),
   ]);
 
@@ -125,7 +128,7 @@ export const getOverview = async (studentId: string) => {
       totalContent,
       tasksCompleted: completedTasks,
       activeBatches,
-      unreadNotifications: unreadNotifications + notices.length,
+      unreadNotifications: unreadNotifications + unreadDashboardNotifications,
     },
     upcomingSessions: upcomingSessions.map((session) => ({
       ...session,
@@ -140,55 +143,69 @@ export const getOverview = async (studentId: string) => {
       submittedAt: attempt.submittedAt,
     })),
     activity,
-    dashboardNotices: notices.map((notice) => ({
-      id: notice.id,
-      title: notice.title,
-      description: notice.description,
-      priority: notice.priority,
-      startDatetime: notice.startDatetime,
-      endDatetime: notice.endDatetime,
-      createdAt: notice.createdAt,
-    })),
   };
 };
 
 export const getNotifications = async (studentId: string) => {
   const now = new Date();
-  const [notifications, notices, unreadCount] = await prisma.$transaction([
+  const [notifications, dashboardNotifications, unreadCount, unreadDashboardCount] = await prisma.$transaction([
     prisma.studentNotification.findMany({
       where: { studentId },
       orderBy: { createdAt: 'desc' },
       take: 30,
     }),
-    prisma.dashboardNotice.findMany({
+    prisma.dashboardNotification.findMany({
       where: { isActive: true, startDatetime: { lte: now }, endDatetime: { gte: now } },
       orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       take: 10,
+      include: { seenBy: { where: { studentId }, select: { id: true } } },
     }),
     prisma.studentNotification.count({ where: { studentId, isRead: false } }),
+    prisma.dashboardNotification.count({
+      where: {
+        isActive: true,
+        startDatetime: { lte: now },
+        endDatetime: { gte: now },
+        seenBy: { none: { studentId } },
+      },
+    }),
   ]);
 
-  const systemNotices = notices.map((notice) => ({
-    id: `notice-${notice.id}`,
+  const systemNotifications = dashboardNotifications.map((notice) => ({
+    id: `dashboard-${notice.id}`,
     title: notice.title,
     description: notice.description,
     type: 'SYSTEM' as const,
     actionUrl: null,
-    isRead: false,
+    isRead: notice.seenBy.length > 0,
     readAt: null,
     createdAt: notice.createdAt,
     priority: notice.priority,
-    isSystemNotice: true,
+    isDashboardNotification: true,
   }));
 
   return {
-    notifications: [...notifications.map((notification) => ({ ...notification, priority: null, isSystemNotice: false })), ...systemNotices]
+    notifications: [...notifications.map((notification) => ({ ...notification, priority: null, isDashboardNotification: false })), ...systemNotifications]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
-    unreadCount: unreadCount + notices.length,
+    unreadCount: unreadCount + unreadDashboardCount,
   };
 };
 
 export const markNotificationRead = async (studentId: string, notificationId: string) => {
+  if (notificationId.startsWith('dashboard-')) {
+    const dashboardNotificationId = notificationId.replace('dashboard-', '');
+    const notification = await prisma.dashboardNotification.findFirst({
+      where: { id: dashboardNotificationId, isActive: true },
+      select: { id: true },
+    });
+    if (!notification) throw new AppError(404, 'Notification not found.');
+    return prisma.studentDashboardNotificationSeen.upsert({
+      where: { studentId_dashboardNotificationId: { studentId, dashboardNotificationId } },
+      update: { seenAt: new Date() },
+      create: { studentId, dashboardNotificationId },
+    });
+  }
+
   const notification = await prisma.studentNotification.findFirst({ where: { id: notificationId, studentId } });
   if (!notification) throw new AppError(404, 'Notification not found.');
   return prisma.studentNotification.update({ where: { id: notificationId }, data: { isRead: true, readAt: new Date() } });

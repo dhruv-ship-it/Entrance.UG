@@ -32,6 +32,7 @@ type Purchase = {
 type Account = { parents: ParentLink[]; feedback: Feedback[]; purchases: Purchase[]; email: { address: string; verified: boolean } };
 type ParentSearchResult = ParentLink['parent'] & { alreadyLinked: boolean };
 type PurchaseFilter = 'ALL' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+type ParentConfirmation = { type: 'add' } | { type: 'remove'; link: ParentLink };
 
 const relationshipLabel: Record<Relationship, string> = { FATHER: 'Father', MOTHER: 'Mother', GUARDIAN: 'Guardian' };
 
@@ -51,6 +52,7 @@ export const AccountPage = () => {
   const [otp, setOtp] = useState('');
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [showAllFeedback, setShowAllFeedback] = useState(false);
+  const [confirmation, setConfirmation] = useState<ParentConfirmation | null>(null);
 
   const purchases = useQuery({
     queryKey: ['student-purchases', purchaseFilter],
@@ -73,6 +75,7 @@ export const AccountPage = () => {
     onSuccess: async () => {
       setParentResult(null);
       setParentQuery('');
+      setConfirmation(null);
       await client.invalidateQueries({ queryKey: ['student-account'] });
     },
   });
@@ -82,7 +85,10 @@ export const AccountPage = () => {
   });
   const removeParent = useMutation({
     mutationFn: (parentId: string) => api(`/api/v1/students/parents/${parentId}`, { method: 'DELETE' }),
-    onSuccess: () => client.invalidateQueries({ queryKey: ['student-account'] }),
+    onSuccess: async () => {
+      setConfirmation(null);
+      await client.invalidateQueries({ queryKey: ['student-account'] });
+    },
   });
   const submitFeedback = useMutation({
     mutationFn: () => api('/api/v1/students/feedback', { method: 'POST', body: JSON.stringify(feedbackForm) }),
@@ -147,7 +153,7 @@ export const AccountPage = () => {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <RelationshipSelect value={relationship} onChange={setRelationship} />
-                  <Button disabled={parentResult.alreadyLinked || addParent.isPending} onClick={() => window.confirm('Add this parent to your account?') && addParent.mutate()}>
+                  <Button disabled={parentResult.alreadyLinked || addParent.isPending} onClick={() => setConfirmation({ type: 'add' })}>
                     <Link2 size={16} />{parentResult.alreadyLinked ? 'Already linked' : 'Add parent'}
                   </Button>
                 </div>
@@ -168,7 +174,7 @@ export const AccountPage = () => {
                   </div>
                   <div className="flex gap-2">
                     <RelationshipSelect value={link.relationship} onChange={(next) => updateParent.mutate({ parentId: link.parentId, next })} />
-                    <Button variant="danger" size="sm" onClick={() => window.confirm('Remove this parent link?') && removeParent.mutate(link.parentId)}><Trash2 size={15} /></Button>
+                    <Button variant="danger" size="sm" onClick={() => setConfirmation({ type: 'remove', link })}><Trash2 size={15} /></Button>
                   </div>
                 </div>
               </div>
@@ -273,6 +279,17 @@ export const AccountPage = () => {
           </div>
         </Card>
       </section>
+
+      {confirmation && (
+        <ConfirmParentDialog
+          confirmation={confirmation}
+          parent={confirmation.type === 'add' ? parentResult : confirmation.link.parent}
+          relationship={confirmation.type === 'add' ? relationship : confirmation.link.relationship}
+          isPending={addParent.isPending || removeParent.isPending}
+          onCancel={() => setConfirmation(null)}
+          onConfirm={() => confirmation.type === 'add' ? addParent.mutate() : removeParent.mutate(confirmation.link.parentId)}
+        />
+      )}
     </div>
   );
 };
@@ -284,3 +301,27 @@ const RelationshipSelect = ({ value, onChange }: { value: Relationship; onChange
     <option value="GUARDIAN">Guardian</option>
   </select>
 );
+
+const ConfirmParentDialog = ({ confirmation, parent, relationship, isPending, onCancel, onConfirm }: { confirmation: ParentConfirmation; parent: ParentSearchResult | ParentLink['parent'] | null; relationship: Relationship; isPending: boolean; onCancel: () => void; onConfirm: () => void }) => {
+  if (!parent) return null;
+  const isRemove = confirmation.type === 'remove';
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-moss-950/40 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-4xl border border-white/80 bg-white p-6 shadow-float">
+        <Badge className={isRemove ? 'bg-red-50 text-red-700' : 'bg-lime/45 text-moss-900'}>{isRemove ? 'Remove parent' : 'Confirm parent'}</Badge>
+        <h3 className="mt-4 text-2xl font-semibold tracking-tight">{isRemove ? 'Remove linked parent?' : 'Add this parent?'}</h3>
+        <p className="mt-2 text-sm leading-6 text-stone-600">
+          {isRemove ? 'This parent will no longer be linked to your student account.' : 'This will link the selected parent account to your student profile.'}
+        </p>
+        <div className="mt-5 rounded-2xl border border-stone-200 bg-stone-50 p-4">
+          <p className="font-bold">{parent.name}</p>
+          <p className="mt-1 text-sm text-stone-500">@{parent.username} · {relationshipLabel[relationship]}</p>
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>Cancel</Button>
+          <Button type="button" variant={isRemove ? 'danger' : 'primary'} onClick={onConfirm} disabled={isPending}>{isPending ? 'Working...' : isRemove ? 'Remove parent' : 'Add parent'}</Button>
+        </div>
+      </div>
+    </div>
+  );
+};

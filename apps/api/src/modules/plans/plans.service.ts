@@ -14,8 +14,8 @@ const addDays = (date: Date, days: number) => {
 const laterDate = (a: Date, b: Date) => a.getTime() >= b.getTime() ? a : b;
 
 const planInclude = {
-  mockExamLinks: { include: { mockExam: { include: { examType: true, mockExamType: true, difficulty: true, sections: { select: { _count: { select: { questions: true } } } }, _count: { select: { sections: true } } } } } },
-  mentorshipProgramLinks: { include: { mentorshipProgram: { include: { _count: { select: { batches: true } } } } } },
+  mockExamLinks: { include: { examType: { include: { _count: { select: { mockExams: true } } } } } },
+  mentorshipProgramLinks: { include: { mentorshipProgram: true } },
 } satisfies Prisma.PlanInclude;
 
 export const listPlans = async () => {
@@ -138,7 +138,7 @@ const completeSuccessfulPayment = async (paymentId: string, gateway: { gatewayPa
       include: {
         plan: {
           include: {
-            mockExamLinks: { include: { mockExam: true } },
+            mockExamLinks: { include: { examType: true } },
             mentorshipProgramLinks: { include: { mentorshipProgram: { include: { batches: { where: { isActive: true }, include: { _count: { select: { studentAccesses: true } } } } } } } },
           },
         },
@@ -168,7 +168,7 @@ const completeSuccessfulPayment = async (paymentId: string, gateway: { gatewayPa
       : await tx.purchase.create({ data: { paymentId: payment.id, studentId: payment.studentId, planId: payment.planId, purchasePrice: payment.amount, purchaseDate, expiryDate, status: PurchaseStatus.ACTIVE } });
 
     for (const link of payment.plan.mockExamLinks) {
-      await upsertMockAccess(tx, payment.studentId, link.mockExam.examTypeId, purchase.id, expiryDate);
+      await upsertMockAccess(tx, payment.studentId, link.examTypeId, purchase.id, expiryDate);
     }
 
     if (payment.plan.isContentIncluded) {
@@ -259,22 +259,16 @@ const serializePlan = (plan: Prisma.PlanGetPayload<{ include: typeof planInclude
   durationDays: plan.durationDays,
   isContentIncluded: plan.isContentIncluded,
   displayOrder: plan.displayOrder,
-  mockExams: plan.mockExamLinks.map(({ mockExam }) => ({
-    id: mockExam.id,
-    name: mockExam.name,
-    examType: mockExam.examType.name,
-    mockExamType: mockExam.mockExamType.name,
-    difficulty: mockExam.difficulty.name,
-    totalMarks: asNumber(mockExam.totalMarks),
-    durationMinutes: mockExam.durationMinutes,
-    totalSections: mockExam._count.sections,
-    totalQuestions: mockExam.sections.reduce((total, section) => total + section._count.questions, 0),
+  examTypes: plan.mockExamLinks.map(({ examType }) => ({
+    id: examType.id,
+    name: examType.name,
+    description: examType.description,
+    mockCount: examType._count.mockExams,
   })),
   mentorshipPrograms: plan.mentorshipProgramLinks.map(({ mentorshipProgram }) => ({
     id: mentorshipProgram.id,
     name: mentorshipProgram.name,
     description: mentorshipProgram.description,
-    batchCount: mentorshipProgram._count.batches,
   })),
 });
 

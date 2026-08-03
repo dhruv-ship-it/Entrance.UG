@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, CreditCard, GraduationCap, Layers3, LoaderCircle, ShieldCheck, Sparkles } from 'lucide-react';
+import { CheckCircle2, CreditCard, GraduationCap, Layers3, LoaderCircle, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 
 import { EmptyState } from '../../components/empty-state';
@@ -18,8 +18,8 @@ type Plan = {
   sellingPrice: number;
   durationDays: number;
   isContentIncluded: boolean;
-  mockExams: { id: string; name: string; examType: string; mockExamType: string; difficulty: string; totalMarks: number; durationMinutes: number; totalSections: number; totalQuestions: number }[];
-  mentorshipPrograms: { id: string; name: string; description: string; batchCount: number }[];
+  examTypes: { id: string; name: string; description: string; mockCount: number }[];
+  mentorshipPrograms: { id: string; name: string; description: string }[];
 };
 
 type OrderResponse = {
@@ -108,9 +108,8 @@ export const PlansPage = () => {
 
             <div className="mt-6 space-y-3">
               {plan.isContentIncluded && <Feature icon={Layers3} text="All paid learning content included" />}
-              {plan.mockExams.map((mock) => <Feature key={mock.id} icon={CheckCircle2} text={`${mock.examType} ${mock.mockExamType}: ${mock.name}`} subtext={`${mock.totalQuestions} questions · ${mock.totalMarks} marks · ${mock.durationMinutes} mins`} />)}
-              {plan.mentorshipPrograms.map((program) => <Feature key={program.id} icon={GraduationCap} text={program.name} subtext={`${program.batchCount} available batches · automatic least-filled batch assignment`} />)}
-              <Feature icon={ShieldCheck} text="Access extension handled automatically on repeat purchase" />
+              {plan.examTypes.map((examType) => <Feature key={examType.id} icon={CheckCircle2} text={`${examType.name} mock test access`} />)}
+              {plan.mentorshipPrograms.map((program) => <Feature key={program.id} icon={GraduationCap} text={program.name} />)}
             </div>
 
             <Button className="mt-auto w-full" size="lg" disabled={createOrder.isPending || verifyPayment.isPending} onClick={() => void buyPlan(plan)}>

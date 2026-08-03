@@ -39,14 +39,14 @@ async function upsertPlan(input: {
   });
 }
 
-async function syncPlanLinks(planId: string, mockExamIds: string[], mentorshipProgramIds: string[]) {
+async function syncPlanLinks(planId: string, examTypeIds: string[], mentorshipProgramIds: string[]) {
   await prisma.$transaction([
-    prisma.planMockExam.deleteMany({ where: { planId, mockExamId: { notIn: mockExamIds } } }),
+    prisma.planMockExam.deleteMany({ where: { planId, examTypeId: { notIn: examTypeIds } } }),
     prisma.planMentorshipProgram.deleteMany({ where: { planId, mentorshipProgramId: { notIn: mentorshipProgramIds } } }),
-    ...mockExamIds.map((mockExamId) => prisma.planMockExam.upsert({
-      where: { planId_mockExamId: { planId, mockExamId } },
+    ...examTypeIds.map((examTypeId) => prisma.planMockExam.upsert({
+      where: { planId_examTypeId: { planId, examTypeId } },
       update: {},
-      create: { planId, mockExamId },
+      create: { planId, examTypeId },
     })),
     ...mentorshipProgramIds.map((mentorshipProgramId) => prisma.planMentorshipProgram.upsert({
       where: { planId_mentorshipProgramId: { planId, mentorshipProgramId } },
@@ -60,12 +60,12 @@ async function main() {
   const admin = await prisma.admin.findFirst({ where: { role: 'SUPER_ADMIN', isActive: true }, orderBy: { createdAt: 'asc' } });
   if (!admin) throw new Error('No active SUPER_ADMIN found.');
 
-  const mockExam = await prisma.mockExam.findFirst({
-    where: { isActive: true },
+  const examType = await prisma.examType.findFirst({
+    where: { isActive: true, mockExams: { some: { isActive: true } } },
     orderBy: { createdAt: 'asc' },
-    include: { examType: true, mockExamType: true },
+    include: { _count: { select: { mockExams: true } } },
   });
-  if (!mockExam) throw new Error('No active mock exam found. Seed mock tests first.');
+  if (!examType) throw new Error('No active exam type with mock exams found. Seed mock tests first.');
 
   const mentorshipProgram = await prisma.mentorshipProgram.findFirst({
     where: { isActive: true, batches: { some: { isActive: true } } },
@@ -85,8 +85,8 @@ async function main() {
       adminId: admin.id,
     }),
     await upsertPlan({
-      name: `${mockExam.examType.name} Mock Test Pack`,
-      description: `Unlock ${mockExam.examType.name} mock access starting with ${mockExam.name}. Best for students focused on exam simulation and analysis.`,
+      name: `${examType.name} Mock Test Pack`,
+      description: `Unlock the complete ${examType.name} mock test library. Best for students focused on exam simulation and analysis.`,
       originalPrice: '2999',
       sellingPrice: '1499',
       durationDays: 60,
@@ -95,8 +95,8 @@ async function main() {
       adminId: admin.id,
     }),
     await upsertPlan({
-      name: `${mockExam.examType.name} Complete Prep Bundle`,
-      description: `A complete preparation bundle with paid learning content, ${mockExam.examType.name} mock access and ${mentorshipProgram.name} mentorship.`,
+      name: `${examType.name} Complete Prep Bundle`,
+      description: `A complete preparation bundle with paid learning content, complete ${examType.name} mock access and ${mentorshipProgram.name} mentorship.`,
       originalPrice: '14999',
       sellingPrice: '8999',
       durationDays: 180,
@@ -107,8 +107,8 @@ async function main() {
   ];
 
   await syncPlanLinks(plans[0].id, [], [mentorshipProgram.id]);
-  await syncPlanLinks(plans[1].id, [mockExam.id], []);
-  await syncPlanLinks(plans[2].id, [mockExam.id], [mentorshipProgram.id]);
+  await syncPlanLinks(plans[1].id, [examType.id], []);
+  await syncPlanLinks(plans[2].id, [examType.id], [mentorshipProgram.id]);
 
   console.log('Seeded plans:');
   plans.forEach((plan) => console.log(`- ${plan.name}: ₹${plan.sellingPrice}`));

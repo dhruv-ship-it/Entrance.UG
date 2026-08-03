@@ -420,6 +420,7 @@ model ExamType {
   updatedBy    Admin    @relation("AdminUpdatedExamTypes", fields: [updatedById], references: [id], onDelete: Restrict)
   mockExams    MockExam[]
   studentAccesses StudentMockAccess[]
+  planLinks    PlanMockExam[]
 
   @@map("exam_types")
 }
@@ -482,7 +483,6 @@ model MockExam {
   sections                      MockSection[]
   attempts                      MockAttempt[]
   analytics                     MockAttemptAnalytics?
-  planLinks                     PlanMockExam[]
 
   @@index([examTypeId, isActive])
   @@map("mock_exams")
@@ -1597,13 +1597,13 @@ model Plan {
 model PlanMockExam {
   id          String   @id @default(uuid()) @db.Uuid
   planId      String   @map("plan_id") @db.Uuid
-  mockExamId  String   @map("mock_exam_id") @db.Uuid
+  examTypeId  String   @map("exam_type_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   plan        Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
-  mockExam    MockExam @relation(fields: [mockExamId], references: [id], onDelete: Cascade)
+  examType    ExamType @relation(fields: [examTypeId], references: [id], onDelete: Cascade)
 
-  @@unique([planId, mockExamId])
+  @@unique([planId, examTypeId])
   @@map("plan_mock_exams")
 }
 

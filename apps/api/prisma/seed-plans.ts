@@ -9,6 +9,7 @@ async function upsertPlan(input: {
   sellingPrice: string;
   durationDays: number;
   isContentIncluded: boolean;
+  isHighlighted: boolean;
   displayOrder: number;
   adminId: string;
 }) {
@@ -20,6 +21,7 @@ async function upsertPlan(input: {
       sellingPrice: input.sellingPrice,
       durationDays: input.durationDays,
       isContentIncluded: input.isContentIncluded,
+      isHighlighted: input.isHighlighted,
       isActive: true,
       displayOrder: input.displayOrder,
       updatedById: input.adminId,
@@ -31,6 +33,7 @@ async function upsertPlan(input: {
       sellingPrice: input.sellingPrice,
       durationDays: input.durationDays,
       isContentIncluded: input.isContentIncluded,
+      isHighlighted: input.isHighlighted,
       isActive: true,
       displayOrder: input.displayOrder,
       createdById: input.adminId,
@@ -81,6 +84,7 @@ async function main() {
       sellingPrice: '4999',
       durationDays: 90,
       isContentIncluded: false,
+      isHighlighted: false,
       displayOrder: 10,
       adminId: admin.id,
     }),
@@ -91,6 +95,7 @@ async function main() {
       sellingPrice: '1499',
       durationDays: 60,
       isContentIncluded: false,
+      isHighlighted: false,
       displayOrder: 20,
       adminId: admin.id,
     }),
@@ -101,6 +106,7 @@ async function main() {
       sellingPrice: '8999',
       durationDays: 180,
       isContentIncluded: true,
+      isHighlighted: true,
       displayOrder: 30,
       adminId: admin.id,
     }),

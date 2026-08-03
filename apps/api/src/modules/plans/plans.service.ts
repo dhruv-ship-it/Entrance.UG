@@ -258,6 +258,7 @@ const serializePlan = (plan: Prisma.PlanGetPayload<{ include: typeof planInclude
   sellingPrice: asNumber(plan.sellingPrice),
   durationDays: plan.durationDays,
   isContentIncluded: plan.isContentIncluded,
+  isHighlighted: plan.isHighlighted,
   displayOrder: plan.displayOrder,
   examTypes: plan.mockExamLinks.map(({ examType }) => ({
     id: examType.id,

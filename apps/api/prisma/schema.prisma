@@ -1577,6 +1577,7 @@ model Plan {
   sellingPrice       Decimal  @map("selling_price") @db.Decimal(12, 2)
   durationDays       Int      @map("duration_days")
   isContentIncluded  Boolean  @default(false) @map("is_content_included")
+  isHighlighted      Boolean  @default(false) @map("is_highlighted")
   isActive           Boolean  @default(true) @map("is_active")
   displayOrder       Int      @unique @map("display_order")
   createdById        String   @map("created_by") @db.Uuid

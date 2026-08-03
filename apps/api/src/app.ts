@@ -8,6 +8,8 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { contentRouter } from './modules/content/content.routes.js';
 import { mockRouter } from './modules/mock/mock.routes.js';
 import { mentorshipRouter } from './modules/mentorship/mentorship.routes.js';
+import { razorpayWebhook } from './modules/plans/plans.controller.js';
+import { plansRouter } from './modules/plans/plans.routes.js';
 import { rcRouter } from './modules/rc/rc.routes.js';
 import { studentRouter } from './modules/student/student.routes.js';
 import { errorHandler, notFoundHandler } from './shared/http/error-handler.js';
@@ -18,6 +20,7 @@ app.disable('x-powered-by');
 app.use(helmet());
 app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
 app.use(cookieParser());
+app.post('/api/v1/plans/webhooks/razorpay', express.raw({ type: 'application/json', limit: '1mb' }), razorpayWebhook);
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_request, response) => {
@@ -30,5 +33,6 @@ app.use('/api/v1/mock-tests', mockRouter);
 app.use('/api/v1/mentorship', mentorshipRouter);
 app.use('/api/v1/content', contentRouter);
 app.use('/api/v1/rc', rcRouter);
+app.use('/api/v1/plans', plansRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);

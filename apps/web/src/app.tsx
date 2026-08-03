@@ -26,6 +26,7 @@ import { MockExamDetailPage } from './features/student/mock-tests/exam-detail-pa
 import { MockExamsPage } from './features/student/mock-tests/mock-exams-page';
 import { NotificationsPage } from './features/student/notifications-page';
 import { OverviewPage } from './features/student/overview-page';
+import { PlansPage } from './features/student/plans-page';
 import { ProfilePage } from './features/student/profile-page';
 import { RcAttemptDetailPage, RcAttemptsPage, RcPage, RcTestDetailPage, RcTestsPage } from './features/student/rc/rc-page';
 import { StudentLayout } from './features/student/student-layout';
@@ -64,6 +65,7 @@ export const App = () => (
         <Route path="mentorship/batches/:batchId/analysis" element={<MentorshipAnalysisPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="account" element={<AccountPage />} />
+        <Route path="plans" element={<PlansPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>

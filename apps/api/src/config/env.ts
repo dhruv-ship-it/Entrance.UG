@@ -9,7 +9,10 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   CORS_ORIGIN: z.string().url(),
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  RAZORPAY_CURRENCY: z.string().length(3).default('INR'),
 });
 
 export const env = envSchema.parse(process.env);
-

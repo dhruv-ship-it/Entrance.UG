@@ -688,7 +688,7 @@ model StudentMockAccess {
   examType     ExamType @relation(fields: [examTypeId], references: [id], onDelete: Restrict)
   purchase     Purchase? @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
 
-  @@unique([studentId, examTypeId, purchaseId])
+  @@unique([studentId, examTypeId])
   @@index([studentId, expiryDate])
   @@map("student_mock_access")
 }
@@ -743,7 +743,7 @@ model StudentContentAccess {
   student      Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   purchase     Purchase? @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
 
-  @@unique([studentId, purchaseId])
+  @@unique([studentId])
   @@index([studentId, expiryDate])
   @@map("student_content_access")
 }
@@ -1021,7 +1021,7 @@ model StudentBatchAccess {
   mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Restrict)
   purchase           Purchase? @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
 
-  @@unique([studentId, mentorshipBatchId, purchaseId])
+  @@unique([studentId, mentorshipBatchId])
   @@index([studentId, isActive, expiryDate])
   @@map("student_batch_access")
 }
@@ -1639,6 +1639,7 @@ model Payment {
   student               Student  @relation(fields: [studentId], references: [id], onDelete: Restrict)
   plan                  Plan     @relation(fields: [planId], references: [id], onDelete: Restrict)
   purchase              Purchase?
+  webhookEvents         PaymentWebhookEvent[]
 
   @@index([studentId, status, createdAt])
   @@map("payments")
@@ -1664,6 +1665,19 @@ model Purchase {
 
   @@index([studentId, status, expiryDate])
   @@map("purchases")
+}
+
+model PaymentWebhookEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  gatewayEventId String   @unique @map("gateway_event_id") @db.VarChar(255)
+  eventType      String   @map("event_type") @db.VarChar(100)
+  paymentId      String?  @map("payment_id") @db.Uuid
+  payload        Json
+  processedAt    DateTime @default(now()) @map("processed_at") @db.Timestamptz(3)
+  payment        Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, processedAt])
+  @@map("payment_webhook_events")
 }
 
 model EmailVerification {

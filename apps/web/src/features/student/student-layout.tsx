@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, BookOpenCheck, BookOpenText, ChevronDown, CircleUserRound, ClipboardList, GraduationCap, LayoutDashboard, LogOut, Menu, ScrollText, ShieldCheck, UsersRound } from 'lucide-react';
+import { Bell, BookOpenCheck, BookOpenText, ChevronDown, CircleUserRound, ClipboardList, CreditCard, GraduationCap, LayoutDashboard, LogOut, Menu, ScrollText, ShieldCheck, UsersRound } from 'lucide-react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
@@ -18,6 +18,7 @@ const navigation = [
   { to: '/student/content', label: 'Learning content', icon: BookOpenText },
   { to: '/student/rc', label: 'RC practice', icon: ScrollText },
   { to: '/student/mentorship', label: 'Mentorship', icon: UsersRound },
+  { to: '/student/plans', label: 'Plans', icon: CreditCard },
   { to: '/student/profile', label: 'My profile', icon: CircleUserRound },
   { to: '/student/account', label: 'Account hub', icon: ShieldCheck },
 ];

@@ -22,6 +22,8 @@ import {
 } from './features/student/mentorship/mentorship-page';
 import { DoubtsPage } from './features/student/mentorship/doubts-page';
 import { MockCategoriesPage } from './features/student/mock-tests/mock-categories-page';
+import { MockAttemptAnalysisPage } from './features/student/mock-tests/mock-analysis-page';
+import { MockBookmarksPage } from './features/student/mock-tests/mock-bookmarks-page';
 import { MockExamDetailPage } from './features/student/mock-tests/exam-detail-page';
 import { MockExamsPage } from './features/student/mock-tests/mock-exams-page';
 import { NotificationsPage } from './features/student/notifications-page';
@@ -30,6 +32,7 @@ import { PlansPage } from './features/student/plans-page';
 import { ProfilePage } from './features/student/profile-page';
 import { RcAttemptDetailPage, RcAttemptsPage, RcPage, RcTestDetailPage, RcTestsPage } from './features/student/rc/rc-page';
 import { StudentLayout } from './features/student/student-layout';
+import { TestEnginePage } from './features/student/test-engine/test-engine-page';
 
 export const App = () => (
   <Routes>
@@ -38,9 +41,12 @@ export const App = () => (
     <Route path="/signup" element={<SignupPage />} />
     <Route path="/access/pending" element={<RolePendingPage />} />
     <Route element={<ProtectedStudentRoute />}>
+      <Route path="/student/test-engine/:pillar/:attemptId" element={<TestEnginePage />} />
       <Route path="/student" element={<StudentLayout />}>
         <Route path="dashboard" element={<OverviewPage />} />
         <Route path="mock-tests" element={<MockExamTypesPage />} />
+        <Route path="mock-tests/bookmarks" element={<MockBookmarksPage />} />
+        <Route path="mock-tests/attempts/:attemptId/analysis" element={<MockAttemptAnalysisPage />} />
         <Route path="mock-tests/:examTypeId" element={<MockCategoriesPage />} />
         <Route path="mock-tests/:examTypeId/:mockExamTypeId" element={<MockExamsPage />} />
         <Route path="mock-tests/:examTypeId/:mockExamTypeId/:examId" element={<MockExamDetailPage />} />

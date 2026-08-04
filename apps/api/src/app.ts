@@ -12,6 +12,7 @@ import { razorpayWebhook } from './modules/plans/plans.controller.js';
 import { plansRouter } from './modules/plans/plans.routes.js';
 import { rcRouter } from './modules/rc/rc.routes.js';
 import { studentRouter } from './modules/student/student.routes.js';
+import { testEngineRouter } from './modules/test-engine/test-engine.routes.js';
 import { errorHandler, notFoundHandler } from './shared/http/error-handler.js';
 
 export const app = express();
@@ -34,5 +35,6 @@ app.use('/api/v1/mentorship', mentorshipRouter);
 app.use('/api/v1/content', contentRouter);
 app.use('/api/v1/rc', rcRouter);
 app.use('/api/v1/plans', plansRouter);
+app.use('/api/v1/test-engine', testEngineRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);

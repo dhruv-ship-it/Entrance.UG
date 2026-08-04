@@ -27,6 +27,7 @@ export type MockExamSummary = {
   totalAttempts: number;
   attempt: MockAttemptSummary | null;
   canAttempt: boolean;
+  sequenceLocked: boolean;
   isAttempted: boolean;
 };
 

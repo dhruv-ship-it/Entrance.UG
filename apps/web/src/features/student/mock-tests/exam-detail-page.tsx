@@ -25,7 +25,7 @@ export const MockExamDetailPage = () => {
   });
 
   const startAttempt = useMutation({
-    mutationFn: () => api<{ attempt: { id: string } }>(`/api/v1/mock-tests/${examId}/attempts`, { method: 'POST' }),
+    mutationFn: () => api<{ attempt: { id: string; enginePath: string } }>(`/api/v1/test-engine/mock/tests/${examId}/attempts`, { method: 'POST' }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ['mock-exams-list', examTypeId, mockExamTypeId] });
       await client.invalidateQueries({ queryKey: ['mock-exam-detail', examId] });
@@ -45,7 +45,7 @@ export const MockExamDetailPage = () => {
   const handleStart = () => {
     if (data.isAttempted) return;
     startAttempt.mutate(undefined, {
-      onSuccess: () => navigate(listPath, { replace: true, state: { startedAttempt: data.name } }),
+      onSuccess: (response) => navigate(response.attempt.enginePath),
     });
   };
 
@@ -68,6 +68,7 @@ export const MockExamDetailPage = () => {
           <div className="flex flex-wrap items-center gap-2">
             {data.isFree && <Badge className="bg-lime/45 text-moss-900">Free</Badge>}
             {!data.hasAccess && <Badge className="bg-stone-100 text-stone-600">Locked</Badge>}
+            {data.sequenceLocked && <Badge className="bg-amber/15 text-[#9a6810]">Locked by sequence</Badge>}
             <Badge>{data.difficulty}</Badge>
             {data.isAttempted && <Badge className="bg-moss-100 text-moss-800">Already attempted</Badge>}
             {inProgress && <Badge className="bg-amber/15 text-[#9a6810]">In progress</Badge>}
@@ -127,15 +128,20 @@ export const MockExamDetailPage = () => {
                   <Lock size={16} />
                   Locked for your account
                 </Button>
-              ) : data.isAttempted ? (
-                <Button disabled className="w-full" variant="secondary">
+              ) : data.isAttempted && data.attempt ? (
+                <Link to={`/student/mock-tests/attempts/${data.attempt.id}/analysis`} className={buttonVariants({ variant: 'primary', className: 'w-full' })}>
                   <CheckCircle2 size={16} />
-                  Already attempted
+                  View analysis
+                </Link>
+              ) : data.sequenceLocked ? (
+                <Button disabled className="w-full" variant="secondary">
+                  <Lock size={16} />
+                  Attempt previous mock first
                 </Button>
               ) : inProgress ? (
-                <Button disabled className="w-full">
+                <Button className="w-full" disabled={startAttempt.isPending} onClick={handleStart}>
                   <ShieldCheck size={16} />
-                  Attempt in progress
+                  Resume attempt
                 </Button>
               ) : (
                 <Button className="w-full" disabled={startAttempt.isPending} onClick={handleStart}>
@@ -149,7 +155,7 @@ export const MockExamDetailPage = () => {
 
             {inProgress && (
               <p className="mt-4 text-xs leading-5 text-stone-500">
-                Your attempt has been created. The shared test engine UI will be connected here later.
+                Your attempt is already in progress. Use the start button to reopen the shared test engine.
               </p>
             )}
           </Card>

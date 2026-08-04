@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { BookOpenText, ChevronLeft, Flame, ListChecks, Medal, PlayCircle, Timer, Trophy } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EmptyState } from '../../../components/empty-state';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
@@ -60,6 +60,7 @@ type Dashboard = {
 type TestDetail = RcTest & {
   passage: string;
   difficulty: { name: string; description: string };
+  latestAttemptId?: string | null;
   questions: { id: string; sequenceNumber: number; questionType: string; positiveMarks: number; negativeMarks: number }[];
 };
 type AttemptDetail = Attempt & {
@@ -223,7 +224,12 @@ const Section = ({ title, tests }: { title: string; tests: RcTest[] }) => (
 
 export const RcTestDetailPage = () => {
   const { testId = '' } = useParams();
+  const navigate = useNavigate();
   const query = useQuery({ queryKey: ['rc-test', testId], queryFn: () => api<{ test: TestDetail }>(`/api/v1/rc/tests/${testId}`) });
+  const startAttempt = useMutation({
+    mutationFn: () => api<{ attempt: { enginePath: string } }>(`/api/v1/test-engine/rc/tests/${testId}/attempts`, { method: 'POST' }),
+    onSuccess: (response) => navigate(response.attempt.enginePath),
+  });
   if (query.isLoading) return <Skeleton className="h-[560px]" />;
   const test = query.data?.test;
   if (!test) return <EmptyState icon={BookOpenText} title="RC test unavailable" description="This RC test could not be opened." />;
@@ -248,7 +254,13 @@ export const RcTestDetailPage = () => {
             <MiniMetric icon={Trophy} label="Marks" value={test.totalMarks} className="bg-lime/20" />
           </div>
           <p className="mt-4 text-sm leading-6 text-stone-600">{test.instructions}</p>
-          <Button className="mt-5 w-full" disabled>{test.phase === 'LIVE' ? 'Attempt when RC engine is ready' : test.phase === 'PAST' ? 'Test closed' : 'Opens later'}</Button>
+          {test.attempted && test.latestAttemptId ? (
+            <Link to={`/student/rc/attempts/${test.latestAttemptId}`}><Button className="mt-5 w-full">View analysis</Button></Link>
+          ) : (
+            <Button className="mt-5 w-full" disabled={test.phase !== 'LIVE' || startAttempt.isPending} onClick={() => startAttempt.mutate()}>
+              {test.phase === 'LIVE' ? 'Start RC test' : test.phase === 'PAST' ? 'Test closed' : 'Opens later'}
+            </Button>
+          )}
         </Card>
       </section>
     </div>

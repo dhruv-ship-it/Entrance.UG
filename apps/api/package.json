@@ -13,6 +13,7 @@
     "db:studio": "prisma studio",
     "db:validate": "prisma validate",
     "db:seed:mock": "tsx prisma/seed-mock-tests.ts",
+    "db:seed:mock-sequence": "tsx prisma/seed-mock-sequence.ts",
     "db:seed:mentorship": "tsx prisma/seed-mentorship.ts",
     "db:seed:rc": "tsx prisma/seed-rc.ts",
     "db:seed:account": "tsx prisma/seed-account-support.ts",

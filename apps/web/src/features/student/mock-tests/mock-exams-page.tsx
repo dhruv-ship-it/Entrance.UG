@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, CheckCircle2, Clock3, FileBarChart2, Hash, Layers, Lock, PlayCircle, UsersRound } from 'lucide-react';
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { BarChart3, Bookmark, CheckCircle2, Clock3, FileBarChart2, Hash, Layers, Lock, PlayCircle, UsersRound } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import { EmptyState } from '../../../components/empty-state';
@@ -11,6 +12,16 @@ import { api } from '../../../lib/api';
 import { formatDateTime } from '../../../lib/utils';
 import { MockTestsHeader } from './mock-tests-nav';
 import type { ExamType, MockExamSummary, MockExamType } from './types';
+
+type CategoryAnalytics = {
+  totalTests: number;
+  attemptedTests: number;
+  averageScore: number;
+  averageOfAverages: number;
+  averageAccuracy: number;
+  trend: { index: number; name: string; score: number | null; averageScore: number; rank: number | null; percentile: number | null }[];
+  sections: { id: string; name: string; averageScore: number; averageAccuracy: number; cohortAverageScore: number; trend: { index: number; examName: string; score: number | null; averageScore: number }[] }[];
+};
 
 export const MockExamsPage = () => {
   const { examTypeId = '', mockExamTypeId = '' } = useParams();
@@ -25,6 +36,11 @@ export const MockExamsPage = () => {
   const exams = useQuery({
     queryKey: ['mock-exams-list', examTypeId, mockExamTypeId],
     queryFn: () => api<{ exams: MockExamSummary[] }>(`/api/v1/mock-tests/exams?examTypeId=${examTypeId}&mockExamTypeId=${mockExamTypeId}`),
+    enabled: Boolean(examTypeId && mockExamTypeId),
+  });
+  const analytics = useQuery({
+    queryKey: ['mock-category-analytics', examTypeId, mockExamTypeId],
+    queryFn: () => api<{ analytics: CategoryAnalytics }>(`/api/v1/mock-tests/analytics?examTypeId=${examTypeId}&mockExamTypeId=${mockExamTypeId}`).then((response) => response.analytics),
     enabled: Boolean(examTypeId && mockExamTypeId),
   });
 
@@ -49,6 +65,10 @@ export const MockExamsPage = () => {
           { label: selectedCategory.name },
         ]}
       />
+      <div className="flex justify-end">
+        <Link to="/student/mock-tests/bookmarks" className={buttonVariants({ variant: 'outline' })}><Bookmark size={16} />Bookmarked questions</Link>
+      </div>
+      {analytics.data && <CategoryAnalyticsPanel analytics={analytics.data} />}
       {exams.data?.exams.length ? (
         <div className="space-y-4">
           {exams.data.exams.map((exam) => (
@@ -81,6 +101,7 @@ const ExamRow = ({ exam, detailPath }: { exam: MockExamSummary; detailPath: stri
             <h2 className="text-lg font-semibold text-ink">{exam.name}</h2>
             {exam.isFree && <Badge className="bg-lime/45 text-moss-900">Free</Badge>}
             {!exam.hasAccess && <Badge className="bg-stone-100 text-stone-600">Locked</Badge>}
+            {exam.sequenceLocked && <Badge className="bg-amber/15 text-[#9a6810]">Locked by sequence</Badge>}
             {exam.isAttempted && <Badge className="bg-moss-100 text-moss-800">Attempted</Badge>}
             {inProgress && <Badge className="bg-amber/15 text-[#9a6810]">In progress</Badge>}
           </div>
@@ -108,10 +129,10 @@ const ExamRow = ({ exam, detailPath }: { exam: MockExamSummary; detailPath: stri
             View details
           </Link>
           {exam.isAttempted ? (
-            <Button disabled variant="secondary">
+            <Link to={`/student/mock-tests/attempts/${exam.attempt?.id}/analysis`} className={buttonVariants({ variant: 'primary' })}>
               <CheckCircle2 size={16} />
-              Already attempted
-            </Button>
+              View analysis
+            </Link>
           ) : inProgress ? (
             <Link to={detailPath} className={buttonVariants({ variant: 'primary' })}>
               <PlayCircle size={16} />
@@ -125,7 +146,7 @@ const ExamRow = ({ exam, detailPath }: { exam: MockExamSummary; detailPath: stri
           ) : (
             <Button disabled variant="secondary">
               <Lock size={16} />
-              Locked
+              {exam.sequenceLocked ? 'Attempt previous mock' : 'Locked'}
             </Button>
           )}
         </div>
@@ -142,3 +163,39 @@ const PageSkeleton = () => (
     </div>
   </div>
 );
+
+const CategoryAnalyticsPanel = ({ analytics }: { analytics: CategoryAnalytics }) => (
+  <Card className="overflow-hidden p-0">
+    <div className="grid gap-5 p-5 lg:grid-cols-[1fr_320px]">
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><p className="eyebrow">Your progression</p><h2 className="text-xl font-bold">Score trend across this mock series</h2></div>
+          <Badge className="bg-moss-50 text-moss-800">{analytics.attemptedTests}/{analytics.totalTests} attempted</Badge>
+        </div>
+        <div className="mt-5 h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={analytics.trend}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="index" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="score" name="Your score" stroke="#164331" strokeWidth={3} connectNulls />
+              <Line type="monotone" dataKey="averageScore" name="Cohort average" stroke="#d69e2e" strokeWidth={2} strokeDasharray="5 5" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="grid gap-3">
+        <MiniStat label="Your avg score" value={analytics.averageScore} />
+        <MiniStat label="Cohort avg score" value={analytics.averageOfAverages} />
+        <MiniStat label="Your avg accuracy" value={`${analytics.averageAccuracy}%`} />
+        <div className="rounded-3xl bg-stone-50 p-4">
+          <p className="text-xs font-bold uppercase tracking-[.14em] text-stone-400">Section signals</p>
+          <div className="mt-3 space-y-2">{analytics.sections.map((section) => <div key={section.id} className="flex items-center justify-between text-sm"><span>{section.name}</span><b>{section.averageScore || 0}</b></div>)}</div>
+        </div>
+      </div>
+    </div>
+  </Card>
+);
+
+const MiniStat = ({ label, value }: { label: string; value: string | number }) => <div className="rounded-3xl bg-moss-50 p-4"><p className="text-xs font-semibold uppercase tracking-[.12em] text-moss-700">{label}</p><p className="mt-1 text-2xl font-bold text-moss-950">{value}</p></div>;

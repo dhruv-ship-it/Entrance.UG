@@ -362,7 +362,7 @@ export const listBookmarkedQuestions = async (studentId: string) => {
     orderBy: { updatedAt: 'desc' },
     include: {
       mockAttempt: { select: { id: true, submittedAt: true, mockExam: { select: { id: true, name: true, examType: { select: { name: true } }, mockExamType: { select: { name: true } } } } } },
-      mockQuestion: { include: { mockSection: true, difficulty: true, topic: { include: { subject: true } }, subtopic: true } },
+      mockQuestion: { include: { mockSection: true, mockComprehension: true, difficulty: true, topic: { include: { subject: true } }, subtopic: true } },
     },
   });
   return rows.map((row) => ({
@@ -371,6 +371,9 @@ export const listBookmarkedQuestions = async (studentId: string) => {
     test: row.mockAttempt.mockExam,
     submittedAt: row.mockAttempt.submittedAt,
     question: row.mockQuestion.question,
+    options: row.mockQuestion.options,
+    explanation: row.mockQuestion.explanation,
+    comprehension: row.mockQuestion.mockComprehension ? { title: row.mockQuestion.mockComprehension.title, passage: row.mockQuestion.mockComprehension.passage } : null,
     status: row.status,
     marksAwarded: n(row.marksAwarded),
     selectedAnswers: row.selectedAnswers,

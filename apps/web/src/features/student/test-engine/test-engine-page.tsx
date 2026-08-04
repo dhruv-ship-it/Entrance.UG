@@ -198,7 +198,7 @@ export const TestEnginePage = () => {
             <h1 className="line-clamp-1 text-lg font-bold md:text-xl">{engine.test.title}</h1>
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={remainingSeconds < 300 ? 'bg-red-50 text-red-700' : 'bg-moss-50 text-moss-800'}><Clock3 size={14} />{formatTime(remainingSeconds)}</Badge>
+            <Badge className={cn('px-4 py-2 text-base font-black tabular-nums', remainingSeconds < 300 ? 'bg-red-50 text-red-700' : 'bg-moss-50 text-moss-900')}><Clock3 size={17} />{formatTime(remainingSeconds)}</Badge>
             <Button variant="outline" onClick={() => setReviewOpen(true)}><Grid3X3 size={16} />Review</Button>
             <Button variant="danger" disabled={submit.isPending} onClick={() => { accrueCurrentQuestionTime(); setConfirmSubmit(true); }}><LogOut size={16} />Submit</Button>
           </div>
@@ -210,7 +210,9 @@ export const TestEnginePage = () => {
           <Card className="p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-moss-800">{current.sectionName ?? 'Questions'} · Question {currentIndex + 1} of {questions.length}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss-700">Current section</p>
+                <p className="mt-1 text-lg font-black text-moss-950">{current.sectionName ?? 'Questions'}</p>
+                <p className="mt-1 text-sm font-semibold text-stone-500">Question {currentIndex + 1} of {questions.length}</p>
                 <p className="mt-1 text-xs text-stone-500">+{current.positiveMarks} marks · -{current.negativeMarks} marks · {current.questionType.replace('_', ' ')}</p>
               </div>
               <div className="flex gap-2">
@@ -220,9 +222,9 @@ export const TestEnginePage = () => {
           </Card>
 
           {(engine.test.rcPassage || current.comprehension) && (
-            <Card className="max-h-[38vh] overflow-auto p-5">
+            <Card className="max-h-[44vh] overflow-auto p-5 md:p-6">
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-moss-700">{current.comprehension?.title ?? 'Reading passage'}</p>
-              <div className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">{current.comprehension?.passage ?? engine.test.rcPassage}</div>
+              <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-stone-700">{current.comprehension?.passage ?? engine.test.rcPassage}</div>
             </Card>
           )}
 
@@ -244,11 +246,21 @@ export const TestEnginePage = () => {
         <aside className="space-y-4">
           <Card className="p-4">
             <h2 className="font-bold">Question palette</h2>
-            <div className="mt-4 grid grid-cols-5 gap-2">
-              {questions.map((question, index) => {
-                const state = questionStatus(answers[question.id]);
-                return <button key={question.id} disabled={!canNavigateTo(engine, currentIndex, index)} className={cn('grid size-10 place-items-center rounded-xl text-sm font-bold transition', paletteClass(state), index === currentIndex && 'ring-2 ring-moss-800 ring-offset-2', !canNavigateTo(engine, currentIndex, index) && 'cursor-not-allowed opacity-45')} onClick={() => goToQuestion(index)}>{index + 1}</button>;
-              })}
+            <div className="mt-4 space-y-4">
+              {engine.test.sections.map((section) => (
+                <div key={section.id}>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-moss-700">{section.name}</p>
+                    <span className="text-xs text-stone-400">{section.questionCount} qs</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {questions.map((question, index) => ({ question, index })).filter((item) => item.question.sectionId === section.id).map(({ question, index }) => {
+                      const state = questionStatus(answers[question.id]);
+                      return <button key={question.id} disabled={!canNavigateTo(engine, currentIndex, index)} className={cn('grid size-10 place-items-center rounded-xl text-sm font-bold transition', paletteClass(state), index === currentIndex && 'ring-2 ring-moss-800 ring-offset-2', !canNavigateTo(engine, currentIndex, index) && 'cursor-not-allowed opacity-45')} onClick={() => goToQuestion(index)}>{index + 1}</button>;
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
           <Card className="p-4">
@@ -276,8 +288,15 @@ export const TestEnginePage = () => {
               <div><p className="eyebrow">{confirmSubmit ? 'Submit test' : 'Review answers'}</p><h2 className="text-xl font-bold">{confirmSubmit ? 'Are you sure you want to submit?' : 'Question review'}</h2></div>
               <Button variant="ghost" onClick={() => { setReviewOpen(false); setConfirmSubmit(false); }}>Close</Button>
             </div>
-            <div className="mt-5 grid grid-cols-5 gap-2 sm:grid-cols-8">
-              {questions.map((question, index) => <button key={question.id} className={cn('grid size-10 place-items-center rounded-xl text-sm font-bold', paletteClass(questionStatus(answers[question.id])))} onClick={() => goToQuestion(index)}>{index + 1}</button>)}
+            <div className="mt-5 space-y-4">
+              {engine.test.sections.map((section) => (
+                <div key={section.id}>
+                  <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-moss-700">{section.name}</p>
+                  <div className="grid grid-cols-5 gap-2 sm:grid-cols-8">
+                    {questions.map((question, index) => ({ question, index })).filter((item) => item.question.sectionId === section.id).map(({ question, index }) => <button key={question.id} className={cn('grid size-10 place-items-center rounded-xl text-sm font-bold', paletteClass(questionStatus(answers[question.id])))} onClick={() => goToQuestion(index)}>{index + 1}</button>)}
+                  </div>
+                </div>
+              ))}
             </div>
             {confirmSubmit && (
               <div className="mt-6 flex justify-end gap-2">

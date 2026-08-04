@@ -66,28 +66,29 @@ async function seedMock(index: number, context: Awaited<ReturnType<typeof loadCo
     }));
   }
 
+  const passage = 'Effective preparation requires regular feedback, deliberate revision and the courage to inspect mistakes closely. Students who treat mock tests as diagnostic tools usually improve faster than students who treat them only as scorecards.';
   const comprehension = await prisma.mockComprehension.upsert({
-    where: { id: (await prisma.mockComprehension.findFirst({ where: { title: `Seed IPMAT Full Length Mock ${index} Passage` }, select: { id: true } }))?.id ?? '00000000-0000-0000-0000-000000000000' },
-    update: { passage: `Mock ${index} passage: Effective preparation requires regular feedback, deliberate revision and the courage to inspect mistakes closely. Students who treat mock tests as diagnostic tools usually improve faster than students who treat them only as scorecards.`, updatedById: context.admin.id },
-    create: { title: `Seed IPMAT Full Length Mock ${index} Passage`, passage: `Mock ${index} passage: Effective preparation requires regular feedback, deliberate revision and the courage to inspect mistakes closely. Students who treat mock tests as diagnostic tools usually improve faster than students who treat them only as scorecards.`, createdById: context.admin.id, updatedById: context.admin.id },
+    where: { id: (await prisma.mockComprehension.findFirst({ where: { title: `IPMAT Practice Passage ${index}` }, select: { id: true } }))?.id ?? '00000000-0000-0000-0000-000000000000' },
+    update: { title: null, passage, updatedById: context.admin.id },
+    create: { title: null, passage, createdById: context.admin.id, updatedById: context.admin.id },
   }).catch(async () => {
     const existing = await prisma.mockComprehension.findFirst({ where: { title: `Seed IPMAT Full Length Mock ${index} Passage` } });
     if (existing) return prisma.mockComprehension.update({ where: { id: existing.id }, data: { updatedById: context.admin.id } });
-    return prisma.mockComprehension.create({ data: { title: `Seed IPMAT Full Length Mock ${index} Passage`, passage: `Mock ${index} passage: Effective preparation requires regular feedback, deliberate revision and the courage to inspect mistakes closely.`, createdById: context.admin.id, updatedById: context.admin.id } });
+    return prisma.mockComprehension.create({ data: { title: null, passage, createdById: context.admin.id, updatedById: context.admin.id } });
   });
 
   const questionSets = [
     [
-      { type: QuestionType.MCQ, q: `Mock ${index}: A price increases by 20% and then decreases by 10%. Net change is:`, o: ['8% increase', '10% increase', '12% increase', '2% decrease'], a: ['A'], e: '1.2 × 0.9 = 1.08, so net increase is 8%.' },
-      { type: QuestionType.INTEGER, q: `Mock ${index}: If 3x + 7 = 40, find x.`, o: null, a: ['11'], e: '3x = 33, so x = 11.' },
+      { type: QuestionType.MCQ, q: 'A price increases by 20% and then decreases by 10%. What is the net change?', o: ['8% increase', '10% increase', '12% increase', '2% decrease'], a: ['A'], e: '1.2 × 0.9 = 1.08, so net increase is 8%.' },
+      { type: QuestionType.INTEGER, q: 'If 3x + 7 = 40, find x.', o: null, a: ['11'], e: '3x = 33, so x = 11.' },
     ],
     [
-      { type: QuestionType.MCQ, q: `Mock ${index}: If all A are B and no B is C, which conclusion follows?`, o: ['Some A are C', 'No A is C', 'All C are A', 'Some C are B'], a: ['B'], e: 'Since all A are inside B and B has no overlap with C, no A is C.' },
-      { type: QuestionType.MULTIPLE_CORRECT, q: `Mock ${index}: Select valid arrangements if P is immediately before Q.`, o: ['P Q R S', 'R P Q S', 'Q P R S', 'S R P Q'], a: ['A', 'B', 'D'], e: 'P must be directly before Q. Options A, B and D satisfy it.' },
+      { type: QuestionType.MCQ, q: 'If all A are B and no B is C, which conclusion follows?', o: ['Some A are C', 'No A is C', 'All C are A', 'Some C are B'], a: ['B'], e: 'Since all A are inside B and B has no overlap with C, no A is C.' },
+      { type: QuestionType.MULTIPLE_CORRECT, q: 'Select valid arrangements if P is immediately before Q.', o: ['P Q R S', 'R P Q S', 'Q P R S', 'S R P Q'], a: ['A', 'B', 'D'], e: 'P must be directly before Q. Options A, B and D satisfy it.' },
     ],
     [
-      { type: QuestionType.MCQ, q: `Mock ${index}: What does the passage mainly recommend?`, o: ['Avoiding mocks', 'Using mocks diagnostically', 'Ignoring mistakes', 'Studying without revision'], a: ['B'], e: 'The passage says mock tests should be treated as diagnostic tools.' },
-      { type: QuestionType.MCQ, q: `Mock ${index}: In the passage, diagnostic most nearly means:`, o: ['Decorative', 'Used to identify strengths and weaknesses', 'Random', 'Final'], a: ['B'], e: 'Diagnostic means used to understand what is working and what is weak.' },
+      { type: QuestionType.MCQ, q: 'What does the passage mainly recommend?', o: ['Avoiding mocks', 'Using mocks diagnostically', 'Ignoring mistakes', 'Studying without revision'], a: ['B'], e: 'The passage says mock tests should be treated as diagnostic tools.' },
+      { type: QuestionType.MCQ, q: 'In the passage, diagnostic most nearly means:', o: ['Decorative', 'Used to identify strengths and weaknesses', 'Random', 'Final'], a: ['B'], e: 'Diagnostic means used to understand what is working and what is weak.' },
     ],
   ];
 

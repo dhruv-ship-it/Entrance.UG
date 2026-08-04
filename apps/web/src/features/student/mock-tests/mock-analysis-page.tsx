@@ -64,9 +64,9 @@ export const MockAttemptAnalysisPage = () => {
   if (!analysis) return <EmptyState icon={Trophy} title="Analysis unavailable" description="This submitted mock attempt could not be opened." />;
 
   const distribution = chartAnalytics ? [
-    { name: 'Correct', value: chartAnalytics.totalCorrectAnswers, color: '#166534' },
-    { name: 'Incorrect', value: chartAnalytics.totalIncorrectAnswers, color: '#dc2626' },
-    { name: 'Unattempted', value: chartAnalytics.totalUnattemptedAnswers, color: '#a8a29e' },
+    { name: 'Correct', value: chartAnalytics.totalCorrectAnswers, percent: percent(chartAnalytics.totalCorrectAnswers, chartAnalytics), color: '#166534' },
+    { name: 'Incorrect', value: chartAnalytics.totalIncorrectAnswers, percent: percent(chartAnalytics.totalIncorrectAnswers, chartAnalytics), color: '#dc2626' },
+    { name: 'Unattempted', value: chartAnalytics.totalUnattemptedAnswers, percent: percent(chartAnalytics.totalUnattemptedAnswers, chartAnalytics), color: '#a8a29e' },
   ] : [];
 
   return (
@@ -90,7 +90,10 @@ export const MockAttemptAnalysisPage = () => {
         </Card>
         <Card className="p-5">
           <div className="flex items-center justify-between"><h2 className="font-bold">Cohort answer mix</h2><Badge>{chartAnalytics?.totalAttempts ?? 0} attempts</Badge></div>
-          <div className="mt-4 h-72"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={distribution} dataKey="value" nameKey="name" innerRadius={65} outerRadius={95} paddingAngle={4}>{distribution.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></div>
+          <div className="mt-4 grid gap-4 md:grid-cols-[1fr_180px]">
+            <div className="h-72"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={distribution} dataKey="percent" nameKey="name" innerRadius={65} outerRadius={95} paddingAngle={4}>{distribution.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie><Tooltip formatter={(value) => `${value}%`} /></PieChart></ResponsiveContainer></div>
+            <div className="self-center space-y-3">{distribution.map((entry) => <div key={entry.name} className="rounded-2xl bg-stone-50 p-3"><div className="flex items-center gap-2"><span className="size-3 rounded-full" style={{ background: entry.color }} /><p className="text-sm font-semibold">{entry.name}</p></div><p className="mt-1 text-2xl font-bold">{entry.percent}%</p><p className="text-xs text-stone-400">{entry.value} answers</p></div>)}</div>
+          </div>
         </Card>
       </section>
 
@@ -138,6 +141,10 @@ export const MockAttemptAnalysisPage = () => {
 const Metric = ({ icon: Icon, label, value, note, compact = false }: { icon: typeof Trophy; label: string; value: string | number; note?: string; compact?: boolean }) => <Card className={cn('p-4', compact && 'bg-stone-50 shadow-none')}><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-2xl bg-moss-50 text-moss-800"><Icon size={18} /></span><div><p className="text-xs font-semibold uppercase tracking-[.12em] text-stone-400">{label}</p><p className="text-xl font-bold">{value}</p>{note && <p className="text-xs text-stone-500">{note}</p>}</div></div></Card>;
 const Info = ({ label, value }: { label: string; value: string }) => <div className="rounded-2xl bg-stone-50 p-3"><p className="text-xs text-stone-400">{label}</p><p className="font-semibold text-ink">{value}</p></div>;
 const normalize = (value: unknown) => Array.isArray(value) ? value.map(String) : [];
+const percent = (value: number, analytics: Analytics) => {
+  const total = analytics.totalCorrectAnswers + analytics.totalIncorrectAnswers + analytics.totalUnattemptedAnswers;
+  return total ? Number(((value / total) * 100).toFixed(1)) : 0;
+};
 const summarize = (answers: Answer[]) => ({ score: Number(answers.reduce((sum, answer) => sum + answer.marksAwarded, 0).toFixed(2)), correct: answers.filter((answer) => answer.status === 'CORRECT').length, incorrect: answers.filter((answer) => answer.status === 'INCORRECT' || answer.status === 'PARTIALLY_CORRECT').length, unattempted: answers.filter((answer) => answer.status === 'UNATTEMPTED').length });
 const statusClass = (status: string) => status === 'CORRECT' ? 'bg-moss-100 text-moss-800' : status === 'UNATTEMPTED' ? 'bg-stone-100 text-stone-600' : 'bg-red-50 text-red-700';
 const OptionReview = ({ options, selected, correct }: { options: unknown; selected: string[]; correct: string[] }) => <div className="mt-4 grid gap-2">{normalizeOptions(options).map((option) => <div key={option.value} className={cn('rounded-2xl border p-3 text-sm', correct.includes(option.value) ? 'border-moss-300 bg-moss-50' : selected.includes(option.value) ? 'border-red-200 bg-red-50' : 'border-stone-100 bg-white')}><b>{option.value}.</b> {option.label}</div>)}</div>;

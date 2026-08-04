@@ -16,8 +16,13 @@ type BookmarkRow = {
   test: { id: string; name: string; examType: { name: string }; mockExamType: { name: string } };
   submittedAt: string | null;
   question: string;
+  options: unknown;
+  explanation: string;
+  comprehension: { title: string | null; passage: string } | null;
   status: string;
   marksAwarded: number;
+  selectedAnswers: unknown;
+  correctAnswers: unknown;
   section: string;
   difficulty: string;
   topic: string;
@@ -50,6 +55,14 @@ export const MockBookmarksPage = () => {
                     <p className="text-xs text-stone-400">{row.submittedAt ? formatDateTime(row.submittedAt) : 'Submitted attempt'}</p>
                   </div>
                 </div>
+                {row.comprehension && <div className="mt-4 rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-600">{row.comprehension.passage}</div>}
+                <OptionReview options={row.options} selected={normalize(row.selectedAnswers)} correct={normalize(row.correctAnswers)} />
+                <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+                  <Info label="Your answer" value={normalize(row.selectedAnswers).join(', ') || 'Unattempted'} />
+                  <Info label="Correct answer" value={normalize(row.correctAnswers).join(', ')} />
+                  <Info label="Difficulty" value={row.difficulty} />
+                </div>
+                <div className="mt-4 rounded-2xl bg-moss-50 p-4 text-sm leading-6 text-moss-900"><b>Explanation:</b> {row.explanation}</div>
               </Card>
             </Link>
           ))}
@@ -58,3 +71,8 @@ export const MockBookmarksPage = () => {
     </div>
   );
 };
+
+const normalize = (value: unknown) => Array.isArray(value) ? value.map(String) : [];
+const normalizeOptions = (value: unknown) => Array.isArray(value) ? value.map((item, index) => typeof item === 'string' ? { value: String.fromCharCode(65 + index), label: item } : { value: String((item as { id?: string; value?: string }).id ?? (item as { value?: string }).value ?? String.fromCharCode(65 + index)), label: String((item as { text?: string; label?: string }).text ?? (item as { label?: string }).label ?? JSON.stringify(item)) }) : [];
+const OptionReview = ({ options, selected, correct }: { options: unknown; selected: string[]; correct: string[] }) => <div className="mt-4 grid gap-2 md:grid-cols-2">{normalizeOptions(options).map((option) => <div key={option.value} className={`rounded-2xl border p-3 text-sm ${correct.includes(option.value) ? 'border-moss-300 bg-moss-50' : selected.includes(option.value) ? 'border-red-200 bg-red-50' : 'border-stone-100 bg-white'}`}><b>{option.value}.</b> {option.label}</div>)}</div>;
+const Info = ({ label, value }: { label: string; value: string }) => <div className="rounded-2xl bg-stone-50 p-3"><p className="text-xs text-stone-400">{label}</p><p className="font-semibold text-ink">{value}</p></div>;

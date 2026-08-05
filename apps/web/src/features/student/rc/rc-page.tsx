@@ -148,12 +148,12 @@ export const RcPage = () => {
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
+      <section className="space-y-5">
         <Card className="p-5">
           <div className="mb-4 flex items-center justify-between"><h2 className="font-bold">Active RC tests</h2><Link to="/student/rc/tests" className="text-sm font-semibold text-moss-700">All tests</Link></div>
           <div className="grid gap-3 md:grid-cols-2">{data.activeTests.length ? data.activeTests.map((test) => <TestCard key={test.id} test={test} />) : <EmptyState compact icon={BookOpenText} title="No active RC today" description="Scheduled RC tests will appear here." />}</div>
         </Card>
-        <Card className="p-5">
+        <Card className="hidden p-5">
           <div className="mb-4 flex items-center justify-between"><h2 className="font-bold">Leaderboard</h2><Medal size={19} className="text-amber" /></div>
           <div className="space-y-3">
             {data.leaderboard.map((entry) => (
@@ -172,10 +172,10 @@ export const RcPage = () => {
         </Card>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
+      <section className="space-y-5">
         <Card className="p-5">
           <div className="mb-4 flex items-center justify-between"><h2 className="font-bold">Recent attempts</h2><Link to="/student/rc/attempts" className="text-sm font-semibold text-moss-700">Show all</Link></div>
-          <div className="space-y-3">{data.recentAttempts.length ? data.recentAttempts.map((attempt) => <AttemptCard key={attempt.id} attempt={attempt} />) : <EmptyState compact icon={ListChecks} title="No RC attempts yet" description="Your submitted RC attempts will appear here." />}</div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{data.recentAttempts.length ? data.recentAttempts.map((attempt) => <AttemptCard key={attempt.id} attempt={attempt} />) : <EmptyState compact icon={ListChecks} title="No RC attempts yet" description="Your submitted RC attempts will appear here." />}</div>
         </Card>
         <Card className="p-5">
           <h2 className="font-bold">Score trend</h2>
@@ -195,6 +195,24 @@ export const RcPage = () => {
           </div>
         </Card>
       </section>
+
+      <Card className="p-5">
+        <div className="mb-4 flex items-center justify-between"><h2 className="font-bold">Leaderboard</h2><Medal size={19} className="text-amber" /></div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {data.leaderboard.map((entry) => (
+            <div key={entry.studentId} className={cn('flex items-center gap-3 rounded-2xl border p-3', entry.isCurrentStudent ? 'border-lime bg-lime/15' : 'border-stone-200 bg-white')}>
+              <span className={cn('grid size-9 place-items-center rounded-xl text-sm font-bold', entry.rank === 1 ? 'bg-yellow-100 text-yellow-700' : entry.rank === 2 ? 'bg-slate-100 text-slate-600' : entry.rank === 3 ? 'bg-orange-100 text-orange-700' : 'bg-moss-100 text-moss-800')}>
+                {entry.rank <= 3 ? <Trophy size={17} /> : `#${entry.rank}`}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold">{entry.student.name}</p>
+                <p className="text-xs text-stone-500">{entry.currentStreak} streak · {entry.averageScore} avg</p>
+              </div>
+              <p className="text-xs font-semibold text-stone-500">Best {entry.highestStreak}</p>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 };

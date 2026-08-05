@@ -957,23 +957,63 @@ export const MentorshipTestAttemptAnalysisPage = () => {
 
 export const MentorshipAnalysisPage = () => {
   const { batchId = '' } = useParams();
+  const query = useQuery({ queryKey: ['mentor-batch-tests', batchId], queryFn: () => api<{ tests: TestSummary[] }>(`/api/v1/mentorship/batches/${batchId}/tests`) });
+  const attemptedTests = (query.data?.tests ?? []).filter((test) => (test.latestAttemptStatus === 'SUBMITTED' || test.latestAttemptStatus === 'AUTO_SUBMITTED') && test.latestAttemptId);
   return (
     <div className="space-y-6">
       <BatchBackLink to={`/student/mentorship/batches/${batchId}`}>Batch dashboard</BatchBackLink>
       <Card className="overflow-hidden p-0">
         <div className="grid gap-6 bg-moss-800 p-7 text-white lg:grid-cols-[1fr_280px]">
           <div>
-            <Badge className="bg-white/12 text-lime">Coming next</Badge>
+            <Badge className="bg-white/12 text-lime">Mentorship performance</Badge>
             <h1 className="mt-4 text-3xl font-semibold">Analyze yourself</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-moss-100/75">This page is reserved for the detailed mentorship analytics you said you will define later: topic strength, subtopic trends, test consistency and mentor batch comparisons.</p>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-moss-100/75">Review every submitted batch test from this mentorship batch. Wider trend analytics can be added here later when you define them.</p>
           </div>
           <div className="grid place-items-center rounded-3xl bg-white/10">
             <Sparkles size={42} className="text-lime" />
           </div>
         </div>
       </Card>
+      <Link className="inline-flex items-center gap-2 rounded-xl bg-moss-100 px-4 py-2 text-sm font-semibold text-moss-800 hover:bg-moss-200" to={`/student/mentorship/batches/${batchId}/test-bookmarks`}><Bookmark size={16} />View bookmarked answers</Link>
+      {query.isLoading ? <Skeleton className="h-60" /> : attemptedTests.length ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {attemptedTests.map((test) => (
+            <Link key={test.id} to={`/student/mentorship/batches/${batchId}/tests/attempts/${test.latestAttemptId}/analysis`} className="block">
+              <Card className="p-5 transition hover:-translate-y-px hover:shadow-card">
+                <div className="flex items-start justify-between gap-3"><div><Badge className="bg-moss-100 text-moss-800">Attempted</Badge><h2 className="mt-3 text-lg font-bold">{test.name}</h2><p className="mt-1 line-clamp-2 text-sm text-stone-500">{test.description}</p></div><BarChart3 className="text-moss-700" /></div>
+                <div className="mt-4 flex flex-wrap gap-3 text-xs text-stone-500"><span>{test.questionCount} questions</span><span>{test.totalMarks} marks</span><span>{test.durationMinutes} min</span><span>{test.difficulty}</span></div>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      ) : <EmptyState icon={Trophy} title="No submitted batch tests yet" description="Once you submit a mentorship batch test, it will appear here with a link to full analysis." />}
     </div>
   );
+};
+
+export const MentorshipBatchBookmarksPage = () => {
+  const { batchId = '' } = useParams();
+  const client = useQueryClient();
+  const query = useQuery({ queryKey: ['mentor-batch-test-bookmarks', batchId], queryFn: () => api<{ answers: (BatchAnswer & { attemptId: string; test: { id: string; name: string; submittedAt: string | null } })[] }>(`/api/v1/mentorship/batches/${batchId}/test-bookmarks`) });
+  const bookmark = useMutation({
+    mutationFn: ({ id, bookmarked }: { id: string; bookmarked: boolean }) => api(`/api/v1/mentorship/test-attempt-answers/${id}/bookmark`, { method: 'PATCH', body: JSON.stringify({ bookmarked }) }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['mentor-batch-test-bookmarks', batchId] }),
+  });
+  if (query.isLoading) return <Skeleton className="h-[520px]" />;
+  return <div className="space-y-6">
+    <BatchBackLink to={`/student/mentorship/batches/${batchId}/analysis`}>Analyze yourself</BatchBackLink>
+    <div><p className="eyebrow">Revision bank</p><h1 className="text-3xl font-bold">Bookmarked batch-test answers</h1></div>
+    {query.data?.answers.length ? query.data.answers.map((answer, index) => (
+      <Card key={answer.id} className="p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap gap-2"><Badge className="bg-moss-100 text-moss-800">{answer.test.name}</Badge><Badge>{answer.sectionName}</Badge></div><Link className="text-sm font-semibold text-moss-700" to={`/student/mentorship/batches/${batchId}/tests/attempts/${answer.attemptId}/analysis`}>Open full analysis</Link></div>
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><Badge className={answerStatusClass(answer.status)}>{answer.status.replace('_', ' ')}</Badge><h3 className="mt-3 font-bold">Q{index + 1}. {answer.question}</h3></div><Button size="sm" variant="secondary" disabled={bookmark.isPending} onClick={() => bookmark.mutate({ id: answer.id, bookmarked: false })}><Bookmark size={15} />Bookmarked</Button></div>
+        {answer.comprehension && <div className="mt-4 rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-600">{answer.comprehension.passage}</div>}
+        <BatchOptionReview options={answer.options} selected={normalizeAnswers(answer.selectedAnswers)} correct={normalizeAnswers(answer.correctAnswers)} />
+        <div className="mt-4 grid gap-3 text-sm sm:grid-cols-4"><InfoBox label="Your answer" value={normalizeAnswers(answer.selectedAnswers).join(', ') || 'Unattempted'} /><InfoBox label="Correct answer" value={normalizeAnswers(answer.correctAnswers).join(', ')} /><InfoBox label="Marks" value={`${answer.marksAwarded} / +${answer.positiveMarks}`} /><InfoBox label="Time" value={`${answer.timeTakenSeconds}s`} /></div>
+        <div className="mt-4 rounded-2xl bg-moss-50 p-4 text-sm leading-6 text-moss-900"><b>Explanation:</b> {answer.explanation}</div>
+      </Card>
+    )) : <EmptyState icon={Bookmark} title="No bookmarked answers yet" description="Bookmark questions while reviewing batch-test analysis and they will appear here." />}
+  </div>;
 };
 
 const AnalysisMetric = ({ icon: Icon, label, value, compact = false }: { icon: typeof Trophy; label: string; value: string | number; compact?: boolean }) => (

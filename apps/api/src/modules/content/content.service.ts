@@ -267,3 +267,53 @@ export const setAttemptAnswerBookmark = async (studentId: string, answerId: stri
   });
   return updated;
 };
+
+export const bookmarkedAttemptAnswers = async (studentId: string) => {
+  const rows = await prisma.contentAttemptAnswer.findMany({
+    where: { bookmarked: true, contentAttempt: { studentId, status: { in: ['SUBMITTED', 'AUTO_SUBMITTED'] } } },
+    orderBy: { updatedAt: 'desc' },
+    include: {
+      contentAttempt: { select: { id: true, submittedAt: true, contentTest: { select: { id: true, name: true, topic: { select: { name: true, subject: { select: { name: true } } } } } } } },
+      contentSection: { select: { id: true, name: true } },
+      contentQuestion: {
+        include: {
+          difficulty: { select: { name: true } },
+          topic: { select: { name: true } },
+          subtopic: { select: { name: true } },
+          contentComprehension: { select: { id: true, title: true, passage: true } },
+        },
+      },
+    },
+  });
+  return rows.map((answer) => ({
+    id: answer.id,
+    attemptId: answer.contentAttemptId,
+    test: {
+      id: answer.contentAttempt.contentTest.id,
+      name: answer.contentAttempt.contentTest.name,
+      topic: answer.contentAttempt.contentTest.topic.name,
+      subject: answer.contentAttempt.contentTest.topic.subject.name,
+      submittedAt: answer.contentAttempt.submittedAt,
+    },
+    sectionId: answer.contentSectionId,
+    sectionName: answer.contentSection.name,
+    sequenceNumber: answer.contentQuestion.sequenceNumber,
+    questionType: answer.contentQuestion.questionType,
+    question: answer.contentQuestion.question,
+    options: answer.contentQuestion.options,
+    selectedAnswers: answer.selectedAnswers,
+    correctAnswers: answer.correctAnswers,
+    status: answer.status,
+    marksAwarded: Number(answer.marksAwarded),
+    positiveMarks: Number(answer.contentQuestion.positiveMarks),
+    negativeMarks: Number(answer.contentQuestion.negativeMarks),
+    timeTakenSeconds: answer.timeTakenSeconds,
+    bookmarked: answer.bookmarked,
+    explanation: answer.contentQuestion.explanation,
+    imageUrl: answer.contentQuestion.imageUrl,
+    difficulty: answer.contentQuestion.difficulty.name,
+    topic: answer.contentQuestion.topic.name,
+    subtopic: answer.contentQuestion.subtopic.name,
+    comprehension: answer.contentQuestion.contentComprehension,
+  }));
+};

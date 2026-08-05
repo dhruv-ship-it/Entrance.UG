@@ -59,9 +59,6 @@ Analytics
 
 - batch_test_analytics
 - batch_section_analytics
-- batch_question_analytics
-- batch_topic_analytics
-- batch_subtopic_analytics
 
 Supporting master tables referenced by this module
 
@@ -398,18 +395,6 @@ Overall Test Analytics
 Section Analytics
 
 - batch_section_analytics
-
-Question Analytics
-
-- batch_question_analytics
-
-Topic Analytics
-
-- batch_topic_analytics
-
-Subtopic Analytics
-
-- batch_subtopic_analytics
 
 Applications should read stored analytics whenever possible instead of recalculating them.
 

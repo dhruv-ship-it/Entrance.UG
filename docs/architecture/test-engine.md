@@ -217,12 +217,6 @@ batch_test_analytics
 
 batch_section_analytics
 
-batch_question_analytics
-
-batch_topic_analytics
-
-batch_subtopic_analytics
-
 ---
 
 ## Access

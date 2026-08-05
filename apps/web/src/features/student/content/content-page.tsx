@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
   BookMarked,
@@ -108,16 +108,31 @@ const contentVisual = { YOUTUBE: Video, PDF: FileText, DOCUMENT: BookOpenCheck, 
 const optionList = (value: unknown): string[] => Array.isArray(value) ? value.map(String) : value == null ? [] : [String(value)];
 const optionsAsEntries = (value: unknown): Array<{ key: string; value: string }> => {
   if (!value) return [];
-  if (Array.isArray(value)) return value.map((item, index) => ({ key: String.fromCharCode(65 + index), value: String(item) }));
-  if (typeof value === 'object') return Object.entries(value as Record<string, unknown>).map(([key, item]) => ({ key, value: String(item) }));
+  if (Array.isArray(value)) return value.map((item, index) => {
+    if (typeof item === 'object' && item !== null) {
+      const option = item as { id?: unknown; value?: unknown; text?: unknown; label?: unknown };
+      return {
+        key: String(option.id ?? option.value ?? String.fromCharCode(65 + index)),
+        value: String(option.text ?? option.label ?? option.value ?? option.id ?? ''),
+      };
+    }
+    return { key: String.fromCharCode(65 + index), value: String(item) };
+  });
+  if (typeof value === 'object') return Object.entries(value as Record<string, unknown>).map(([key, item]) => ({
+    key,
+    value: typeof item === 'object' && item !== null ? String((item as { text?: unknown; label?: unknown; value?: unknown }).text ?? (item as { label?: unknown }).label ?? (item as { value?: unknown }).value ?? '') : String(item),
+  }));
   return [];
 };
 
 export const ContentPage = () => {
   const queryClient = useQueryClient();
-  const [view, setView] = useState<View>('subjects');
-  const [subjectId, setSubjectId] = useState<string>();
-  const [topicId, setTopicId] = useState<string>();
+  const [searchParams] = useSearchParams();
+  const initialSubjectId = searchParams.get('subjectId') ?? undefined;
+  const initialTopicId = searchParams.get('topicId') ?? undefined;
+  const [view, setView] = useState<View>(initialSubjectId ? 'learning' : 'subjects');
+  const [subjectId, setSubjectId] = useState<string | undefined>(initialSubjectId);
+  const [topicId, setTopicId] = useState<string | undefined>(initialTopicId);
   const learning = useQuery({ queryKey: ['learning-content'], queryFn: () => api<ContentTreeResponse>('/api/v1/content') });
   const attempts = useQuery({ queryKey: ['content-attempts'], queryFn: () => api<{ attempts: ContentAttempt[] }>('/api/v1/content/attempts'), enabled: view === 'attempts' });
   const updateCompletion = useMutation({
@@ -149,6 +164,7 @@ export const ContentPage = () => {
       </div>
       <div className="flex gap-2">
         {view !== 'subjects' && <Button variant="outline" onClick={() => setView('subjects')}><ArrowLeft size={16} />All subjects</Button>}
+        <Link className={buttonVariants({ variant: 'outline' })} to="/student/content/bookmarks"><Bookmark size={16} />Bookmarks</Link>
         <Button variant={view === 'attempts' ? 'secondary' : 'outline'} onClick={() => setView('attempts')}><Trophy size={16} />Attempted tests</Button>
       </div>
     </header>
@@ -189,7 +205,7 @@ const SubtopicSection = ({ subtopic, onCompletion, saving, onSaveNote, savingNot
       <div className="min-w-0"><h3 className="font-semibold text-ink">{subtopic.name}</h3><p className="mt-1 truncate text-xs text-stone-400">{subtopic.description}</p></div>
       <div className="flex shrink-0 items-center gap-3"><Badge className="bg-moss-50 text-moss-800">{subtopic.completedContentCount}/{subtopic.totalContentCount}</Badge><ChevronDown size={18} className={cn('text-stone-400 transition-transform', isOpen && 'rotate-180')} /></div>
     </button>
-    {isOpen && <div className="divide-y divide-stone-100 border-t border-stone-100">{subtopic.contents.map((content) => <LessonRow key={content.id} content={content} onCompletion={onCompletion} saving={saving} onSaveNote={onSaveNote} savingNote={savingNote} />)}</div>}
+    {isOpen && <div className="divide-y divide-stone-100 border-t border-stone-100">{subtopic.contents.length ? subtopic.contents.map((content) => <LessonRow key={content.id} content={content} onCompletion={onCompletion} saving={saving} onSaveNote={onSaveNote} savingNote={savingNote} />) : <div className="p-5 text-sm text-stone-500">Coming soon.</div>}</div>}
   </Card>;
 };
 
@@ -232,7 +248,7 @@ const TopicTests = ({ topic }: { topic: ContentTopic }) => {
         <div className="mt-4 flex flex-wrap gap-3 text-xs text-stone-500"><span>{test.totalQuestions} questions</span><span>{test.durationMinutes} min</span><span>{test.totalMarks} marks</span><span>{test.sectionCount} sections</span><span>{test.difficulty}</span></div>
         {isSubmitted && test.attempt ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-moss-50 px-4 py-3"><div><p className="text-sm font-semibold text-moss-900">Score {test.attempt.marksScored}/{test.totalMarks}</p><p className="text-xs text-moss-700">Accuracy {Math.round(test.attempt.accuracy)}%</p></div><Link className={buttonVariants({ variant: 'secondary', size: 'sm' })} to={`/student/content/attempts/${test.attempt.id}`}><BookMarked size={15} />View result</Link></div> : <Button className="mt-5" size="sm" variant={test.hasAccess ? 'primary' : 'outline'} disabled={!test.hasAccess || startAttempt.isPending} onClick={() => startAttempt.mutate(test.id)}>{isInProgress ? <RotateCcw size={15} /> : test.hasAccess ? <PlayCircle size={15} /> : <Lock size={15} />}{isInProgress ? 'Resume test' : test.hasAccess ? 'Start test' : 'Locked'}</Button>}
       </Card>;
-    })}</div> : <Card className="border-dashed p-5 text-sm text-stone-500">No practice test has been added for this topic yet.</Card>}
+    })}</div> : <Card className="border-dashed p-5 text-sm text-stone-500">Coming soon.</Card>}
   </section>;
 };
 
@@ -304,6 +320,26 @@ export const ContentAttemptDetailPage = () => {
         {!filteredAnswers.length && <EmptyState icon={CircleSlash} title="No questions match these filters" description="Try choosing another section or difficulty." />}
       </div>
     </div>
+  </div>;
+};
+
+type ContentBookmarkAnswer = ContentAttemptDetail['answers'][number] & {
+  attemptId: string;
+  test: { id: string; name: string; topic: string; subject: string; submittedAt: string | null };
+};
+
+export const ContentBookmarksPage = () => {
+  const client = useQueryClient();
+  const query = useQuery({ queryKey: ['content-bookmarks'], queryFn: () => api<{ answers: ContentBookmarkAnswer[] }>('/api/v1/content/bookmarks') });
+  const bookmark = useMutation({
+    mutationFn: ({ answerId, bookmarked }: { answerId: string; bookmarked: boolean }) => api(`/api/v1/content/attempt-answers/${answerId}/bookmark`, { method: 'PATCH', body: JSON.stringify({ bookmarked }) }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['content-bookmarks'] }),
+  });
+  if (query.isLoading) return <div className="space-y-4"><Skeleton className="h-28" /><Skeleton className="h-72" /></div>;
+  return <div className="space-y-6">
+    <Link to="/student/content" className="inline-flex items-center gap-2 text-sm font-semibold text-moss-800 hover:text-moss-950"><ArrowLeft size={16} />Back to learning content</Link>
+    <Card className="p-6"><p className="text-xs font-bold uppercase tracking-[.18em] text-moss-700">Revision bank</p><h1 className="mt-1 text-3xl font-bold text-ink">Bookmarked topic-test answers</h1><p className="mt-2 text-sm text-stone-500">All questions you bookmarked after content topic tests appear here.</p></Card>
+    {query.data?.answers.length ? query.data.answers.map((answer, index) => <div key={answer.id} className="space-y-2"><div className="flex flex-wrap items-center gap-2 text-sm text-stone-500"><Badge className="bg-moss-50 text-moss-800">{answer.test.name}</Badge><span>{answer.test.subject} · {answer.test.topic}</span><Link className="font-semibold text-moss-700" to={`/student/content/attempts/${answer.attemptId}`}>Open full attempt</Link></div><AnswerReviewCard answer={answer} index={index} onBookmark={(bookmarked) => bookmark.mutate({ answerId: answer.id, bookmarked })} savingBookmark={bookmark.isPending} /></div>) : <EmptyState icon={Bookmark} title="No bookmarked answers yet" description="Bookmark questions while reviewing content topic-test attempts and they will appear here." />}
   </div>;
 };
 

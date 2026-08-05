@@ -66,18 +66,27 @@ export const programs = async (studentId: string) => prisma.mentorshipProgram.fi
   select: { id: true, name: true, description: true, _count: { select: { batches: true } } },
 });
 
-export const batches = async (studentId: string, programId: string) => prisma.mentorshipBatch.findMany({
-  where: { mentorshipProgramId: programId, isActive: true, studentAccesses: { some: activeMembership(studentId) } },
-  orderBy: { name: 'asc' },
-  include: {
-    mentorAssignments: {
-      where: { isActive: true },
-      include: { mentor: { select: { id: true, name: true, profileImage: true } } },
+export const batches = async (studentId: string, programId: string) => {
+  const current = new Date();
+  return prisma.mentorshipBatch.findMany({
+    where: { mentorshipProgramId: programId, isActive: true, studentAccesses: { some: activeMembership(studentId) } },
+    orderBy: { name: 'asc' },
+    include: {
+      mentorAssignments: {
+        where: { isActive: true },
+        include: { mentor: { select: { id: true, name: true, profileImage: true } } },
+      },
+      studentAccesses: { where: activeMembership(studentId), select: { expiryDate: true, joinedAt: true, accessSource: true } },
+      _count: {
+        select: {
+          tasks: { where: { startDatetime: { lte: current }, endDatetime: { gte: current } } },
+          liveSessions: { where: { startDatetime: { lte: current }, endDatetime: { gte: current } } },
+          tests: { where: { isActive: true, startDatetime: { lte: current }, endDatetime: { gte: current } } },
+        },
+      },
     },
-    studentAccesses: { where: activeMembership(studentId), select: { expiryDate: true, joinedAt: true, accessSource: true } },
-    _count: { select: { tasks: true, liveSessions: true, tests: true } },
-  },
-});
+  });
+};
 
 export const overview = async (studentId: string, batchId: string) => {
   const batch = await requireBatchAccess(studentId, batchId);
@@ -358,6 +367,7 @@ export const testDetail = async (studentId: string, batchId: string, testId: str
     endDatetime: test.endDatetime,
     durationMinutes: test.durationMinutes,
     totalMarks: toNumber(test.totalMarks),
+    questionCount: test.sections.reduce((sum, section) => sum + section._count.questions, 0),
     canGoBackBetweenSections: test.canGoBackBetweenSections,
     difficulty: test.difficulty,
     creator: test.createdByMentor ?? test.createdByAdmin,
@@ -540,6 +550,50 @@ export const setBatchAnswerBookmark = async (studentId: string, answerId: string
   });
   if (!answer) throw new AppError(404, 'Attempt answer not found.');
   return prisma.batchAttemptAnswer.update({ where: { id: answerId }, data: { bookmarked }, select: { id: true, bookmarked: true } });
+};
+
+export const bookmarkedBatchAnswers = async (studentId: string, batchId: string) => {
+  await requireBatchAccess(studentId, batchId);
+  const rows = await prisma.batchAttemptAnswer.findMany({
+    where: { bookmarked: true, batchAttempt: { studentId, status: { in: ['SUBMITTED', 'AUTO_SUBMITTED'] }, batchTest: { mentorshipBatchId: batchId } } },
+    orderBy: { updatedAt: 'desc' },
+    include: {
+      batchAttempt: { select: { id: true, submittedAt: true, batchTest: { select: { id: true, name: true } } } },
+      batchSection: { select: { id: true, name: true } },
+      batchQuestion: {
+        include: {
+          difficulty: { select: { id: true, name: true } },
+          topic: { select: { id: true, name: true, subject: { select: { id: true, name: true } } } },
+          subtopic: { select: { id: true, name: true } },
+          batchComprehension: { select: { title: true, passage: true } },
+        },
+      },
+    },
+  });
+  return rows.map((answer) => ({
+    id: answer.id,
+    attemptId: answer.batchAttemptId,
+    test: { id: answer.batchAttempt.batchTest.id, name: answer.batchAttempt.batchTest.name, submittedAt: answer.batchAttempt.submittedAt },
+    sectionId: answer.batchSectionId,
+    sectionName: answer.batchSection.name,
+    question: answer.batchQuestion.question,
+    options: answer.batchQuestion.options,
+    selectedAnswers: answer.selectedAnswers,
+    correctAnswers: answer.correctAnswers,
+    status: answer.status,
+    marksAwarded: toNumber(answer.marksAwarded),
+    positiveMarks: toNumber(answer.batchQuestion.positiveMarks),
+    negativeMarks: toNumber(answer.batchQuestion.negativeMarks),
+    timeTakenSeconds: answer.timeTakenSeconds,
+    averageTimeTakenSeconds: 0,
+    bookmarked: answer.bookmarked,
+    explanation: answer.batchQuestion.explanation,
+    imageUrl: answer.batchQuestion.imageUrl,
+    comprehension: answer.batchQuestion.batchComprehension,
+    difficulty: answer.batchQuestion.difficulty,
+    topic: answer.batchQuestion.topic,
+    subtopic: answer.batchQuestion.subtopic,
+  }));
 };
 
 export const listDoubts = async (studentId: string, batchId: string, options: { scope?: string; status?: string } = {}) => {

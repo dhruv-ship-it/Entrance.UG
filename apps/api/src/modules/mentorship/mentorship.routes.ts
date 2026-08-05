@@ -4,6 +4,7 @@ import { requireStudent } from '../../shared/auth/auth.middleware.js';
 import { validateBody } from '../../shared/http/validate.js';
 import {
   batchAttendanceCalendar,
+  batchBookmarks,
   batchNotices,
   batchOverview,
   batchSessions,
@@ -39,6 +40,7 @@ mentorshipRouter.get('/batches/:batchId/sessions', batchSessions);
 mentorshipRouter.get('/batches/:batchId/attendance-calendar', batchAttendanceCalendar);
 mentorshipRouter.get('/batches/:batchId/notices', batchNotices);
 mentorshipRouter.get('/batches/:batchId/tests', batchTests);
+mentorshipRouter.get('/batches/:batchId/test-bookmarks', batchBookmarks);
 mentorshipRouter.get('/batches/:batchId/tests/:testId', batchTestDetail);
 mentorshipRouter.get('/batches/:batchId/doubts', doubts);
 mentorshipRouter.post('/batches/:batchId/doubts', validateBody(doubtSchema), createDoubt);

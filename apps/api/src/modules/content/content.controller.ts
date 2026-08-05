@@ -11,6 +11,9 @@ export const completion = async (request: AuthenticatedRequest, response: Respon
 export const attempts = async (request: AuthenticatedRequest, response: Response) =>
   response.json({ attempts: await service.listAttempts(request.auth!.sub) });
 
+export const bookmarks = async (request: AuthenticatedRequest, response: Response) =>
+  response.json({ answers: await service.bookmarkedAttemptAnswers(request.auth!.sub) });
+
 export const attemptDetail = async (request: AuthenticatedRequest, response: Response) =>
   response.json({ attempt: await service.getAttemptDetail(request.auth!.sub, String(request.params.attemptId)) });
 

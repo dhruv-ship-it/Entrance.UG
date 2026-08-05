@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowUpRight, BookOpen, CalendarDays, CheckCircle2, ClipboardCheck, FileBarChart2, GraduationCap, PlayCircle, Sparkles } from 'lucide-react';
+import { ArrowUpRight, BookOpen, CalendarDays, CheckCircle2, ClipboardCheck, FileBarChart2, GraduationCap, PlayCircle, ScrollText, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { EmptyState } from '../../components/empty-state';
@@ -21,9 +21,9 @@ type Overview = {
     activeBatches: number;
     unreadNotifications: number;
   };
-  upcomingSessions: { id: string; title: string; startDatetime: string; endDatetime: string; batchName: string }[];
-  recentScores: { id: string; examName: string; score: number; totalMarks: number; accuracy: number; submittedAt: string | null }[];
-  activity: { id: string; type: 'MOCK' | 'CONTENT' | 'MENTORSHIP'; title: string; detail: string; occurredAt: string }[];
+  upcomingSessions: { id: string; title: string; startDatetime: string; endDatetime: string; batchName: string; batchId: string }[];
+  recentScores: { id: string; examName: string; score: number; totalMarks: number; accuracy: number; submittedAt: string | null; href: string }[];
+  activity: { id: string; type: 'MOCK' | 'CONTENT' | 'MENTORSHIP' | 'RC'; title: string; detail: string; occurredAt: string; href: string }[];
 };
 
 const metricDefinitions = [
@@ -83,14 +83,14 @@ export const OverviewPage = () => {
           {data.activity.length ? (
             <div className="mt-5 divide-y divide-stone-100">
               {data.activity.map((item) => (
-                <div key={item.id} className="flex gap-4 py-4 first:pt-0 last:pb-0">
+                <Link key={item.id} to={item.href} className="flex gap-4 py-4 first:pt-0 last:pb-0 transition hover:bg-moss-50/60">
                   <ActivityIcon type={item.type} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{item.title}</p>
                     <p className="mt-1 text-xs text-stone-500">{item.detail}</p>
                   </div>
                   <p className="whitespace-nowrap text-xs font-medium text-stone-400">{relativeTime(item.occurredAt)}</p>
-                </div>
+                </Link>
               ))}
             </div>
           ) : <div className="mt-5"><EmptyState compact icon={Sparkles} title="Your journey starts here" description="Your completed mocks, content and mentorship tasks will become your progress timeline." /></div>}
@@ -104,7 +104,7 @@ export const OverviewPage = () => {
           {data.upcomingSessions.length ? (
             <div className="divide-y divide-stone-100">
               {data.upcomingSessions.map((session) => (
-                <div key={session.id} className="px-6 py-4">
+                <Link key={session.id} to={`/student/mentorship/batches/${session.batchId}`} className="block px-6 py-4 transition hover:bg-moss-50/60">
                   <div className="flex gap-3">
                     <div className="grid size-10 place-items-center rounded-xl bg-moss-100 text-moss-700"><CalendarDays size={18} /></div>
                     <div>
@@ -112,7 +112,7 @@ export const OverviewPage = () => {
                       <p className="mt-1 text-xs text-stone-500">{session.batchName} · {formatDateTime(session.startDatetime)}</p>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : <div className="p-6"><EmptyState compact icon={CalendarDays} title="Nothing scheduled yet" description="Live sessions from your enrolled batches will appear here." /></div>}
@@ -131,7 +131,7 @@ export const OverviewPage = () => {
           {data.recentScores.length ? (
             <div className="mt-5 space-y-4">
               {data.recentScores.map((score) => (
-                <div key={score.id}>
+                <Link key={score.id} to={score.href} className="block rounded-2xl p-2 transition hover:bg-moss-50/60">
                   <div className="flex justify-between gap-3 text-sm">
                     <span className="truncate font-medium">{score.examName}</span>
                     <span className="whitespace-nowrap font-semibold text-moss-800">{score.score}/{score.totalMarks}</span>
@@ -140,7 +140,7 @@ export const OverviewPage = () => {
                     <div className="h-full rounded-full bg-moss-700 transition-all" style={{ width: `${Math.min(100, score.totalMarks ? (score.score / score.totalMarks) * 100 : 0)}%` }} />
                   </div>
                   <p className="mt-1.5 text-xs text-stone-400">{Math.round(score.accuracy)}% accuracy</p>
-                </div>
+                </Link>
               ))}
             </div>
           ) : <div className="mt-5"><EmptyState compact icon={PlayCircle} title="No mock attempt yet" description="Your submitted mock-test scores will be tracked here." /></div>}
@@ -164,6 +164,7 @@ const ActivityIcon = ({ type }: { type: Overview['activity'][number]['type'] }) 
     MOCK: { icon: FileBarChart2, className: 'bg-coral/15 text-[#b54c3a]' },
     CONTENT: { icon: BookOpen, className: 'bg-sky/15 text-[#28718d]' },
     MENTORSHIP: { icon: GraduationCap, className: 'bg-amber/15 text-[#9a6810]' },
+    RC: { icon: ScrollText, className: 'bg-lime/35 text-moss-800' },
   };
   const item = map[type];
   const Icon = item.icon;

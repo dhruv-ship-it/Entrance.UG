@@ -54,6 +54,10 @@ export const batchAttemptAnswerBookmark = async (request: AuthenticatedRequest, 
   response.json({ answer: await service.setBatchAnswerBookmark(request.auth!.sub, String(request.params.answerId), request.body.bookmarked) });
 };
 
+export const batchBookmarks = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ answers: await service.bookmarkedBatchAnswers(request.auth!.sub, String(request.params.batchId)) });
+};
+
 export const doubts = async (request: AuthenticatedRequest, response: Response) => {
   response.json({ doubts: await service.listDoubts(request.auth!.sub, String(request.params.batchId), {
     scope: String(request.query.scope ?? ''),

@@ -5,9 +5,10 @@ import { SignupPage } from './features/auth/signup-page';
 import { LandingPage, RolePendingPage } from './features/misc-pages';
 import { MockExamTypesPage } from './features/student/mock-tests/exam-types-page';
 import { AccountPage } from './features/student/account-page';
-import { ContentAttemptDetailPage, ContentPage } from './features/student/content/content-page';
+import { ContentAttemptDetailPage, ContentBookmarksPage, ContentPage } from './features/student/content/content-page';
 import {
   MentorshipAnalysisPage,
+  MentorshipBatchBookmarksPage,
   MentorshipBatchPage,
   MentorshipBatchesPage,
   MentorshipClassesPage,
@@ -52,6 +53,7 @@ export const App = () => (
         <Route path="mock-tests/:examTypeId/:mockExamTypeId" element={<MockExamsPage />} />
         <Route path="mock-tests/:examTypeId/:mockExamTypeId/:examId" element={<MockExamDetailPage />} />
         <Route path="content" element={<ContentPage />} />
+        <Route path="content/bookmarks" element={<ContentBookmarksPage />} />
         <Route path="content/attempts/:attemptId" element={<ContentAttemptDetailPage />} />
         <Route path="rc" element={<RcPage />} />
         <Route path="rc/tests" element={<RcTestsPage />} />
@@ -69,6 +71,7 @@ export const App = () => (
         <Route path="mentorship/batches/:batchId/tests" element={<MentorshipTestsPage />} />
         <Route path="mentorship/batches/:batchId/tests/closed" element={<MentorshipClosedTestsPage />} />
         <Route path="mentorship/batches/:batchId/tests/attempts/:attemptId/analysis" element={<MentorshipTestAttemptAnalysisPage />} />
+        <Route path="mentorship/batches/:batchId/test-bookmarks" element={<MentorshipBatchBookmarksPage />} />
         <Route path="mentorship/batches/:batchId/tests/:testId" element={<MentorshipTestDetailPage />} />
         <Route path="mentorship/batches/:batchId/notices" element={<MentorshipNoticesPage />} />
         <Route path="mentorship/batches/:batchId/analysis" element={<MentorshipAnalysisPage />} />

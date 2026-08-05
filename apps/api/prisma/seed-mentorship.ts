@@ -37,9 +37,9 @@ async function ensureSession(mentorId: string, batchId: string, title: string, d
   return existing ? prisma.liveSession.update({ where: { id: existing.id }, data }) : prisma.liveSession.create({ data: { mentorshipBatchId: batchId, title, ...data } });
 }
 
-async function ensureTest(mentorId: string, batchId: string, difficultyId: string, name: string, description: string) {
+async function ensureTest(mentorId: string, batchId: string, difficultyId: string, name: string, description: string, startDatetime = days(-1), endDatetime = new Date(now.getFullYear(), now.getMonth() + 3, 0, 23, 59, 59)) {
   const existing = await prisma.batchTest.findFirst({ where: { mentorshipBatchId: batchId, name } });
-  const data = { description, instructions: 'Attempt every question. Answers are saved automatically. Negative marking applies to incorrect responses.', difficultyId, durationMinutes: 30, totalMarks: '12', canGoBackBetweenSections: true, isActive: true, startDatetime: days(-1), endDatetime: new Date(now.getFullYear(), now.getMonth() + 3, 0, 23, 59, 59), updatedByMentorId: mentorId, updatedByAdminId: null };
+  const data = { description, instructions: 'Attempt every question. Answers are saved automatically. Negative marking applies to incorrect responses.', difficultyId, durationMinutes: 30, totalMarks: '12', canGoBackBetweenSections: true, isActive: true, startDatetime, endDatetime, updatedByMentorId: mentorId, updatedByAdminId: null };
   return existing ? prisma.batchTest.update({ where: { id: existing.id }, data }) : prisma.batchTest.create({ data: { mentorshipBatchId: batchId, name, ...data, createdByMentorId: mentorId, createdByAdminId: null } });
 }
 
@@ -87,9 +87,11 @@ async function main() {
     ensureSession(ankit.id, pratigya.id, 'Weekly Live Mentoring', 'An open mentoring session for strategy, progress reviews and student doubts.', days(-1, 18), days(7, 19)),
   ]);
   const tests = await Promise.all([
-    ensureTest(rahul.id, pratigya.id, difficulty.id, 'Batch Test 1', 'A completed practice test covering foundational quantitative and reasoning skills.'),
-    ensureTest(priya.id, pratigya.id, difficulty.id, 'Batch Test 2', 'An active practice test for ongoing batch preparation.'),
+    ensureTest(rahul.id, pratigya.id, difficulty.id, 'Batch Test 1', 'A closed practice test covering foundational quantitative and reasoning skills.', days(-20, 10), days(-19, 23)),
+    ensureTest(priya.id, pratigya.id, difficulty.id, 'Batch Test 2', 'A closed practice test for arithmetic and logical reasoning revision.', days(-12, 10), days(-11, 23)),
     ensureTest(ankit.id, pratigya.id, difficulty.id, 'Batch Test 3', 'An active mixed-skills practice test for the current study cycle.'),
+    ensureTest(rahul.id, pratigya.id, difficulty.id, 'Batch Test 4', 'An active sectional-style test focused on speed and accuracy.'),
+    ensureTest(priya.id, pratigya.id, difficulty.id, 'Batch Test 5', 'An active mentoring checkpoint test for weekly progress review.'),
   ]);
   const questionSeeds = [
     ['What is 25% of 480?', ['100', '110', '120', '130'], 'C', '25% is one-fourth, and one-fourth of 480 is 120.'],
@@ -100,7 +102,7 @@ async function main() {
     ['Every scholar is a reader. Some readers are writers. Which statement is definitely true?', ['All writers are scholars', 'Some scholars are writers', 'All scholars are readers', 'No reader is a writer'], 'C', 'The first statement directly establishes that all scholars are readers.'],
   ];
   for (const [testIndex, test] of tests.entries()) {
-    const owner = [rahul, priya, ankit][testIndex];
+    const owner = [rahul, priya, ankit, rahul, priya][testIndex];
     const sections = await ensureSections(owner.id, test.id);
     for (let sectionIndex = 0; sectionIndex < 2; sectionIndex += 1) {
       for (let questionIndex = 0; questionIndex < 3; questionIndex += 1) {
@@ -110,7 +112,7 @@ async function main() {
     }
   }
   for (const batch of [hausla, udaan, pratigya]) await prisma.$executeRaw`INSERT INTO "student_batch_access" ("id", "student_id", "mentorship_batch_id", "purchase_id", "access_source", "joined_at", "expiry_date", "is_active", "created_at", "updated_at") SELECT gen_random_uuid(), ${STUDENT_ID}::uuid, ${batch.id}::uuid, NULL, 'ADMIN'::"AccessSource", NOW(), ${farFuture}, true, NOW(), NOW() WHERE NOT EXISTS (SELECT 1 FROM "student_batch_access" WHERE "student_id" = ${STUDENT_ID}::uuid AND "mentorship_batch_id" = ${batch.id}::uuid AND "purchase_id" IS NULL AND "access_source" = 'ADMIN'::"AccessSource")`;
-  console.info('Mentorship seed completed', { programs: [ipmat.name, jipmat.name, cuet.name], batches: [hausla.name, udaan.name, pratigya.name], mentors: [rahul.name, priya.name, ankit.name], tests: tests.length, questions: 18 });
+  console.info('Mentorship seed completed', { programs: [ipmat.name, jipmat.name, cuet.name], batches: [hausla.name, udaan.name, pratigya.name], mentors: [rahul.name, priya.name, ankit.name], tests: tests.length, questions: tests.length * 6 });
 }
 
 main().catch((error) => { console.error('Mentorship seed failed', error); process.exitCode = 1; }).finally(async () => prisma.$disconnect());

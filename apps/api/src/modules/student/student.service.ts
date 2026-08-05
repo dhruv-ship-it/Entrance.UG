@@ -46,7 +46,7 @@ export const getOverview = async (studentId: string) => {
   const now = new Date();
   const submittedStatuses = [AttemptStatus.SUBMITTED, AttemptStatus.AUTO_SUBMITTED];
 
-  const [student, mockCount, mockAccuracy, completedContent, totalContent, completedTasks, activeBatches, upcomingSessions, unreadNotifications, mockAttempts, contentCompletions, recentTasks, unreadDashboardNotifications] = await prisma.$transaction([
+  const [student, mockCount, mockAccuracy, completedContent, totalContent, completedTasks, activeBatches, upcomingSessions, unreadNotifications, mockAttempts, contentCompletions, recentTasks, contentAttempts, rcAttempts, batchAttempts, unreadDashboardNotifications] = await prisma.$transaction([
     prisma.student.findUnique({ where: { id: studentId }, select: { name: true, profileImage: true } }),
     prisma.mockAttempt.count({ where: { studentId, status: { in: submittedStatuses } } }),
     prisma.mockAttempt.aggregate({ where: { studentId, status: { in: submittedStatuses } }, _avg: { accuracy: true } }),
@@ -56,12 +56,13 @@ export const getOverview = async (studentId: string) => {
     prisma.studentBatchAccess.count({ where: { studentId, isActive: true, expiryDate: { gte: now } } }),
     prisma.liveSession.findMany({
       where: {
-        startDatetime: { gte: now },
+        startDatetime: { lte: now },
+        endDatetime: { gte: now },
         mentorshipBatch: { studentAccesses: { some: { studentId, isActive: true, expiryDate: { gte: now } } } },
       },
-      orderBy: { startDatetime: 'asc' },
+      orderBy: { endDatetime: 'asc' },
       take: 3,
-      select: { id: true, title: true, startDatetime: true, endDatetime: true, mentorshipBatch: { select: { name: true } } },
+      select: { id: true, title: true, startDatetime: true, endDatetime: true, mentorshipBatch: { select: { id: true, name: true } } },
     }),
     prisma.studentNotification.count({ where: { studentId, isRead: false } }),
     prisma.mockAttempt.findMany({
@@ -74,13 +75,35 @@ export const getOverview = async (studentId: string) => {
       where: { studentId },
       orderBy: { completedAt: 'desc' },
       take: 3,
-      select: { id: true, completedAt: true, content: { select: { title: true } } },
+      select: {
+        id: true,
+        completedAt: true,
+        content: { select: { title: true, subtopic: { select: { topicId: true, topic: { select: { subjectId: true } } } } } },
+      },
     }),
     prisma.completedTask.findMany({
       where: { studentId, status: TaskStatus.COMPLETED },
       orderBy: { completedAt: 'desc' },
       take: 3,
       select: { id: true, completedAt: true, batchTask: { select: { title: true } } },
+    }),
+    prisma.contentAttempt.findMany({
+      where: { studentId, status: { in: submittedStatuses } },
+      orderBy: { submittedAt: 'desc' },
+      take: 3,
+      select: { id: true, submittedAt: true, marksScored: true, totalMarks: true, accuracy: true, contentTest: { select: { name: true } } },
+    }),
+    prisma.rcAttempt.findMany({
+      where: { studentId, submittedAt: { not: null } },
+      orderBy: { submittedAt: 'desc' },
+      take: 3,
+      select: { id: true, submittedAt: true, marksScored: true, totalMarks: true, accuracy: true, rcTest: { select: { title: true } } },
+    }),
+    prisma.batchAttempt.findMany({
+      where: { studentId, status: { in: submittedStatuses } },
+      orderBy: { submittedAt: 'desc' },
+      take: 3,
+      select: { id: true, submittedAt: true, marksScored: true, totalMarks: true, accuracy: true, batchTest: { select: { name: true, mentorshipBatch: { select: { id: true, name: true } } } } },
     }),
     prisma.dashboardNotification.count({
       where: {
@@ -101,6 +124,7 @@ export const getOverview = async (studentId: string) => {
       title: `Completed ${attempt.mockExam.name}`,
       detail: `${asNumber(attempt.marksScored)} / ${asNumber(attempt.totalMarks)} marks · ${asNumber(attempt.accuracy).toFixed(0)}% accuracy`,
       occurredAt: attempt.submittedAt!,
+      href: `/student/mock-tests/attempts/${attempt.id}/analysis`,
     })),
     ...contentCompletions.map((completion) => ({
       id: `content-${completion.id}`,
@@ -108,6 +132,31 @@ export const getOverview = async (studentId: string) => {
       title: `Completed ${completion.content.title}`,
       detail: 'Study material completed',
       occurredAt: completion.completedAt,
+      href: `/student/content?subjectId=${completion.content.subtopic.topic.subjectId}&topicId=${completion.content.subtopic.topicId}`,
+    })),
+    ...contentAttempts.filter((attempt) => attempt.submittedAt).map((attempt) => ({
+      id: `content-test-${attempt.id}`,
+      type: 'CONTENT' as const,
+      title: `Attempted ${attempt.contentTest.name}`,
+      detail: `${asNumber(attempt.marksScored)} / ${asNumber(attempt.totalMarks)} marks · ${asNumber(attempt.accuracy).toFixed(0)}% accuracy`,
+      occurredAt: attempt.submittedAt!,
+      href: `/student/content/attempts/${attempt.id}`,
+    })),
+    ...rcAttempts.filter((attempt) => attempt.submittedAt).map((attempt) => ({
+      id: `rc-${attempt.id}`,
+      type: 'RC' as const,
+      title: `Attempted ${attempt.rcTest.title}`,
+      detail: `${asNumber(attempt.marksScored)} / ${asNumber(attempt.totalMarks)} marks · ${asNumber(attempt.accuracy).toFixed(0)}% accuracy`,
+      occurredAt: attempt.submittedAt!,
+      href: `/student/rc/attempts/${attempt.id}`,
+    })),
+    ...batchAttempts.filter((attempt) => attempt.submittedAt).map((attempt) => ({
+      id: `batch-test-${attempt.id}`,
+      type: 'MENTORSHIP' as const,
+      title: `Attempted ${attempt.batchTest.name}`,
+      detail: `${attempt.batchTest.mentorshipBatch.name} · ${asNumber(attempt.marksScored)} / ${asNumber(attempt.totalMarks)} marks`,
+      occurredAt: attempt.submittedAt!,
+      href: `/student/mentorship/batches/${attempt.batchTest.mentorshipBatch.id}/tests/attempts/${attempt.id}/analysis`,
     })),
     ...recentTasks.filter((task) => task.completedAt).map((task) => ({
       id: `task-${task.id}`,
@@ -115,6 +164,7 @@ export const getOverview = async (studentId: string) => {
       title: `Finished ${task.batchTask.title}`,
       detail: 'Mentorship task marked complete',
       occurredAt: task.completedAt!,
+      href: '/student/mentorship',
     })),
   ].sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime()).slice(0, 5);
 
@@ -133,6 +183,7 @@ export const getOverview = async (studentId: string) => {
     upcomingSessions: upcomingSessions.map((session) => ({
       ...session,
       batchName: session.mentorshipBatch.name,
+      batchId: session.mentorshipBatch.id,
     })),
     recentScores: mockAttempts.map((attempt) => ({
       id: attempt.id,
@@ -141,6 +192,7 @@ export const getOverview = async (studentId: string) => {
       totalMarks: asNumber(attempt.totalMarks),
       accuracy: asNumber(attempt.accuracy),
       submittedAt: attempt.submittedAt,
+      href: `/student/mock-tests/attempts/${attempt.id}/analysis`,
     })),
     activity,
   };

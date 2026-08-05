@@ -642,35 +642,10 @@ const recalcBatchAnalytics = async (tx: Prisma.TransactionClient, batchTestId: s
     create: { batchTestId, ...batchTestAnalyticsData(attempts) },
     update: batchTestAnalyticsData(attempts),
   });
-  const sections = await tx.batchSection.findMany({ where: { batchTestId }, include: { questions: true } });
+  const sections = await tx.batchSection.findMany({ where: { batchTestId } });
   await Promise.all(sections.map(async (section) => {
     const rows = await tx.batchAttemptSection.findMany({ where: { batchSectionId: section.id, batchAttempt: { status: { in: submittedStatuses } } } });
     await tx.batchSectionAnalytics.upsert({ where: { batchSectionId: section.id }, create: { batchSectionId: section.id, ...batchSectionAnalyticsData(rows) }, update: batchSectionAnalyticsData(rows) });
-  }));
-  const questions = sections.flatMap((section) => section.questions);
-  await Promise.all(questions.map(async (question) => {
-    const rows = await tx.batchAttemptAnswer.findMany({ where: { batchQuestionId: question.id, batchAttempt: { status: { in: submittedStatuses } } } });
-    await tx.batchQuestionAnalytics.upsert({ where: { batchQuestionId: question.id }, create: { batchQuestionId: question.id, ...batchQuestionAnalyticsData(rows) }, update: batchQuestionAnalyticsData(rows) });
-  }));
-  await recalcBatchTopicAnalytics(tx, batchTestId, questions, 'topicId');
-  await recalcBatchSubtopicAnalytics(tx, batchTestId, questions);
-};
-
-const recalcBatchTopicAnalytics = async (tx: Prisma.TransactionClient, batchTestId: string, questions: any[], key: 'topicId') => {
-  const ids = [...new Set(questions.map((question) => question[key]))];
-  await Promise.all(ids.map(async (topicId) => {
-    const topicQuestions = questions.filter((question) => question.topicId === topicId);
-    const rows = await tx.batchAttemptAnswer.findMany({ where: { batchQuestionId: { in: topicQuestions.map((question) => question.id) }, batchAttempt: { status: { in: submittedStatuses } } } });
-    await tx.batchTopicAnalytics.upsert({ where: { batchTestId_topicId: { batchTestId, topicId } }, create: { batchTestId, topicId, ...topicSubtopicAnalyticsData(topicQuestions, rows) }, update: topicSubtopicAnalyticsData(topicQuestions, rows) });
-  }));
-};
-
-const recalcBatchSubtopicAnalytics = async (tx: Prisma.TransactionClient, batchTestId: string, questions: any[]) => {
-  const ids = [...new Set(questions.map((question) => question.subtopicId))];
-  await Promise.all(ids.map(async (subtopicId) => {
-    const subtopicQuestions = questions.filter((question) => question.subtopicId === subtopicId);
-    const rows = await tx.batchAttemptAnswer.findMany({ where: { batchQuestionId: { in: subtopicQuestions.map((question) => question.id) }, batchAttempt: { status: { in: submittedStatuses } } } });
-    await tx.batchSubtopicAnalytics.upsert({ where: { batchTestId_subtopicId: { batchTestId, subtopicId } }, create: { batchTestId, subtopicId, ...topicSubtopicAnalyticsData(subtopicQuestions, rows) }, update: topicSubtopicAnalyticsData(subtopicQuestions, rows) });
   }));
 };
 
@@ -746,35 +721,6 @@ const batchSectionAnalyticsData = (rows: any[]) => ({
   totalIncorrectAnswers: sum(rows.map((row) => row.incorrectAnswers)),
   totalUnattemptedAnswers: sum(rows.map((row) => row.unattemptedAnswers)),
 });
-
-const batchQuestionAnalyticsData = (rows: any[]) => {
-  const correctCount = rows.filter((row) => row.status === AnswerStatus.CORRECT).length;
-  const incorrectCount = rows.filter((row) => row.status === AnswerStatus.INCORRECT || row.status === AnswerStatus.PARTIALLY_CORRECT).length;
-  const unattemptedCount = rows.filter((row) => row.status === AnswerStatus.UNATTEMPTED).length;
-  return {
-    totalAttempts: rows.length,
-    correctCount,
-    incorrectCount,
-    unattemptedCount,
-    averageTimeTakenSeconds: Math.round(average(rows.map((row) => row.timeTakenSeconds))),
-    correctPercentage: rows.length ? Number(((correctCount / rows.length) * 100).toFixed(2)) : 0,
-  };
-};
-
-const topicSubtopicAnalyticsData = (questions: any[], rows: any[]) => {
-  const correctAnswers = rows.filter((row) => row.status === AnswerStatus.CORRECT).length;
-  const incorrectAnswers = rows.filter((row) => row.status === AnswerStatus.INCORRECT || row.status === AnswerStatus.PARTIALLY_CORRECT).length;
-  const unattemptedAnswers = rows.filter((row) => row.status === AnswerStatus.UNATTEMPTED).length;
-  return {
-    totalQuestions: questions.length,
-    totalAttempts: rows.length,
-    correctAnswers,
-    incorrectAnswers,
-    unattemptedAnswers,
-    averageAccuracy: accuracy(correctAnswers, incorrectAnswers),
-    averageScore: average(rows.map((row) => toNumber(row.marksAwarded))),
-  };
-};
 
 const simpleTestAnalyticsData = (attempts: any[]) => ({
   totalAttempts: attempts.length,

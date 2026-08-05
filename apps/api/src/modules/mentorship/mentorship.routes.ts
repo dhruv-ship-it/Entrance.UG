@@ -8,6 +8,8 @@ import {
   batchOverview,
   batchSessions,
   batchTasks,
+  batchAttemptAnswerBookmark,
+  batchTestAttemptAnalysis,
   batchTestDetail,
   batchTests,
   createDoubt,
@@ -43,6 +45,8 @@ mentorshipRouter.post('/batches/:batchId/doubts', validateBody(doubtSchema), cre
 
 mentorshipRouter.patch('/tasks/:taskId/completion', validateBody(z.object({ completed: z.boolean() })), taskCompletion);
 mentorshipRouter.post('/sessions/:sessionId/join', sessionJoin);
+mentorshipRouter.get('/test-attempts/:attemptId/analysis', batchTestAttemptAnalysis);
+mentorshipRouter.patch('/test-attempt-answers/:answerId/bookmark', validateBody(z.object({ bookmarked: z.boolean() })), batchAttemptAnswerBookmark);
 
 mentorshipRouter.get('/doubts/:doubtId/replies', doubtReplies);
 mentorshipRouter.post('/doubts/:doubtId/replies', validateBody(replySchema), createReply);

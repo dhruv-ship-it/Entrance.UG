@@ -353,7 +353,6 @@ model Topic {
   contentTests ContentTest[]
   contentQuestions ContentQuestion[]
   batchQuestions BatchQuestion[]
-  batchTopicAnalytics BatchTopicAnalytics[]
 
   @@unique([subjectId, name])
   @@unique([subjectId, displayOrder])
@@ -378,7 +377,6 @@ model Subtopic {
   mockQuestions MockQuestion[]
   contentQuestions ContentQuestion[]
   batchQuestions BatchQuestion[]
-  batchSubtopicAnalytics BatchSubtopicAnalytics[]
 
   @@unique([topicId, name])
   @@unique([topicId, displayOrder])
@@ -1195,8 +1193,6 @@ model BatchTest {
   sections                 BatchSection[]
   attempts                 BatchAttempt[]
   analytics                BatchTestAnalytics?
-  topicAnalytics           BatchTopicAnalytics[]
-  subtopicAnalytics        BatchSubtopicAnalytics[]
 
   @@index([mentorshipBatchId, isActive])
   @@map("batch_tests")
@@ -1283,7 +1279,6 @@ model BatchQuestion {
   updatedByMentor       Mentor?  @relation("MentorUpdatedBatchQuestions", fields: [updatedByMentorId], references: [id], onDelete: Restrict)
   updatedByAdmin        Admin?   @relation("AdminUpdatedBatchQuestions", fields: [updatedByAdminId], references: [id], onDelete: Restrict)
   attemptAnswers        BatchAttemptAnswer[]
-  analytics             BatchQuestionAnalytics?
 
   @@unique([batchSectionId, sequenceNumber])
   @@index([topicId, subtopicId])
@@ -1395,59 +1390,6 @@ model BatchSectionAnalytics {
   batchSection             BatchSection @relation(fields: [batchSectionId], references: [id], onDelete: Cascade)
 
   @@map("batch_section_analytics")
-}
-
-model BatchQuestionAnalytics {
-  id                       String   @id @default(uuid()) @db.Uuid
-  batchQuestionId          String   @unique @map("batch_question_id") @db.Uuid
-  totalAttempts            Int      @default(0) @map("total_attempts")
-  correctCount             Int      @default(0) @map("correct_count")
-  incorrectCount           Int      @default(0) @map("incorrect_count")
-  unattemptedCount         Int      @default(0) @map("unattempted_count")
-  averageTimeTakenSeconds  Int      @default(0) @map("average_time_taken_seconds")
-  correctPercentage        Decimal  @default(0) @map("correct_percentage") @db.Decimal(5, 2)
-  updatedAt                DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-  batchQuestion            BatchQuestion @relation(fields: [batchQuestionId], references: [id], onDelete: Cascade)
-
-  @@map("batch_question_analytics")
-}
-
-model BatchTopicAnalytics {
-  id                  String   @id @default(uuid()) @db.Uuid
-  batchTestId         String   @map("batch_test_id") @db.Uuid
-  topicId             String   @map("topic_id") @db.Uuid
-  totalQuestions      Int      @default(0) @map("total_questions")
-  totalAttempts       Int      @default(0) @map("total_attempts")
-  correctAnswers      Int      @default(0) @map("correct_answers")
-  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
-  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
-  averageAccuracy     Decimal  @default(0) @map("average_accuracy") @db.Decimal(5, 2)
-  averageScore        Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
-  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-  batchTest           BatchTest @relation(fields: [batchTestId], references: [id], onDelete: Cascade)
-  topic               Topic    @relation(fields: [topicId], references: [id], onDelete: Restrict)
-
-  @@unique([batchTestId, topicId])
-  @@map("batch_topic_analytics")
-}
-
-model BatchSubtopicAnalytics {
-  id                  String   @id @default(uuid()) @db.Uuid
-  batchTestId         String   @map("batch_test_id") @db.Uuid
-  subtopicId          String   @map("subtopic_id") @db.Uuid
-  totalQuestions      Int      @default(0) @map("total_questions")
-  totalAttempts       Int      @default(0) @map("total_attempts")
-  correctAnswers      Int      @default(0) @map("correct_answers")
-  incorrectAnswers    Int      @default(0) @map("incorrect_answers")
-  unattemptedAnswers  Int      @default(0) @map("unattempted_answers")
-  averageAccuracy     Decimal  @default(0) @map("average_accuracy") @db.Decimal(5, 2)
-  averageScore        Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
-  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-  batchTest           BatchTest @relation(fields: [batchTestId], references: [id], onDelete: Cascade)
-  subtopic            Subtopic @relation(fields: [subtopicId], references: [id], onDelete: Restrict)
-
-  @@unique([batchTestId, subtopicId])
-  @@map("batch_subtopic_analytics")
 }
 
 model RcTest {

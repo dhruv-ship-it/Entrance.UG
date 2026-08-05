@@ -83,10 +83,12 @@ export const getLearningTree = async (studentId: string) => {
           estimatedDurationMinutes: allContents.reduce((sum, item) => sum + (item.estimatedDurationMinutes ?? 0), 0),
           tests: topic.contentTests.map((test) => {
             const latestAttempt = test.attempts[0] ?? null;
+            const hasAccess = test.isFree || hasPaidAccess;
+            const isSubmitted = latestAttempt?.status === 'SUBMITTED' || latestAttempt?.status === 'AUTO_SUBMITTED';
             return {
               id: test.id, name: test.name, description: test.description, durationMinutes: test.durationMinutes,
               totalMarks: Number(test.totalMarks), difficulty: test.difficulty.name, isFree: test.isFree,
-              hasAccess: test.isFree || hasPaidAccess, canAttempt: test.isFree || hasPaidAccess,
+              hasAccess, canAttempt: hasAccess && !isSubmitted,
               sectionCount: test._count.sections,
               totalQuestions: test.sections.reduce((sum, section) => sum + section._count.questions, 0),
               attempt: latestAttempt ? { id: latestAttempt.id, status: latestAttempt.status, submittedAt: latestAttempt.submittedAt, marksScored: Number(latestAttempt.marksScored), accuracy: Number(latestAttempt.accuracy) } : null,
@@ -147,4 +149,121 @@ export const listAttempts = async (studentId: string) => {
     test: { id: attempt.contentTest.id, name: attempt.contentTest.name, durationMinutes: attempt.contentTest.durationMinutes, totalMarks: Number(attempt.contentTest.totalMarks), topic: attempt.contentTest.topic.name, subject: attempt.contentTest.topic.subject.name },
     sections: attempt.sections.map((section) => ({ id: section.contentSection.id, name: section.contentSection.name, totalMarks: Number(section.contentSection.totalMarks), marksScored: Number(section.marksScored), accuracy: Number(section.accuracy), timeTakenSeconds: section.timeTakenSeconds, correctAnswers: section.correctAnswers, incorrectAnswers: section.incorrectAnswers, unattemptedAnswers: section.unattemptedAnswers })),
   }));
+};
+
+export const getAttemptDetail = async (studentId: string, attemptId: string) => {
+  const attempt = await prisma.contentAttempt.findFirst({
+    where: { id: attemptId, studentId },
+    include: {
+      contentTest: {
+        include: {
+          topic: { select: { id: true, name: true, subject: { select: { id: true, name: true } } } },
+          difficulty: { select: { name: true } },
+        },
+      },
+      sections: {
+        include: { contentSection: { select: { id: true, name: true, sequenceNumber: true, totalMarks: true } } },
+        orderBy: { contentSection: { sequenceNumber: 'asc' } },
+      },
+      answers: {
+        include: {
+          contentSection: { select: { id: true, name: true, sequenceNumber: true } },
+          contentQuestion: {
+            include: {
+              difficulty: { select: { id: true, name: true } },
+              subtopic: { select: { id: true, name: true } },
+              topic: { select: { id: true, name: true } },
+              contentComprehension: { select: { id: true, title: true, passage: true } },
+            },
+          },
+        },
+        orderBy: [
+          { contentSection: { sequenceNumber: 'asc' } },
+          { contentQuestion: { sequenceNumber: 'asc' } },
+        ],
+      },
+    },
+  });
+  if (!attempt) throw new AppError(404, 'Content test attempt not found.');
+
+  return {
+    id: attempt.id,
+    status: attempt.status,
+    startedAt: attempt.startedAt,
+    submittedAt: attempt.submittedAt,
+    timeTakenSeconds: attempt.timeTakenSeconds,
+    totalMarks: Number(attempt.totalMarks),
+    marksScored: Number(attempt.marksScored),
+    correctAnswers: attempt.correctAnswers,
+    incorrectAnswers: attempt.incorrectAnswers,
+    unattemptedAnswers: attempt.unattemptedAnswers,
+    accuracy: Number(attempt.accuracy),
+    test: {
+      id: attempt.contentTest.id,
+      name: attempt.contentTest.name,
+      description: attempt.contentTest.description,
+      instructions: attempt.contentTest.instructions,
+      durationMinutes: attempt.contentTest.durationMinutes,
+      totalMarks: Number(attempt.contentTest.totalMarks),
+      difficulty: attempt.contentTest.difficulty.name,
+      topic: attempt.contentTest.topic.name,
+      subject: attempt.contentTest.topic.subject.name,
+    },
+    sections: attempt.sections.map((section) => ({
+      id: section.contentSection.id,
+      name: section.contentSection.name,
+      totalMarks: Number(section.contentSection.totalMarks),
+      marksScored: Number(section.marksScored),
+      accuracy: Number(section.accuracy),
+      timeTakenSeconds: section.timeTakenSeconds,
+      correctAnswers: section.correctAnswers,
+      incorrectAnswers: section.incorrectAnswers,
+      unattemptedAnswers: section.unattemptedAnswers,
+    })),
+    answers: attempt.answers.map((answer) => ({
+      id: answer.id,
+      questionId: answer.contentQuestionId,
+      sectionId: answer.contentSectionId,
+      sectionName: answer.contentSection.name,
+      sequenceNumber: answer.contentQuestion.sequenceNumber,
+      questionType: answer.contentQuestion.questionType,
+      question: answer.contentQuestion.question,
+      options: answer.contentQuestion.options,
+      selectedAnswers: answer.selectedAnswers,
+      correctAnswers: answer.correctAnswers,
+      status: answer.status,
+      marksAwarded: Number(answer.marksAwarded),
+      positiveMarks: Number(answer.contentQuestion.positiveMarks),
+      negativeMarks: Number(answer.contentQuestion.negativeMarks),
+      timeTakenSeconds: answer.timeTakenSeconds,
+      visited: answer.visited,
+      bookmarked: answer.bookmarked,
+      markedForReview: answer.markedForReview,
+      answeredAt: answer.answeredAt,
+      explanation: answer.contentQuestion.explanation,
+      imageUrl: answer.contentQuestion.imageUrl,
+      difficulty: answer.contentQuestion.difficulty.name,
+      topic: answer.contentQuestion.topic.name,
+      subtopic: answer.contentQuestion.subtopic.name,
+      comprehension: answer.contentQuestion.contentComprehension ? {
+        id: answer.contentQuestion.contentComprehension.id,
+        title: answer.contentQuestion.contentComprehension.title,
+        passage: answer.contentQuestion.contentComprehension.passage,
+      } : null,
+    })),
+  };
+};
+
+export const setAttemptAnswerBookmark = async (studentId: string, answerId: string, bookmarked: boolean) => {
+  const answer = await prisma.contentAttemptAnswer.findFirst({
+    where: { id: answerId, contentAttempt: { studentId, status: { in: ['SUBMITTED', 'AUTO_SUBMITTED'] } } },
+    select: { id: true },
+  });
+  if (!answer) throw new AppError(404, 'Attempt answer not found.');
+  const updated = await prisma.contentAttemptAnswer.update({
+    where: { id: answerId },
+    data: { bookmarked },
+    select: { id: true, bookmarked: true },
+  });
+  return updated;
 };

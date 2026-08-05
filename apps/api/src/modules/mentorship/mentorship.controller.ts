@@ -46,6 +46,14 @@ export const batchTestDetail = async (request: AuthenticatedRequest, response: R
   response.json({ test: await service.testDetail(request.auth!.sub, String(request.params.batchId), String(request.params.testId)) });
 };
 
+export const batchTestAttemptAnalysis = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ analysis: await service.testAttemptAnalysis(request.auth!.sub, String(request.params.attemptId)) });
+};
+
+export const batchAttemptAnswerBookmark = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ answer: await service.setBatchAnswerBookmark(request.auth!.sub, String(request.params.answerId), request.body.bookmarked) });
+};
+
 export const doubts = async (request: AuthenticatedRequest, response: Response) => {
   response.json({ doubts: await service.listDoubts(request.auth!.sub, String(request.params.batchId), {
     scope: String(request.query.scope ?? ''),

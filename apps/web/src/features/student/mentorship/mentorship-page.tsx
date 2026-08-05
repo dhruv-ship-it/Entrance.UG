@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import {
   ArrowRight,
   BarChart3,
+  Bookmark,
   BookOpenCheck,
   CalendarCheck2,
   CalendarDays,
@@ -12,15 +14,19 @@ import {
   Clock3,
   ExternalLink,
   FileText,
+  Filter,
   GraduationCap,
+  HelpCircle,
   MessageCircleQuestion,
   PlayCircle,
   Radio,
+  Target,
   Sparkles,
   Trophy,
   UsersRound,
+  XCircle,
 } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { EmptyState } from '../../../components/empty-state';
 import { Badge } from '../../../components/ui/badge';
 import { Button } from '../../../components/ui/button';
@@ -88,6 +94,7 @@ type TestSummary = {
   phase: Phase;
   attempted: boolean;
   latestAttemptId?: string | null;
+  latestAttemptStatus?: string | null;
   analytics?: { totalAttempts: number; averageScore: number; highestScore: number; averageAccuracy: number } | null;
 };
 type Overview = {
@@ -136,6 +143,24 @@ type TestDetail = TestSummary & {
     lastAttemptAt?: string | null;
   } | null;
 };
+type BatchAnalysis = {
+  attempt: { id: string; submittedAt: string | null; timeTakenSeconds: number; totalMarks: number; marksScored: number; percentage: number; accuracy: number; correctAnswers: number; incorrectAnswers: number; unattemptedAnswers: number };
+  test: {
+    id: string;
+    batchId: string;
+    batchName: string;
+    name: string;
+    totalMarks: number;
+    analytics: ({ totalAttempts: number; uniqueStudentsAttempted: number; averageScore: number; highestScore: number; lowestScore: number; averageAccuracy: number; averageTimeTakenSeconds: number }) | null;
+    marksDistribution: { label: string; count: number }[];
+    sections: { id: string; name: string; analytics: SectionAnalytics | null }[];
+  };
+  sections: { id: string; name: string; totalMarks: number; marksScored: number; correctAnswers: number; incorrectAnswers: number; unattemptedAnswers: number; accuracy: number; timeTakenSeconds: number; analytics: SectionAnalytics | null }[];
+  filters: { sections: { id: string; name: string }[]; difficulties: { id: string; name: string }[] };
+  answers: BatchAnswer[];
+};
+type SectionAnalytics = { totalAttempts: number; averageScore: number; highestScore: number; lowestScore: number; averageAccuracy: number; averageTimeTakenSeconds: number; totalCorrectAnswers: number; totalIncorrectAnswers: number; totalUnattemptedAnswers: number };
+type BatchAnswer = { id: string; sectionId: string; sectionName: string; question: string; options: unknown; selectedAnswers: unknown; correctAnswers: unknown; status: 'CORRECT' | 'INCORRECT' | 'PARTIALLY_CORRECT' | 'UNATTEMPTED'; marksAwarded: number; positiveMarks: number; negativeMarks: number; timeTakenSeconds: number; averageTimeTakenSeconds: number; bookmarked: boolean; explanation: string; imageUrl: string | null; comprehension: { title: string | null; passage: string } | null; difficulty: { id: string; name: string }; topic: { id: string; name: string; subject?: { id: string; name: string } }; subtopic: { id: string; name: string } };
 
 const phaseLabel = (phase: Phase) => phase === 'LIVE' ? 'Live now' : phase === 'UPCOMING' ? 'Upcoming' : 'Closed';
 
@@ -303,7 +328,8 @@ const TestRow = ({ test, batchId }: { test: TestSummary; batchId: string }) => (
           <span>{test.durationMinutes} min</span>
           <span>{test.difficulty}</span>
         </div>
-        {test.phase === 'PAST' && <p className="mt-2 text-xs font-semibold text-moss-700">{test.attempted ? 'Analysis available after engine is connected' : 'Not attempted'}</p>}
+        {test.phase === 'PAST' && <p className="mt-2 text-xs font-semibold text-moss-700">{test.latestAttemptStatus === 'SUBMITTED' || test.latestAttemptStatus === 'AUTO_SUBMITTED' ? 'Analysis available' : 'Not attempted'}</p>}
+        {test.latestAttemptStatus === 'IN_PROGRESS' && <p className="mt-2 text-xs font-semibold text-amber-700">Attempt in progress</p>}
       </div>
       <ArrowRight className="shrink-0 text-stone-400" size={19} />
     </div>
@@ -746,13 +772,25 @@ export const MentorshipClosedTestsPage = () => {
 
 export const MentorshipTestDetailPage = () => {
   const { batchId = '', testId = '' } = useParams();
+  const navigate = useNavigate();
+  const client = useQueryClient();
   const query = useQuery({ queryKey: ['mentor-batch-test', batchId, testId], queryFn: () => api<{ test: TestDetail }>(`/api/v1/mentorship/batches/${batchId}/tests/${testId}`) });
+  const startAttempt = useMutation({
+    mutationFn: () => api<{ attempt: { id: string; enginePath: string } }>(`/api/v1/test-engine/batch/tests/${testId}/attempts`, { method: 'POST' }),
+    onSuccess: (data) => {
+      client.invalidateQueries({ queryKey: ['mentor-batch-test', batchId, testId] });
+      client.invalidateQueries({ queryKey: ['mentor-batch-tests', batchId] });
+      navigate(data.attempt.enginePath);
+    },
+  });
 
   if (query.isLoading) return <Skeleton className="h-[560px]" />;
   const test = query.data?.test;
   if (!test) return <EmptyState icon={BookOpenCheck} title="Test unavailable" description="This batch test could not be opened." />;
 
-  const attemptText = test.attempted ? 'View analysis' : test.phase === 'LIVE' ? 'Attempt when engine is ready' : test.phase === 'PAST' ? 'Test closed' : 'Opens later';
+  const isSubmitted = test.latestAttemptStatus === 'SUBMITTED' || test.latestAttemptStatus === 'AUTO_SUBMITTED';
+  const isInProgress = test.latestAttemptStatus === 'IN_PROGRESS';
+  const attemptText = isSubmitted ? 'View analysis' : isInProgress ? 'Resume test' : test.phase === 'LIVE' ? 'Start test' : test.phase === 'PAST' ? 'Test closed' : 'Opens later';
 
   return (
     <div className="space-y-6">
@@ -780,7 +818,13 @@ export const MentorshipTestDetailPage = () => {
             <p><span className="font-semibold text-ink">Ends:</span> {formatDateTime(test.endDatetime)}</p>
             <p><span className="font-semibold text-ink">Back between sections:</span> {test.canGoBackBetweenSections ? 'Allowed' : 'Not allowed'}</p>
           </div>
-          <Button className="mt-5 w-full" disabled={!test.attempted}>{attemptText}</Button>
+          {isSubmitted && test.latestAttemptId ? (
+            <Button className="mt-5 w-full" onClick={() => navigate(`/student/mentorship/batches/${batchId}/tests/attempts/${test.latestAttemptId}/analysis`)}><BarChart3 size={16} />{attemptText}</Button>
+          ) : isInProgress && test.latestAttemptId ? (
+            <Button className="mt-5 w-full" onClick={() => navigate(`/student/test-engine/batch/${test.latestAttemptId}`)}><PlayCircle size={16} />{attemptText}</Button>
+          ) : (
+            <Button className="mt-5 w-full" disabled={test.phase !== 'LIVE' || startAttempt.isPending} onClick={() => startAttempt.mutate()}><PlayCircle size={16} />{attemptText}</Button>
+          )}
           {test.analytics && (
             <div className="mt-5 rounded-2xl bg-stone-50 p-4 text-sm">
               <p className="font-bold">Batch analytics</p>
@@ -807,6 +851,110 @@ export const MentorshipTestDetailPage = () => {
   );
 };
 
+export const MentorshipTestAttemptAnalysisPage = () => {
+  const { batchId = '', attemptId = '' } = useParams();
+  const client = useQueryClient();
+  const query = useQuery({ queryKey: ['mentor-batch-test-analysis', attemptId], queryFn: () => api<{ analysis: BatchAnalysis }>(`/api/v1/mentorship/test-attempts/${attemptId}/analysis`).then((response) => response.analysis) });
+  const [sectionId, setSectionId] = useState('all');
+  const [difficultyId, setDifficultyId] = useState('all');
+  const [status, setStatus] = useState('all');
+  const bookmark = useMutation({
+    mutationFn: ({ id, bookmarked }: { id: string; bookmarked: boolean }) => api(`/api/v1/mentorship/test-attempt-answers/${id}/bookmark`, { method: 'PATCH', body: JSON.stringify({ bookmarked }) }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['mentor-batch-test-analysis', attemptId] }),
+  });
+
+  const analysis = query.data;
+  const chartAnalytics = sectionId === 'all' ? analysis?.test.analytics : analysis?.test.sections.find((section) => section.id === sectionId)?.analytics;
+  const answerTotals = sectionId === 'all' && analysis
+    ? aggregateSectionAnalytics(analysis.test.sections.map((section) => section.analytics).filter(Boolean) as SectionAnalytics[])
+    : analysis?.test.sections.find((section) => section.id === sectionId)?.analytics;
+  const filteredAnswers = (analysis?.answers ?? []).filter((answer) => {
+    if (sectionId !== 'all' && answer.sectionId !== sectionId) return false;
+    if (difficultyId !== 'all' && answer.difficulty.id !== difficultyId) return false;
+    if (status !== 'all' && answer.status !== status) return false;
+    return true;
+  });
+  const filteredSummary = summarizeBatchAnswers(filteredAnswers);
+  const answerMix = answerTotals ? [
+    { name: 'Correct', value: answerTotals.totalCorrectAnswers, percent: percentOfAnswers(answerTotals.totalCorrectAnswers, answerTotals), color: '#166534' },
+    { name: 'Incorrect', value: answerTotals.totalIncorrectAnswers, percent: percentOfAnswers(answerTotals.totalIncorrectAnswers, answerTotals), color: '#dc2626' },
+    { name: 'Unattempted', value: answerTotals.totalUnattemptedAnswers, percent: percentOfAnswers(answerTotals.totalUnattemptedAnswers, answerTotals), color: '#a8a29e' },
+  ] : [];
+
+  if (query.isLoading) return <Skeleton className="h-[720px]" />;
+  if (!analysis) return <EmptyState icon={Trophy} title="Analysis unavailable" description="This submitted batch test attempt could not be opened." />;
+
+  return (
+    <div className="space-y-7">
+      <BatchBackLink to={`/student/mentorship/batches/${batchId}/tests`}>Batch tests</BatchBackLink>
+      <section className="rounded-3xl bg-moss-800 p-7 text-white shadow-card">
+        <Badge className="bg-white/12 text-lime">Batch test analysis</Badge>
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight">{analysis.test.name}</h1>
+        <p className="mt-2 text-sm text-moss-100/75">{analysis.test.batchName} · submitted {analysis.attempt.submittedAt ? formatDateTime(analysis.attempt.submittedAt) : 'recently'}</p>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <AnalysisMetric icon={Trophy} label="Score" value={`${analysis.attempt.marksScored}/${analysis.attempt.totalMarks}`} />
+        <AnalysisMetric icon={Target} label="Percentage" value={`${analysis.attempt.percentage}%`} />
+        <AnalysisMetric icon={CheckCircle2} label="Correct" value={analysis.attempt.correctAnswers} />
+        <AnalysisMetric icon={XCircle} label="Incorrect" value={analysis.attempt.incorrectAnswers} />
+        <AnalysisMetric icon={Clock3} label="Time" value={`${Math.floor(analysis.attempt.timeTakenSeconds / 60)}m`} />
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-2">
+        <Card className="p-5">
+          <div className="flex items-center justify-between"><h2 className="font-bold">Marks distribution</h2><Badge>{sectionId === 'all' ? 'Entire test' : analysis.filters.sections.find((section) => section.id === sectionId)?.name}</Badge></div>
+          <div className="mt-4 h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={analysis.test.marksDistribution}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="label" /><YAxis allowDecimals={false} /><Tooltip /><Bar dataKey="count" fill="#7a9c32" radius={[10, 10, 0, 0]} /></BarChart></ResponsiveContainer></div>
+        </Card>
+        <Card className="p-5">
+          <div className="flex items-center justify-between"><h2 className="font-bold">Cohort answer mix</h2><Badge>{chartAnalytics?.totalAttempts ?? 0} attempts</Badge></div>
+          <div className="mt-4 grid gap-4 md:grid-cols-[1fr_180px]">
+            <div className="h-72"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={answerMix} dataKey="percent" nameKey="name" innerRadius={65} outerRadius={95} paddingAngle={4}>{answerMix.map((entry) => <Cell key={entry.name} fill={entry.color} />)}</Pie><Tooltip formatter={(value) => `${value}%`} /></PieChart></ResponsiveContainer></div>
+            <div className="self-center space-y-3">{answerMix.map((entry) => <div key={entry.name} className="rounded-2xl bg-stone-50 p-3"><div className="flex items-center gap-2"><span className="size-3 rounded-full" style={{ background: entry.color }} /><p className="text-sm font-semibold">{entry.name}</p></div><p className="mt-1 text-2xl font-bold">{entry.percent}%</p><p className="text-xs text-stone-400">{entry.value} answers</p></div>)}</div>
+          </div>
+        </Card>
+      </section>
+
+      <Card className="p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <Filter size={17} className="text-moss-700" />
+          <select className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm" value={sectionId} onChange={(event) => setSectionId(event.target.value)}><option value="all">Entire test</option>{analysis.filters.sections.map((section) => <option key={section.id} value={section.id}>{section.name}</option>)}</select>
+          <select className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm" value={difficultyId} onChange={(event) => setDifficultyId(event.target.value)}><option value="all">All difficulty</option>{analysis.filters.difficulties.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+          <select className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm" value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All statuses</option>{['CORRECT', 'INCORRECT', 'PARTIALLY_CORRECT', 'UNATTEMPTED'].map((item) => <option key={item} value={item}>{item.replace('_', ' ')}</option>)}</select>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-4">
+          <AnalysisMetric compact icon={Trophy} label="Filtered score" value={filteredSummary.score} />
+          <AnalysisMetric compact icon={CheckCircle2} label="Correct" value={filteredSummary.correct} />
+          <AnalysisMetric compact icon={XCircle} label="Incorrect" value={filteredSummary.incorrect} />
+          <AnalysisMetric compact icon={HelpCircle} label="Unattempted" value={filteredSummary.unattempted} />
+        </div>
+      </Card>
+
+      <section className="space-y-4">
+        {filteredAnswers.map((answer, index) => (
+          <Card key={answer.id} className="p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div><Badge className={answerStatusClass(answer.status)}>{answer.status.replace('_', ' ')}</Badge><h3 className="mt-3 font-bold">Q{index + 1}. {answer.question}</h3></div>
+              <Button size="sm" variant={answer.bookmarked ? 'secondary' : 'outline'} disabled={bookmark.isPending} onClick={() => bookmark.mutate({ id: answer.id, bookmarked: !answer.bookmarked })}><Bookmark size={15} />{answer.bookmarked ? 'Bookmarked' : 'Bookmark'}</Button>
+            </div>
+            {answer.comprehension && <div className="mt-4 rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-600">{answer.comprehension.passage}</div>}
+            {answer.imageUrl && <img src={answer.imageUrl} alt="" className="mt-4 max-h-72 rounded-2xl object-contain" />}
+            <BatchOptionReview options={answer.options} selected={normalizeAnswers(answer.selectedAnswers)} correct={normalizeAnswers(answer.correctAnswers)} />
+            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+              <InfoBox label="Your answer" value={normalizeAnswers(answer.selectedAnswers).join(', ') || 'Unattempted'} />
+              <InfoBox label="Correct answer" value={normalizeAnswers(answer.correctAnswers).join(', ')} />
+              <InfoBox label="Marks" value={`${answer.marksAwarded} / +${answer.positiveMarks}`} />
+              <InfoBox label="Time" value={`${answer.timeTakenSeconds}s · avg ${answer.averageTimeTakenSeconds}s`} />
+            </div>
+            <div className="mt-4 rounded-2xl bg-moss-50 p-4 text-sm leading-6 text-moss-900"><b>Explanation:</b> {answer.explanation}</div>
+            <p className="mt-3 text-xs text-stone-500">{answer.sectionName} · {answer.topic.subject?.name} / {answer.topic.name} / {answer.subtopic.name} · {answer.difficulty.name}</p>
+          </Card>
+        ))}
+      </section>
+    </div>
+  );
+};
+
 export const MentorshipAnalysisPage = () => {
   const { batchId = '' } = useParams();
   return (
@@ -827,3 +975,62 @@ export const MentorshipAnalysisPage = () => {
     </div>
   );
 };
+
+const AnalysisMetric = ({ icon: Icon, label, value, compact = false }: { icon: typeof Trophy; label: string; value: string | number; compact?: boolean }) => (
+  <Card className={cn('p-4', compact && 'bg-stone-50 shadow-none')}>
+    <div className="flex items-center gap-3">
+      <span className="grid size-10 place-items-center rounded-2xl bg-moss-50 text-moss-800"><Icon size={18} /></span>
+      <div><p className="text-xs font-semibold uppercase tracking-[.12em] text-stone-400">{label}</p><p className="text-xl font-bold">{value}</p></div>
+    </div>
+  </Card>
+);
+
+const InfoBox = ({ label, value }: { label: string; value: string }) => (
+  <div className="rounded-2xl bg-stone-50 p-3"><p className="text-xs text-stone-400">{label}</p><p className="font-semibold text-ink">{value}</p></div>
+);
+
+const normalizeAnswers = (value: unknown) => Array.isArray(value) ? value.map(String) : [];
+
+const percentOfAnswers = (value: number, analytics: SectionAnalytics | NonNullable<BatchAnalysis['test']['analytics']>) => {
+  const total = 'totalCorrectAnswers' in analytics
+    ? analytics.totalCorrectAnswers + analytics.totalIncorrectAnswers + analytics.totalUnattemptedAnswers
+    : 0;
+  return total ? Number(((value / total) * 100).toFixed(1)) : 0;
+};
+
+const aggregateSectionAnalytics = (sections: SectionAnalytics[]): SectionAnalytics => ({
+  totalAttempts: sections.reduce((sum, section) => Math.max(sum, section.totalAttempts), 0),
+  averageScore: 0,
+  highestScore: 0,
+  lowestScore: 0,
+  averageAccuracy: 0,
+  averageTimeTakenSeconds: 0,
+  totalCorrectAnswers: sections.reduce((sum, section) => sum + section.totalCorrectAnswers, 0),
+  totalIncorrectAnswers: sections.reduce((sum, section) => sum + section.totalIncorrectAnswers, 0),
+  totalUnattemptedAnswers: sections.reduce((sum, section) => sum + section.totalUnattemptedAnswers, 0),
+});
+
+const summarizeBatchAnswers = (answers: BatchAnswer[]) => ({
+  score: Number(answers.reduce((sum, answer) => sum + answer.marksAwarded, 0).toFixed(2)),
+  correct: answers.filter((answer) => answer.status === 'CORRECT').length,
+  incorrect: answers.filter((answer) => answer.status === 'INCORRECT' || answer.status === 'PARTIALLY_CORRECT').length,
+  unattempted: answers.filter((answer) => answer.status === 'UNATTEMPTED').length,
+});
+
+const answerStatusClass = (status: string) => status === 'CORRECT' ? 'bg-moss-100 text-moss-800' : status === 'UNATTEMPTED' ? 'bg-stone-100 text-stone-600' : 'bg-red-50 text-red-700';
+
+const BatchOptionReview = ({ options, selected, correct }: { options: unknown; selected: string[]; correct: string[] }) => (
+  <div className="mt-4 grid gap-2">
+    {normalizeOptions(options).map((option) => {
+      const isSelected = selected.includes(option.value);
+      const isCorrect = correct.includes(option.value);
+      return <div key={option.value} className={cn('rounded-2xl border p-3 text-sm', isCorrect ? 'border-moss-300 bg-moss-50' : isSelected ? 'border-red-200 bg-red-50' : 'border-stone-100 bg-white')}><b>{option.value}.</b> {option.label}{isSelected && <span className="ml-2 text-xs font-bold">(your answer)</span>}{isCorrect && <span className="ml-2 text-xs font-bold">(correct)</span>}</div>;
+    })}
+  </div>
+);
+
+const normalizeOptions = (value: unknown) => Array.isArray(value)
+  ? value.map((item, index) => typeof item === 'string'
+    ? { value: String.fromCharCode(65 + index), label: item }
+    : { value: String((item as { id?: string; value?: string }).id ?? (item as { value?: string }).value ?? String.fromCharCode(65 + index)), label: String((item as { text?: string; label?: string }).text ?? (item as { label?: string }).label ?? JSON.stringify(item)) })
+  : [];

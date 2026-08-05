@@ -5,7 +5,7 @@ import { SignupPage } from './features/auth/signup-page';
 import { LandingPage, RolePendingPage } from './features/misc-pages';
 import { MockExamTypesPage } from './features/student/mock-tests/exam-types-page';
 import { AccountPage } from './features/student/account-page';
-import { ContentPage } from './features/student/content/content-page';
+import { ContentAttemptDetailPage, ContentPage } from './features/student/content/content-page';
 import {
   MentorshipAnalysisPage,
   MentorshipBatchPage,
@@ -17,6 +17,7 @@ import {
   MentorshipPastClassesPage,
   MentorshipProgramsPage,
   MentorshipTasksPage,
+  MentorshipTestAttemptAnalysisPage,
   MentorshipTestDetailPage,
   MentorshipTestsPage,
 } from './features/student/mentorship/mentorship-page';
@@ -51,6 +52,7 @@ export const App = () => (
         <Route path="mock-tests/:examTypeId/:mockExamTypeId" element={<MockExamsPage />} />
         <Route path="mock-tests/:examTypeId/:mockExamTypeId/:examId" element={<MockExamDetailPage />} />
         <Route path="content" element={<ContentPage />} />
+        <Route path="content/attempts/:attemptId" element={<ContentAttemptDetailPage />} />
         <Route path="rc" element={<RcPage />} />
         <Route path="rc/tests" element={<RcTestsPage />} />
         <Route path="rc/tests/:testId" element={<RcTestDetailPage />} />
@@ -66,6 +68,7 @@ export const App = () => (
         <Route path="mentorship/batches/:batchId/doubts" element={<DoubtsPage />} />
         <Route path="mentorship/batches/:batchId/tests" element={<MentorshipTestsPage />} />
         <Route path="mentorship/batches/:batchId/tests/closed" element={<MentorshipClosedTestsPage />} />
+        <Route path="mentorship/batches/:batchId/tests/attempts/:attemptId/analysis" element={<MentorshipTestAttemptAnalysisPage />} />
         <Route path="mentorship/batches/:batchId/tests/:testId" element={<MentorshipTestDetailPage />} />
         <Route path="mentorship/batches/:batchId/notices" element={<MentorshipNoticesPage />} />
         <Route path="mentorship/batches/:batchId/analysis" element={<MentorshipAnalysisPage />} />

@@ -11,5 +11,11 @@ export const completion = async (request: AuthenticatedRequest, response: Respon
 export const attempts = async (request: AuthenticatedRequest, response: Response) =>
   response.json({ attempts: await service.listAttempts(request.auth!.sub) });
 
+export const attemptDetail = async (request: AuthenticatedRequest, response: Response) =>
+  response.json({ attempt: await service.getAttemptDetail(request.auth!.sub, String(request.params.attemptId)) });
+
+export const bookmarkAttemptAnswer = async (request: AuthenticatedRequest, response: Response) =>
+  response.json({ answer: await service.setAttemptAnswerBookmark(request.auth!.sub, String(request.params.answerId), request.body.bookmarked) });
+
 export const saveContentNote = async (request: AuthenticatedRequest, response: Response) =>
   response.json({ note: await service.saveNote(request.auth!.sub, String(request.params.contentId), request.body.note) });

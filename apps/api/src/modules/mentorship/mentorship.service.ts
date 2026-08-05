@@ -17,6 +17,23 @@ const phaseFor = (start: Date, end: Date) => {
 
 const toNumber = (value: unknown) => Number(value ?? 0);
 
+const uniqueBy = <T extends Record<string, unknown>>(rows: T[], key: keyof T) => [...new Map(rows.map((row) => [row[key], row])).values()];
+
+const buildMarksDistribution = (scores: number[], totalMarks: number) => {
+  const bucketCount = 5;
+  const step = Math.max(1, Math.ceil(totalMarks / bucketCount));
+  const buckets = Array.from({ length: Math.ceil(Math.max(totalMarks, 1) / step) }, (_, index) => {
+    const start = index * step;
+    const end = Math.min(totalMarks, start + step);
+    return { start, end, label: `${start}-${end}`, count: 0 };
+  });
+  for (const score of scores) {
+    const index = Math.min(Math.floor(score / step), buckets.length - 1);
+    buckets[index].count += 1;
+  }
+  return buckets.map(({ label, count }) => ({ label, count }));
+};
+
 const requireBatchAccess = async (studentId: string, batchId: string) => {
   const batch = await prisma.mentorshipBatch.findFirst({
     where: {
@@ -301,6 +318,7 @@ export const tests = async (studentId: string, batchId: string) => {
     phase: phaseFor(test.startDatetime, test.endDatetime),
     attempted: Boolean(test.attempts.length),
     latestAttemptId: test.attempts[0]?.id ?? null,
+    latestAttemptStatus: test.attempts[0]?.status ?? null,
     analytics: test.analytics ? {
       totalAttempts: test.analytics.totalAttempts,
       averageScore: toNumber(test.analytics.averageScore),
@@ -346,6 +364,7 @@ export const testDetail = async (studentId: string, batchId: string, testId: str
     phase: phaseFor(test.startDatetime, test.endDatetime),
     attempted: Boolean(test.attempts.length),
     latestAttemptId: test.attempts[0]?.id ?? null,
+    latestAttemptStatus: test.attempts[0]?.status ?? null,
     sections: test.sections.map((section) => ({
       id: section.id,
       name: section.name,
@@ -372,6 +391,155 @@ export const testDetail = async (studentId: string, batchId: string, testId: str
       lastAttemptAt: test.analytics.lastAttemptAt,
     } : null,
   };
+};
+
+export const testAttemptAnalysis = async (studentId: string, attemptId: string) => {
+  const attempt = await prisma.batchAttempt.findFirst({
+    where: { id: attemptId, studentId, status: { in: ['SUBMITTED', 'AUTO_SUBMITTED'] } },
+    include: {
+      batchTest: {
+        include: {
+          mentorshipBatch: { select: { id: true, name: true, studentAccesses: { where: activeMembership(studentId), select: { id: true } } } },
+          analytics: true,
+          sections: { orderBy: { sequenceNumber: 'asc' }, include: { analytics: true } },
+        },
+      },
+      sections: { include: { batchSection: { select: { id: true, name: true, sequenceNumber: true, totalMarks: true, analytics: true } } }, orderBy: { batchSection: { sequenceNumber: 'asc' } } },
+      answers: {
+        include: {
+          batchSection: { select: { id: true, name: true, sequenceNumber: true } },
+          batchQuestion: {
+            include: {
+              difficulty: { select: { id: true, name: true } },
+              topic: { select: { id: true, name: true, subject: { select: { id: true, name: true } } } },
+              subtopic: { select: { id: true, name: true } },
+              batchComprehension: { select: { title: true, passage: true } },
+            },
+          },
+        },
+        orderBy: [{ batchSection: { sequenceNumber: 'asc' } }, { batchQuestion: { sequenceNumber: 'asc' } }],
+      },
+    },
+  });
+  if (!attempt || !attempt.batchTest.mentorshipBatch.studentAccesses.length) throw new AppError(404, 'Batch test attempt not found.');
+
+  const submittedAttempts = await prisma.batchAttempt.findMany({
+    where: { batchTestId: attempt.batchTestId, status: { in: ['SUBMITTED', 'AUTO_SUBMITTED'] } },
+    select: { marksScored: true },
+  });
+  const averageAnswerTimes = await prisma.batchAttemptAnswer.findMany({
+    where: { batchQuestionId: { in: attempt.answers.map((answer) => answer.batchQuestionId) }, batchAttempt: { status: { in: ['SUBMITTED', 'AUTO_SUBMITTED'] } } },
+    select: { batchQuestionId: true, timeTakenSeconds: true },
+  });
+  const averageTimeByQuestion = new Map<string, number>();
+  for (const questionId of new Set(averageAnswerTimes.map((row) => row.batchQuestionId))) {
+    const rows = averageAnswerTimes.filter((row) => row.batchQuestionId === questionId);
+    averageTimeByQuestion.set(questionId, Math.round(rows.reduce((sum, row) => sum + row.timeTakenSeconds, 0) / Math.max(rows.length, 1)));
+  }
+
+  return {
+    attempt: {
+      id: attempt.id,
+      submittedAt: attempt.submittedAt,
+      timeTakenSeconds: attempt.timeTakenSeconds,
+      totalMarks: toNumber(attempt.totalMarks),
+      marksScored: toNumber(attempt.marksScored),
+      percentage: toNumber(attempt.totalMarks) ? Number(((toNumber(attempt.marksScored) / toNumber(attempt.totalMarks)) * 100).toFixed(2)) : 0,
+      accuracy: toNumber(attempt.accuracy),
+      correctAnswers: attempt.correctAnswers,
+      incorrectAnswers: attempt.incorrectAnswers,
+      unattemptedAnswers: attempt.unattemptedAnswers,
+    },
+    test: {
+      id: attempt.batchTest.id,
+      batchId: attempt.batchTest.mentorshipBatch.id,
+      batchName: attempt.batchTest.mentorshipBatch.name,
+      name: attempt.batchTest.name,
+      totalMarks: toNumber(attempt.batchTest.totalMarks),
+      analytics: attempt.batchTest.analytics ? {
+        totalAttempts: attempt.batchTest.analytics.totalAttempts,
+        uniqueStudentsAttempted: attempt.batchTest.analytics.uniqueStudentsAttempted,
+        averageScore: toNumber(attempt.batchTest.analytics.averageScore),
+        highestScore: toNumber(attempt.batchTest.analytics.highestScore),
+        lowestScore: toNumber(attempt.batchTest.analytics.lowestScore),
+        averageAccuracy: toNumber(attempt.batchTest.analytics.averageAccuracy),
+        averageTimeTakenSeconds: attempt.batchTest.analytics.averageTimeTakenSeconds,
+      } : null,
+      marksDistribution: buildMarksDistribution(submittedAttempts.map((row) => toNumber(row.marksScored)), toNumber(attempt.batchTest.totalMarks)),
+      sections: attempt.batchTest.sections.map((section) => ({
+        id: section.id,
+        name: section.name,
+        analytics: section.analytics ? {
+          totalAttempts: section.analytics.totalAttempts,
+          averageScore: toNumber(section.analytics.averageScore),
+          highestScore: toNumber(section.analytics.highestScore),
+          lowestScore: toNumber(section.analytics.lowestScore),
+          averageAccuracy: toNumber(section.analytics.averageAccuracy),
+          averageTimeTakenSeconds: section.analytics.averageTimeTakenSeconds,
+          totalCorrectAnswers: section.analytics.totalCorrectAnswers,
+          totalIncorrectAnswers: section.analytics.totalIncorrectAnswers,
+          totalUnattemptedAnswers: section.analytics.totalUnattemptedAnswers,
+        } : null,
+      })),
+    },
+    sections: attempt.sections.map((section) => ({
+      id: section.batchSection.id,
+      name: section.batchSection.name,
+      totalMarks: toNumber(section.batchSection.totalMarks),
+      marksScored: toNumber(section.marksScored),
+      correctAnswers: section.correctAnswers,
+      incorrectAnswers: section.incorrectAnswers,
+      unattemptedAnswers: section.unattemptedAnswers,
+      accuracy: toNumber(section.accuracy),
+      timeTakenSeconds: section.timeTakenSeconds,
+      analytics: section.batchSection.analytics ? {
+        totalAttempts: section.batchSection.analytics.totalAttempts,
+        averageScore: toNumber(section.batchSection.analytics.averageScore),
+        highestScore: toNumber(section.batchSection.analytics.highestScore),
+        lowestScore: toNumber(section.batchSection.analytics.lowestScore),
+        averageAccuracy: toNumber(section.batchSection.analytics.averageAccuracy),
+        averageTimeTakenSeconds: section.batchSection.analytics.averageTimeTakenSeconds,
+        totalCorrectAnswers: section.batchSection.analytics.totalCorrectAnswers,
+        totalIncorrectAnswers: section.batchSection.analytics.totalIncorrectAnswers,
+        totalUnattemptedAnswers: section.batchSection.analytics.totalUnattemptedAnswers,
+      } : null,
+    })),
+    filters: {
+      sections: attempt.batchTest.sections.map((section) => ({ id: section.id, name: section.name })),
+      difficulties: uniqueBy(attempt.answers.map((answer) => answer.batchQuestion.difficulty), 'id'),
+    },
+    answers: attempt.answers.map((answer) => ({
+      id: answer.id,
+      sectionId: answer.batchSectionId,
+      sectionName: answer.batchSection.name,
+      question: answer.batchQuestion.question,
+      options: answer.batchQuestion.options,
+      selectedAnswers: answer.selectedAnswers,
+      correctAnswers: answer.correctAnswers,
+      status: answer.status,
+      marksAwarded: toNumber(answer.marksAwarded),
+      positiveMarks: toNumber(answer.batchQuestion.positiveMarks),
+      negativeMarks: toNumber(answer.batchQuestion.negativeMarks),
+      timeTakenSeconds: answer.timeTakenSeconds,
+      averageTimeTakenSeconds: averageTimeByQuestion.get(answer.batchQuestionId) ?? 0,
+      bookmarked: answer.bookmarked,
+      explanation: answer.batchQuestion.explanation,
+      imageUrl: answer.batchQuestion.imageUrl,
+      comprehension: answer.batchQuestion.batchComprehension,
+      difficulty: answer.batchQuestion.difficulty,
+      topic: answer.batchQuestion.topic,
+      subtopic: answer.batchQuestion.subtopic,
+    })),
+  };
+};
+
+export const setBatchAnswerBookmark = async (studentId: string, answerId: string, bookmarked: boolean) => {
+  const answer = await prisma.batchAttemptAnswer.findFirst({
+    where: { id: answerId, batchAttempt: { studentId, status: { in: ['SUBMITTED', 'AUTO_SUBMITTED'] } } },
+    select: { id: true },
+  });
+  if (!answer) throw new AppError(404, 'Attempt answer not found.');
+  return prisma.batchAttemptAnswer.update({ where: { id: answerId }, data: { bookmarked }, select: { id: true, bookmarked: true } });
 };
 
 export const listDoubts = async (studentId: string, batchId: string, options: { scope?: string; status?: string } = {}) => {

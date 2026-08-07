@@ -18,9 +18,23 @@ export default {
         float: '0 18px 46px rgba(28,57,42,.14)',
       },
       borderRadius: { '4xl': '1.75rem' },
-      fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+      fontFamily: {
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"SF Pro Display"',
+          '"SF Pro Text"',
+          '"Segoe UI"',
+          'Inter',
+          'Roboto',
+          '"Helvetica Neue"',
+          'Arial',
+          'ui-sans-serif',
+          'system-ui',
+          'sans-serif',
+        ],
+      },
     },
   },
   plugins: [],
 } satisfies Config;
-

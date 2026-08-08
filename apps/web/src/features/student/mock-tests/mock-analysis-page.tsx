@@ -98,13 +98,13 @@ export const MockAttemptAnalysisPage = () => {
           </div>
         </Card>
         <Card className="overflow-hidden p-0">
-          <div className="grid h-full gap-4 bg-[#173f33] p-6 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] md:grid-cols-[1fr_auto] md:items-center">
+          <div className="grid h-full gap-4 bg-[linear-gradient(135deg,#123b31_0%,#1f5b45_52%,#8a5a18_100%)] p-6 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] md:grid-cols-[1fr_auto] md:items-center">
             <div>
-              <Badge className="bg-amber-100 text-amber-800">SWOT brief</Badge>
+              <Badge className="bg-white/15 text-amber-100">SWOT brief</Badge>
               <h2 className="mt-3 text-2xl font-bold">See your SWOT analysis</h2>
               <p className="mt-1 text-sm text-emerald-50/85">A compact strengths, weaknesses, opportunities and threats brief generated from this exact mock attempt.</p>
             </div>
-            <Link to={`/student/mock-tests/attempts/${attemptId}/swot`} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-100 px-5 py-3 text-sm font-bold text-moss-950 shadow-card hover:bg-amber-50">
+            <Link to={`/student/mock-tests/attempts/${attemptId}/swot`} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-lime px-5 py-3 text-sm font-bold text-moss-950 shadow-card hover:bg-lime/90">
               <Compass size={17} /> View SWOT
             </Link>
           </div>

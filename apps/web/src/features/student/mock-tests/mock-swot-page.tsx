@@ -34,36 +34,40 @@ const panels = [
     title: 'Strengths',
     subtitle: 'What is already working',
     icon: CheckCircle2,
-    shell: 'border-emerald-100 bg-emerald-50/70',
+    shell: 'border-emerald-200 bg-gradient-to-br from-emerald-100 via-emerald-50 to-white',
     iconClass: 'bg-emerald-600 text-white',
     accent: 'text-emerald-800',
+    chip: 'bg-emerald-700 text-white',
   },
   {
     key: 'weaknesses',
     title: 'Weaknesses',
     subtitle: 'Where marks are leaking',
     icon: ShieldAlert,
-    shell: 'border-rose-100 bg-rose-50/70',
+    shell: 'border-rose-200 bg-gradient-to-br from-rose-100 via-rose-50 to-white',
     iconClass: 'bg-rose-500 text-white',
     accent: 'text-rose-800',
+    chip: 'bg-rose-600 text-white',
   },
   {
     key: 'opportunities',
     title: 'Opportunities',
     subtitle: 'Highest-return next moves',
     icon: Lightbulb,
-    shell: 'border-sky-100 bg-sky-50/70',
+    shell: 'border-sky-200 bg-gradient-to-br from-sky-100 via-cyan-50 to-white',
     iconClass: 'bg-sky-600 text-white',
     accent: 'text-sky-800',
+    chip: 'bg-sky-700 text-white',
   },
   {
     key: 'threats',
     title: 'Threats',
     subtitle: 'Risks to control before next mock',
     icon: AlertTriangle,
-    shell: 'border-amber-100 bg-amber-50/80',
-    iconClass: 'bg-amber-500 text-white',
-    accent: 'text-amber-900',
+    shell: 'border-orange-200 bg-gradient-to-br from-orange-100 via-amber-50 to-white',
+    iconClass: 'bg-orange-500 text-white',
+    accent: 'text-orange-900',
+    chip: 'bg-orange-600 text-white',
   },
 ] as const;
 
@@ -145,14 +149,17 @@ const SwotPanel = ({ panel, items }: { panel: (typeof panels)[number]; items: Sw
     <Card className={cn('border p-5', panel.shell)}>
       <div className="flex items-start gap-3">
         <span className={cn('grid size-12 shrink-0 place-items-center rounded-2xl shadow-sm', panel.iconClass)}><Icon size={22} /></span>
-        <div>
-          <h2 className={cn('text-xl font-black', panel.accent)}>{panel.title}</h2>
-          <p className="text-sm text-stone-500">{panel.subtitle}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className={cn('text-xl font-black', panel.accent)}>{panel.title}</h2>
+            <span className={cn('rounded-full px-3 py-1 text-xs font-black', panel.chip)}>{items.length} signals</span>
+          </div>
+          <p className="mt-1 text-sm text-stone-600">{panel.subtitle}</p>
         </div>
       </div>
       <div className="mt-5 space-y-3">
         {items.map((entry) => (
-          <div key={`${entry.title}-${entry.metric}`} className="rounded-3xl border border-white/70 bg-white/80 p-4 shadow-sm">
+          <div key={`${entry.title}-${entry.metric}`} className="rounded-3xl border border-white/80 bg-white/90 p-4 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="font-black text-stone-950">{entry.title}</h3>

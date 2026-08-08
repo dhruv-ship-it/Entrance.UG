@@ -410,9 +410,16 @@ export const TestEnginePage = () => {
               })}
             </div>
             {confirmSubmit && (
-              <div className="mt-6 flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setConfirmSubmit(false)}>Keep attempting</Button>
-                <Button disabled={submit.isPending} onClick={() => { accrueCurrentQuestionTime(); submit.mutate(false); }}>{submit.isPending ? <><LoaderCircle size={16} className="animate-spin" />Submitting...</> : <><CheckCircle2 size={16} />Submit now</>}</Button>
+              <div className="mt-6 space-y-3">
+                {submit.isError && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                    {submit.error?.message || 'Unable to submit this test. Please try again.'}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setConfirmSubmit(false)}>Keep attempting</Button>
+                  <Button disabled={submit.isPending} onClick={() => { accrueCurrentQuestionTime(); submit.mutate(false); }}>{submit.isPending ? <><LoaderCircle size={16} className="animate-spin" />Submitting...</> : <><CheckCircle2 size={16} />Submit now</>}</Button>
+                </div>
               </div>
             )}
           </Card>

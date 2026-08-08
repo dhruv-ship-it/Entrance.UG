@@ -452,22 +452,29 @@ const answerPatch = (input: SaveAnswerInput) => ({
   answeredAt: input.selectedAnswers.length ? new Date() : null,
 });
 
-const submitMockAttempt = async (studentId: string, attemptId: string, input: SubmitInput) => prisma.$transaction(async (tx) => {
-  const attempt = await tx.mockAttempt.findFirst({
-    where: { id: attemptId, studentId },
-    include: { mockExam: { include: { sections: { include: { questions: { where: { isActive: true } } } } } }, answers: true },
+const submitMockAttempt = async (studentId: string, attemptId: string, input: SubmitInput) => {
+  const summary = await prisma.$transaction(async (tx) => {
+    const attempt = await tx.mockAttempt.findFirst({
+      where: { id: attemptId, studentId },
+      include: { mockExam: { include: { sections: { include: { questions: { where: { isActive: true } } } } } }, answers: true },
+    });
+    if (!attempt) throw new AppError(404, 'Attempt not found.');
+    if (attempt.status !== AttemptStatus.IN_PROGRESS) throw new AppError(409, 'This attempt has already been submitted.');
+    const result = calculateSectionedResult(attempt.answers, attempt.mockExam.sections, 'mockQuestionId', 'mockSectionId');
+    const submittedAt = new Date();
+    await tx.mockAttempt.update({ where: { id: attemptId }, data: attemptUpdate(input, result, attempt.startedAt, attempt.mockExam.durationMinutes, submittedAt) });
+    await updateMockAnswerRows(tx, result.answerResults);
+    await updateMockSectionRows(tx, attemptId, result.sectionResults, input.sectionTimes);
+    await recalcMockAnalytics(tx, attempt.mockExamId);
+    return resultSummary(attemptId, result);
   });
-  if (!attempt) throw new AppError(404, 'Attempt not found.');
-  if (attempt.status !== AttemptStatus.IN_PROGRESS) throw new AppError(409, 'This attempt has already been submitted.');
-  const result = calculateSectionedResult(attempt.answers, attempt.mockExam.sections, 'mockQuestionId', 'mockSectionId');
-  const submittedAt = new Date();
-  await tx.mockAttempt.update({ where: { id: attemptId }, data: attemptUpdate(input, result, attempt.startedAt, attempt.mockExam.durationMinutes, submittedAt) });
-  await updateMockAnswerRows(tx, result.answerResults);
-  await updateMockSectionRows(tx, attemptId, result.sectionResults, input.sectionTimes);
-  await upsertMockAttemptSwotAnalysis(tx, attemptId);
-  await recalcMockAnalytics(tx, attempt.mockExamId);
-  return resultSummary(attemptId, result);
-});
+
+  await prisma.$transaction((tx) => upsertMockAttemptSwotAnalysis(tx, attemptId)).catch((error) => {
+    console.warn('Mock SWOT generation failed after submit:', error);
+  });
+
+  return summary;
+};
 
 const submitContentAttempt = async (studentId: string, attemptId: string, input: SubmitInput) => prisma.$transaction(async (tx) => {
   const attempt = await tx.contentAttempt.findFirst({

@@ -332,6 +332,39 @@ export const RcAttemptDetailPage = () => {
           </div>
         </Card>
       </section>
+      <Card className="overflow-hidden p-0">
+        <div className="grid gap-4 bg-gradient-to-r from-moss-900 to-moss-700 p-6 text-white md:grid-cols-[1fr_auto] md:items-center">
+          <div>
+            <Badge className="bg-white/12 text-lime">Answer review</Badge>
+            <h2 className="mt-3 text-2xl font-bold">Open attempted answers</h2>
+            <p className="mt-1 text-sm text-moss-100/75">Detailed RC question review is separated from the analytics summary.</p>
+          </div>
+          <Link to={`/student/rc/attempts/${attemptId}/review`} className="inline-flex items-center justify-center rounded-2xl bg-lime px-5 py-3 text-sm font-bold text-moss-950 shadow-card hover:bg-lime/90">View attempted answers</Link>
+        </div>
+      </Card>
+      <Card className="hidden p-5">
+        <h2 className="mb-4 font-bold">Question review</h2>
+        <div className="space-y-3">{attempt.answers.map((answer) => <div key={answer.id} className="rounded-2xl border border-stone-200 p-4"><Badge>{answer.status}</Badge><p className="mt-3 font-semibold">Q{answer.questionNumber}. {answer.question}</p><p className="mt-2 text-sm text-stone-600">{answer.explanation}</p><p className="mt-2 text-xs font-semibold text-moss-700">{answer.marksAwarded} marks · {answer.timeTakenSeconds}s</p></div>)}</div>
+      </Card>
+    </div>
+  );
+};
+
+export const RcAttemptReviewPage = () => {
+  const { attemptId = '' } = useParams();
+  const query = useQuery({ queryKey: ['rc-attempt', attemptId], queryFn: () => api<{ attempt: AttemptDetail }>(`/api/v1/rc/attempts/${attemptId}`) });
+  if (query.isLoading) return <Skeleton className="h-[560px]" />;
+  const attempt = query.data?.attempt;
+  if (!attempt) return <EmptyState icon={ListChecks} title="Review unavailable" description="This RC attempt could not be opened." />;
+
+  return (
+    <div className="space-y-6">
+      <Back to={`/student/rc/attempts/${attemptId}`}>RC analysis</Back>
+      <Card className="p-6">
+        <Badge className="bg-moss-100 text-moss-800">Attempted answers</Badge>
+        <h1 className="mt-4 text-3xl font-bold">{attempt.test.title}</h1>
+        <p className="mt-2 text-sm text-stone-500">Submitted {attempt.submittedAt ? formatDateTime(attempt.submittedAt) : 'not submitted'}</p>
+      </Card>
       <Card className="p-5">
         <h2 className="mb-4 font-bold">Question review</h2>
         <div className="space-y-3">{attempt.answers.map((answer) => <div key={answer.id} className="rounded-2xl border border-stone-200 p-4"><Badge>{answer.status}</Badge><p className="mt-3 font-semibold">Q{answer.questionNumber}. {answer.question}</p><p className="mt-2 text-sm text-stone-600">{answer.explanation}</p><p className="mt-2 text-xs font-semibold text-moss-700">{answer.marksAwarded} marks · {answer.timeTakenSeconds}s</p></div>)}</div>

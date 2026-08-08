@@ -915,7 +915,7 @@ export const MentorshipTestAttemptAnalysisPage = () => {
         </Card>
       </section>
 
-      <Card className="p-5">
+      <Card className="hidden p-5">
         <div className="flex flex-wrap items-center gap-3">
           <Filter size={17} className="text-moss-700" />
           <select className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm" value={sectionId} onChange={(event) => setSectionId(event.target.value)}><option value="all">Entire test</option>{analysis.filters.sections.map((section) => <option key={section.id} value={section.id}>{section.name}</option>)}</select>
@@ -930,6 +930,87 @@ export const MentorshipTestAttemptAnalysisPage = () => {
         </div>
       </Card>
 
+      <Card className="overflow-hidden p-0">
+        <div className="grid gap-4 bg-gradient-to-r from-moss-900 to-moss-700 p-6 text-white md:grid-cols-[1fr_auto] md:items-center">
+          <div>
+            <Badge className="bg-white/12 text-lime">Answer review</Badge>
+            <h2 className="mt-3 text-2xl font-bold">Open attempted answers</h2>
+            <p className="mt-1 text-sm text-moss-100/75">Detailed question review, filters, explanations and bookmarks are now separated from the analytics dashboard.</p>
+          </div>
+          <Link to={`/student/mentorship/batches/${batchId}/tests/attempts/${attemptId}/review`} className="inline-flex items-center justify-center rounded-2xl bg-lime px-5 py-3 text-sm font-bold text-moss-950 shadow-card hover:bg-lime/90">View attempted answers</Link>
+        </div>
+      </Card>
+
+      <section className="hidden">
+        {false && filteredAnswers.map((answer, index) => (
+          <Card key={answer.id} className="p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div><Badge className={answerStatusClass(answer.status)}>{answer.status.replace('_', ' ')}</Badge><h3 className="mt-3 font-bold">Q{index + 1}. {answer.question}</h3></div>
+              <Button size="sm" variant={answer.bookmarked ? 'secondary' : 'outline'} disabled={bookmark.isPending} onClick={() => bookmark.mutate({ id: answer.id, bookmarked: !answer.bookmarked })}><Bookmark size={15} />{answer.bookmarked ? 'Bookmarked' : 'Bookmark'}</Button>
+            </div>
+            {answer.comprehension && <div className="mt-4 rounded-2xl bg-stone-50 p-4 text-sm leading-6 text-stone-600">{answer.comprehension.passage}</div>}
+            {answer.imageUrl && <img src={answer.imageUrl} alt="" className="mt-4 max-h-72 rounded-2xl object-contain" />}
+            <BatchOptionReview options={answer.options} selected={normalizeAnswers(answer.selectedAnswers)} correct={normalizeAnswers(answer.correctAnswers)} />
+            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+              <InfoBox label="Your answer" value={normalizeAnswers(answer.selectedAnswers).join(', ') || 'Unattempted'} />
+              <InfoBox label="Correct answer" value={normalizeAnswers(answer.correctAnswers).join(', ')} />
+              <InfoBox label="Marks" value={`${answer.marksAwarded} / +${answer.positiveMarks}`} />
+              <InfoBox label="Time" value={`${answer.timeTakenSeconds}s · avg ${answer.averageTimeTakenSeconds}s`} />
+            </div>
+            <div className="mt-4 rounded-2xl bg-moss-50 p-4 text-sm leading-6 text-moss-900"><b>Explanation:</b> {answer.explanation}</div>
+            <p className="mt-3 text-xs text-stone-500">{answer.sectionName} · {answer.topic.subject?.name} / {answer.topic.name} / {answer.subtopic.name} · {answer.difficulty.name}</p>
+          </Card>
+        ))}
+      </section>
+    </div>
+  );
+};
+
+export const MentorshipTestAttemptReviewPage = () => {
+  const { batchId = '', attemptId = '' } = useParams();
+  const client = useQueryClient();
+  const query = useQuery({ queryKey: ['mentor-batch-test-analysis', attemptId], queryFn: () => api<{ analysis: BatchAnalysis }>(`/api/v1/mentorship/test-attempts/${attemptId}/analysis`).then((response) => response.analysis) });
+  const [sectionId, setSectionId] = useState('all');
+  const [difficultyId, setDifficultyId] = useState('all');
+  const [status, setStatus] = useState('all');
+  const bookmark = useMutation({
+    mutationFn: ({ id, bookmarked }: { id: string; bookmarked: boolean }) => api(`/api/v1/mentorship/test-attempt-answers/${id}/bookmark`, { method: 'PATCH', body: JSON.stringify({ bookmarked }) }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ['mentor-batch-test-analysis', attemptId] }),
+  });
+  const analysis = query.data;
+  const filteredAnswers = (analysis?.answers ?? []).filter((answer) => {
+    if (sectionId !== 'all' && answer.sectionId !== sectionId) return false;
+    if (difficultyId !== 'all' && answer.difficulty.id !== difficultyId) return false;
+    if (status !== 'all' && answer.status !== status) return false;
+    return true;
+  });
+  const filteredSummary = summarizeBatchAnswers(filteredAnswers);
+
+  if (query.isLoading) return <Skeleton className="h-[720px]" />;
+  if (!analysis) return <EmptyState icon={Trophy} title="Review unavailable" description="This submitted batch test attempt could not be opened." />;
+
+  return (
+    <div className="space-y-7">
+      <BatchBackLink to={`/student/mentorship/batches/${batchId}/tests/attempts/${attemptId}/analysis`}>Batch test analysis</BatchBackLink>
+      <section className="rounded-3xl bg-moss-800 p-7 text-white shadow-card">
+        <Badge className="bg-white/12 text-lime">Attempted answers</Badge>
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight">{analysis.test.name}</h1>
+        <p className="mt-2 text-sm text-moss-100/75">Question-by-question review for {analysis.test.batchName}.</p>
+      </section>
+      <Card className="p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <Filter size={17} className="text-moss-700" />
+          <select className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm" value={sectionId} onChange={(event) => setSectionId(event.target.value)}><option value="all">Entire test</option>{analysis.filters.sections.map((section) => <option key={section.id} value={section.id}>{section.name}</option>)}</select>
+          <select className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm" value={difficultyId} onChange={(event) => setDifficultyId(event.target.value)}><option value="all">All difficulty</option>{analysis.filters.difficulties.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+          <select className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm" value={status} onChange={(event) => setStatus(event.target.value)}><option value="all">All statuses</option>{['CORRECT', 'INCORRECT', 'PARTIALLY_CORRECT', 'UNATTEMPTED'].map((item) => <option key={item} value={item}>{item.replace('_', ' ')}</option>)}</select>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-4">
+          <AnalysisMetric compact icon={Trophy} label="Filtered score" value={filteredSummary.score} />
+          <AnalysisMetric compact icon={CheckCircle2} label="Correct" value={filteredSummary.correct} />
+          <AnalysisMetric compact icon={XCircle} label="Incorrect" value={filteredSummary.incorrect} />
+          <AnalysisMetric compact icon={HelpCircle} label="Unattempted" value={filteredSummary.unattempted} />
+        </div>
+      </Card>
       <section className="space-y-4">
         {filteredAnswers.map((answer, index) => (
           <Card key={answer.id} className="p-5">

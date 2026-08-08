@@ -68,7 +68,6 @@ export const MockExamDetailPage = () => {
           <div className="flex flex-wrap items-center gap-2">
             {data.isFree && <Badge className="bg-lime/45 text-moss-900">Free</Badge>}
             {!data.hasAccess && <Badge className="bg-stone-100 text-stone-600">Locked</Badge>}
-            {data.sequenceLocked && <Badge className="bg-amber/15 text-[#9a6810]">Locked by sequence</Badge>}
             <Badge>{data.difficulty}</Badge>
             {data.isAttempted && <Badge className="bg-moss-100 text-moss-800">Already attempted</Badge>}
             {inProgress && <Badge className="bg-amber/15 text-[#9a6810]">In progress</Badge>}
@@ -133,11 +132,6 @@ export const MockExamDetailPage = () => {
                   <CheckCircle2 size={16} />
                   View analysis
                 </Link>
-              ) : data.sequenceLocked ? (
-                <Button disabled className="w-full" variant="secondary">
-                  <Lock size={16} />
-                  Attempt previous mock first
-                </Button>
               ) : inProgress ? (
                 <Button className="w-full" disabled={startAttempt.isPending} onClick={handleStart}>
                   <ShieldCheck size={16} />

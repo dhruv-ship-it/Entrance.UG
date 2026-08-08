@@ -115,7 +115,6 @@ const startMockAttempt = async (studentId: string, testId: string) => prisma.$tr
     include: { sections: { orderBy: { sequenceNumber: 'asc' }, include: { questions: { where: { isActive: true }, orderBy: { sequenceNumber: 'asc' } } } } },
   });
   if (!test) throw new AppError(404, 'This mock test is unavailable.');
-  await assertMockSequenceUnlocked(tx, studentId, test.id, test.examTypeId, test.mockExamTypeId);
   const existing = await tx.mockAttempt.findUnique({ where: { studentId_mockExamId: { studentId, mockExamId: testId } } });
   if (existing) {
     if (existing.status === AttemptStatus.IN_PROGRESS) return engineStarted('mock', existing.id);
@@ -135,18 +134,6 @@ const startMockAttempt = async (studentId: string, testId: string) => prisma.$tr
   });
   return engineStarted('mock', attempt.id);
 });
-
-const assertMockSequenceUnlocked = async (tx: Prisma.TransactionClient, studentId: string, mockExamId: string, examTypeId: string, mockExamTypeId: string) => {
-  const tests = await tx.mockExam.findMany({
-    where: { examTypeId, mockExamTypeId, isActive: true },
-    orderBy: [{ createdAt: 'asc' }, { name: 'asc' }],
-    select: { id: true, attempts: { where: { studentId, status: { in: submittedStatuses } }, select: { id: true }, take: 1 } },
-  });
-  const index = tests.findIndex((test) => test.id === mockExamId);
-  if (index <= 0) return;
-  const previous = tests[index - 1];
-  if (!previous.attempts.length) throw new AppError(403, 'Attempt previous mock tests first to unlock this test.');
-};
 
 const startContentAttempt = async (studentId: string, testId: string) => prisma.$transaction(async (tx) => {
   const test = await tx.contentTest.findFirst({

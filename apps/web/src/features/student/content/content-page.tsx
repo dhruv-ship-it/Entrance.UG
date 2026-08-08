@@ -130,7 +130,7 @@ export const ContentPage = () => {
   const [searchParams] = useSearchParams();
   const initialSubjectId = searchParams.get('subjectId') ?? undefined;
   const initialTopicId = searchParams.get('topicId') ?? undefined;
-  const [view, setView] = useState<View>(initialSubjectId ? 'learning' : 'subjects');
+  const [view, setView] = useState<View>(searchParams.get('view') === 'attempts' ? 'attempts' : initialSubjectId ? 'learning' : 'subjects');
   const [subjectId, setSubjectId] = useState<string | undefined>(initialSubjectId);
   const [topicId, setTopicId] = useState<string | undefined>(initialTopicId);
   const learning = useQuery({ queryKey: ['learning-content'], queryFn: () => api<ContentTreeResponse>('/api/v1/content') });

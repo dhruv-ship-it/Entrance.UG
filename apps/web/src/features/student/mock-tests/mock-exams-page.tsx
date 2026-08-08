@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { BarChart3, Bookmark, CheckCircle2, Clock3, FileBarChart2, Hash, Layers, Lock, PlayCircle, UsersRound } from 'lucide-react';
+import { Bookmark, CheckCircle2, Clock3, FileBarChart2, Hash, Layers, Lock, PlayCircle, UsersRound } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import { EmptyState } from '../../../components/empty-state';
@@ -17,10 +17,9 @@ type CategoryAnalytics = {
   totalTests: number;
   attemptedTests: number;
   averageScore: number;
-  averageOfAverages: number;
   averageAccuracy: number;
-  trend: { index: number; name: string; score: number | null; averageScore: number; rank: number | null; percentile: number | null }[];
-  sections: { id: string; name: string; averageScore: number; averageAccuracy: number; cohortAverageScore: number; trend: { index: number; examName: string; score: number | null; averageScore: number }[] }[];
+  trend: { index: number; name: string; score: number | null; rank: number | null; percentile: number | null }[];
+  sections: { id: string; name: string; averageScore: number; averageAccuracy: number; trend: { index: number; examName: string; score: number | null }[] }[];
 };
 
 export const MockExamsPage = () => {
@@ -101,7 +100,6 @@ const ExamRow = ({ exam, detailPath }: { exam: MockExamSummary; detailPath: stri
             <h2 className="text-lg font-semibold text-ink">{exam.name}</h2>
             {exam.isFree && <Badge className="bg-lime/45 text-moss-900">Free</Badge>}
             {!exam.hasAccess && <Badge className="bg-stone-100 text-stone-600">Locked</Badge>}
-            {exam.sequenceLocked && <Badge className="bg-amber/15 text-[#9a6810]">Locked by sequence</Badge>}
             {exam.isAttempted && <Badge className="bg-moss-100 text-moss-800">Attempted</Badge>}
             {inProgress && <Badge className="bg-amber/15 text-[#9a6810]">In progress</Badge>}
           </div>
@@ -113,7 +111,6 @@ const ExamRow = ({ exam, detailPath }: { exam: MockExamSummary; detailPath: stri
             <span className="inline-flex items-center gap-1.5"><Layers size={14} />{exam.sectionCount} sections</span>
             <span className="inline-flex items-center gap-1.5"><FileBarChart2 size={14} />{exam.totalQuestions} questions</span>
             <span className="inline-flex items-center gap-1.5"><UsersRound size={14} />{exam.totalAttempts} attempted</span>
-            <span className="inline-flex items-center gap-1.5"><BarChart3 size={14} />Avg {exam.averageScore}/{exam.totalMarks}</span>
             <span className="inline-flex items-center gap-1.5">Difficulty: {exam.difficulty}</span>
           </div>
           <p className="mt-3 text-xs text-stone-400">Created {formatDateTime(exam.createdAt)}</p>
@@ -146,7 +143,7 @@ const ExamRow = ({ exam, detailPath }: { exam: MockExamSummary; detailPath: stri
           ) : (
             <Button disabled variant="secondary">
               <Lock size={16} />
-              {exam.sequenceLocked ? 'Attempt previous mock' : 'Locked'}
+              Locked
             </Button>
           )}
         </div>
@@ -180,14 +177,12 @@ const CategoryAnalyticsPanel = ({ analytics }: { analytics: CategoryAnalytics })
               <YAxis />
               <Tooltip />
               <Line type="monotone" dataKey="score" name="Your score" stroke="#164331" strokeWidth={3} connectNulls />
-              <Line type="monotone" dataKey="averageScore" name="Cohort average" stroke="#d69e2e" strokeWidth={2} strokeDasharray="5 5" />
             </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
       <div className="grid gap-3">
         <MiniStat label="Your avg score" value={analytics.averageScore} />
-        <MiniStat label="Cohort avg score" value={analytics.averageOfAverages} />
         <MiniStat label="Your avg accuracy" value={`${analytics.averageAccuracy}%`} />
         <div className="rounded-3xl bg-stone-50 p-4">
           <p className="text-xs font-bold uppercase tracking-[.14em] text-stone-400">Section signals</p>

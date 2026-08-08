@@ -194,7 +194,7 @@ export const TestEnginePage = () => {
   const activeSectionName = current.sectionName ?? currentSection?.name ?? 'Questions';
 
   return (
-    <div className="min-h-screen bg-[#eef3f8] font-sans text-[#202733]">
+    <div className="min-h-screen bg-[#eef3f8] text-[#202733]" style={{ fontFamily: 'Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
       <header className="sticky top-0 z-30 shadow-[0_2px_8px_rgba(30,72,112,0.18)]">
         <div className="bg-gradient-to-r from-[#2f74af] via-[#2c6da4] to-[#205b91] px-4 py-3 text-white">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -273,7 +273,7 @@ export const TestEnginePage = () => {
                 </div>
                 <div className="px-4 py-5 md:px-6">
                   {current.imageUrl && <img src={current.imageUrl} alt="" className="mb-5 max-h-80 rounded-lg border border-slate-200 object-contain" />}
-                  <div className="whitespace-pre-wrap text-[15px] font-semibold leading-8 text-slate-800 md:text-base">{current.question}</div>
+                  <div className="whitespace-pre-wrap text-[15px] font-semibold leading-8 text-slate-800 md:text-base" style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}>{current.question}</div>
                   <QuestionInput question={current} selected={selected} onChange={(next) => setAnswers((value) => patchAnswer(value, current.id, { selectedAnswers: next, visited: true }))} />
                 </div>
               </article>
@@ -427,6 +427,7 @@ const QuestionInput = ({ question, selected, onChange }: { question: EngineQuest
     return (
       <input
         className="mt-6 w-full max-w-sm rounded-md border border-[#bfcbd7] bg-[#f8fbfe] px-4 py-3 text-lg font-semibold outline-none transition focus:border-[#3d82bf] focus:ring-2 focus:ring-[#9dccf4]"
+        style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}
         value={selected[0] ?? ''}
         inputMode="numeric"
         placeholder="Enter integer answer"
@@ -450,7 +451,7 @@ const QuestionInput = ({ question, selected, onChange }: { question: EngineQuest
             onClick={() => question.questionType === 'MULTIPLE_CORRECT' ? onChange(checked ? selected.filter((value) => value !== option.value) : [...selected, option.value]) : onChange([option.value])}
           >
             <span className={cn('mt-0.5 grid size-5 shrink-0 place-items-center border text-[11px] font-black', question.questionType === 'MULTIPLE_CORRECT' ? 'rounded-sm' : 'rounded-full', checked ? 'border-[#2f74af] bg-[#2f74af] text-white' : 'border-slate-400 bg-white text-transparent')}>✓</span>
-            <span className="text-sm font-medium leading-6 text-slate-800">{option.label}</span>
+            <span className="text-sm font-medium leading-6 text-slate-800" style={{ fontFamily: 'Arial, "Helvetica Neue", sans-serif' }}>{option.label}</span>
           </button>
         );
       })}

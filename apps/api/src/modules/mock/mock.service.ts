@@ -30,7 +30,7 @@ export const listMockExamTypes = async () => prisma.mockExamType.findMany({
   select: { id: true, name: true, description: true },
 });
 
-const mapExamSummary = (exam: any, sequenceLocked = false) => {
+const mapExamSummary = (exam: any) => {
   const attempt = exam.attempts[0] ?? null;
   const hasAccess = Boolean(exam.isFree || exam.examType.studentAccesses?.length);
   const isAttempted = Boolean(attempt && isSubmittedAttempt(attempt.status));
@@ -58,8 +58,8 @@ const mapExamSummary = (exam: any, sequenceLocked = false) => {
       marksScored: n(attempt.marksScored),
       accuracy: n(attempt.accuracy),
     } : null,
-    sequenceLocked,
-    canAttempt: hasAccess && !sequenceLocked && (!attempt || inProgress),
+    sequenceLocked: false,
+    canAttempt: hasAccess && (!attempt || inProgress),
     isAttempted,
   };
 };
@@ -94,7 +94,7 @@ export const listExams = async (studentId: string, examTypeId: string, mockExamT
     orderBy: [{ createdAt: 'asc' }, { name: 'asc' }],
     include: examInclude(studentId),
   });
-  return applySequenceLocks(exams).map(({ exam, sequenceLocked }) => mapExamSummary(exam, sequenceLocked));
+  return exams.map((exam) => mapExamSummary(exam));
 };
 
 export const getExamDetail = async (studentId: string, examId: string) => {
@@ -124,7 +124,6 @@ export const getExamDetail = async (studentId: string, examId: string) => {
   const attempt = exam.attempts[0] ?? null;
   const hasAccess = await hasMockAccess(studentId, exam.examTypeId, exam.isFree);
   const isAttempted = Boolean(attempt && isSubmittedAttempt(attempt.status));
-  const sequenceLocked = await isMockSequenceLocked(studentId, exam.id, exam.examTypeId, exam.mockExamTypeId);
   return {
     id: exam.id,
     name: exam.name,
@@ -160,8 +159,8 @@ export const getExamDetail = async (studentId: string, examId: string) => {
       marksScored: n(attempt.marksScored),
       accuracy: n(attempt.accuracy),
     } : null,
-    sequenceLocked,
-    canAttempt: hasAccess && !sequenceLocked && (!attempt || attempt.status === AttemptStatus.IN_PROGRESS),
+    sequenceLocked: false,
+    canAttempt: hasAccess && (!attempt || attempt.status === AttemptStatus.IN_PROGRESS),
     isAttempted,
   };
 };
@@ -173,27 +172,7 @@ export const getCatalog = async (studentId: string, input: any) => {
     prisma.mockExamType.findMany({ where: { isActive: true, mockExams: { some: where } }, orderBy: { name: 'asc' } }),
     prisma.mockExam.findMany({ where, orderBy: input.sort === 'marks' ? { totalMarks: 'desc' } : input.sort === 'duration' ? { durationMinutes: 'asc' } : [{ createdAt: 'asc' }, { name: 'asc' }], include: { difficulty: true, examType: { include: { studentAccesses: { where: { studentId, expiryDate: { gte: new Date() } }, select: { id: true } } } }, mockExamType: true, analytics: true, _count: { select: { sections: true, attempts: { where: { status: { in: submitted } } } } }, attempts: { where: { studentId }, take: 1, orderBy: { createdAt: 'desc' }, select: { id: true, status: true, submittedAt: true } }, sections: { select: { _count: { select: { questions: { where: { isActive: true } } } } } } } }),
   ]);
-  return { examTypes, mockExamTypes: examTypesWithCounts, exams: applySequenceLocks(exams).filter(({ exam: x }) => input.attempted === undefined || (input.attempted === 'true') === Boolean(x.attempts.length)).map(({ exam: x, sequenceLocked }) => ({ ...x, sequenceLocked, hasAccess: x.isFree || Boolean(x.examType.studentAccesses.length), totalQuestions: x.sections.reduce((sum: number, section: any) => sum + section._count.questions, 0), averageScore: n(x.analytics?.averageScore), attempted: x.attempts[0] ?? null })) };
-};
-
-const applySequenceLocks = (exams: any[]) => {
-  let previousSubmitted = true;
-  return exams.map((exam) => {
-    const submittedAttempt = exam.attempts?.some((attempt: any) => isSubmittedAttempt(attempt.status));
-    const inProgress = exam.attempts?.some((attempt: any) => attempt.status === AttemptStatus.IN_PROGRESS);
-    const sequenceLocked = !previousSubmitted && !submittedAttempt && !inProgress;
-    previousSubmitted = previousSubmitted && Boolean(submittedAttempt);
-    return { exam, sequenceLocked };
-  });
-};
-
-const isMockSequenceLocked = async (studentId: string, examId: string, examTypeId: string, mockExamTypeId: string) => {
-  const exams = await prisma.mockExam.findMany({
-    where: { examTypeId, mockExamTypeId, isActive: true },
-    orderBy: [{ createdAt: 'asc' }, { name: 'asc' }],
-    include: { attempts: { where: { studentId }, select: { status: true } } },
-  });
-  return applySequenceLocks(exams).find((item) => item.exam.id === examId)?.sequenceLocked ?? false;
+  return { examTypes, mockExamTypes: examTypesWithCounts, exams: exams.filter((x) => input.attempted === undefined || (input.attempted === 'true') === Boolean(x.attempts.length)).map((x) => ({ ...x, sequenceLocked: false, hasAccess: x.isFree || Boolean(x.examType.studentAccesses.length), totalQuestions: x.sections.reduce((sum: number, section: any) => sum + section._count.questions, 0), averageScore: n(x.analytics?.averageScore), attempted: x.attempts[0] ?? null })) };
 };
 
 export const startAttempt = async (studentId: string, examId: string) => prisma.$transaction(async (tx) => {
@@ -401,7 +380,6 @@ export const getCategoryAnalytics = async (studentId: string, examTypeId: string
     totalTests: exams.length,
     attemptedTests: attempted.length,
     averageScore: attempted.length ? round(attempted.reduce((sum, row) => sum + n(row.attempt!.marksScored), 0) / attempted.length) : 0,
-    averageOfAverages: exams.length ? round(exams.reduce((sum, exam) => sum + n(exam.analytics?.averageScore), 0) / exams.length) : 0,
     averageAccuracy: attempted.length ? round(attempted.reduce((sum, row) => sum + n(row.attempt!.accuracy), 0) / attempted.length) : 0,
     trend: exams.map((exam, index) => {
       const attempt = exam.attempts[0] ?? null;
@@ -410,24 +388,20 @@ export const getCategoryAnalytics = async (studentId: string, examTypeId: string
         examId: exam.id,
         name: exam.name,
         score: attempt ? n(attempt.marksScored) : null,
-        averageScore: n(exam.analytics?.averageScore),
         rank: attempt?.rank ?? null,
         percentile: attempt?.percentile == null ? null : n(attempt.percentile),
       };
     }),
     sections: sectionTypes.map((sectionType) => {
-      const matchingSections = exams.flatMap((exam) => exam.sections.filter((section) => section.mockSectionTypeId === sectionType.id));
       const userRows = attempted.flatMap((row) => row.attempt!.sections.filter((section) => section.mockSection.mockSectionTypeId === sectionType.id));
       return {
         id: sectionType.id,
         name: sectionType.name,
         averageScore: userRows.length ? round(userRows.reduce((sum, row) => sum + n(row.marksScored), 0) / userRows.length) : 0,
         averageAccuracy: userRows.length ? round(userRows.reduce((sum, row) => sum + n(row.accuracy), 0) / userRows.length) : 0,
-        cohortAverageScore: matchingSections.length ? round(matchingSections.reduce((sum, section) => sum + n(section.analytics?.averageScore), 0) / matchingSections.length) : 0,
         trend: exams.map((exam, index) => {
-          const section = exam.sections.find((item) => item.mockSectionTypeId === sectionType.id);
           const attempt = exam.attempts[0]?.sections.find((item) => item.mockSection.mockSectionTypeId === sectionType.id);
-          return { index: index + 1, examName: exam.name, score: attempt ? n(attempt.marksScored) : null, averageScore: n(section?.analytics?.averageScore) };
+          return { index: index + 1, examName: exam.name, score: attempt ? n(attempt.marksScored) : null };
         }),
       };
     }),

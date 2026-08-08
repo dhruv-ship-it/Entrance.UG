@@ -30,6 +30,7 @@ import { MockAttemptAnalysisPage, MockAttemptReviewPage } from './features/stude
 import { MockBookmarksPage } from './features/student/mock-tests/mock-bookmarks-page';
 import { MockExamDetailPage } from './features/student/mock-tests/exam-detail-page';
 import { MockExamsPage } from './features/student/mock-tests/mock-exams-page';
+import { MockSwotPage } from './features/student/mock-tests/mock-swot-page';
 import { NotificationsPage } from './features/student/notifications-page';
 import { OverviewPage } from './features/student/overview-page';
 import { PlansPage } from './features/student/plans-page';
@@ -52,6 +53,7 @@ export const App = () => (
         <Route path="mock-tests" element={<MockExamTypesPage />} />
         <Route path="mock-tests/bookmarks" element={<MockBookmarksPage />} />
         <Route path="mock-tests/attempts/:attemptId/analysis" element={<MockAttemptAnalysisPage />} />
+        <Route path="mock-tests/attempts/:attemptId/swot" element={<MockSwotPage />} />
         <Route path="mock-tests/attempts/:attemptId/review" element={<MockAttemptReviewPage />} />
         <Route path="mock-tests/:examTypeId" element={<MockCategoriesPage />} />
         <Route path="mock-tests/:examTypeId/:mockExamTypeId" element={<MockExamsPage />} />

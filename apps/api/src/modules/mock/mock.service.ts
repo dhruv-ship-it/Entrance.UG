@@ -1,6 +1,7 @@
 import { AnswerStatus, AttemptStatus, Prisma } from '@prisma/client';
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../shared/http/app-error.js';
+import { getOrCreateMockAttemptSwotAnalysis } from './mock-swot.js';
 
 const n = (v: any) => v == null ? 0 : typeof v === 'number' ? v : v.toNumber();
 const submitted = [AttemptStatus.SUBMITTED, AttemptStatus.AUTO_SUBMITTED];
@@ -325,6 +326,8 @@ export const getAttemptAnalysis = async (studentId: string, attemptId: string) =
     })),
   };
 };
+
+export const getAttemptSwotAnalysis = async (studentId: string, attemptId: string) => getOrCreateMockAttemptSwotAnalysis(studentId, attemptId);
 
 export const setAttemptAnswerBookmark = async (studentId: string, answerId: string, bookmarked: boolean) => {
   const answer = await prisma.mockAttemptAnswer.findFirst({

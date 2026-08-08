@@ -586,11 +586,27 @@ model MockAttempt {
   mockExam            MockExam @relation(fields: [mockExamId], references: [id], onDelete: Restrict)
   sections            MockAttemptSection[]
   answers             MockAttemptAnswer[]
+  swotAnalysis        MockAttemptSwotAnalysis?
 
   @@index([studentId, mockExamId, status])
   @@index([mockExamId, submittedAt])
   @@unique([studentId, mockExamId])
   @@map("mock_attempts")
+}
+
+model MockAttemptSwotAnalysis {
+  id             String   @id @default(uuid()) @db.Uuid
+  mockAttemptId  String   @unique @map("mock_attempt_id") @db.Uuid
+  summary        String   @db.Text
+  strengths      Json
+  weaknesses     Json
+  opportunities  Json
+  threats        Json
+  generatedAt    DateTime @default(now()) @map("generated_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mockAttempt    MockAttempt @relation(fields: [mockAttemptId], references: [id], onDelete: Cascade)
+
+  @@map("mock_attempt_swot_analysis")
 }
 
 model MockAttemptSection {

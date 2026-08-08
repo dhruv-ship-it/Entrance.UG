@@ -2,6 +2,7 @@ import { AnswerStatus, AttemptStatus, Prisma } from '@prisma/client';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../shared/http/app-error.js';
+import { upsertMockAttemptSwotAnalysis } from '../mock/mock-swot.js';
 import type { TestPillar } from './test-engine.schemas.js';
 
 type SaveAnswerInput = {
@@ -463,6 +464,7 @@ const submitMockAttempt = async (studentId: string, attemptId: string, input: Su
   await tx.mockAttempt.update({ where: { id: attemptId }, data: attemptUpdate(input, result, attempt.startedAt, attempt.mockExam.durationMinutes, submittedAt) });
   await updateMockAnswerRows(tx, result.answerResults);
   await updateMockSectionRows(tx, attemptId, result.sectionResults, input.sectionTimes);
+  await upsertMockAttemptSwotAnalysis(tx, attemptId);
   await recalcMockAnalytics(tx, attempt.mockExamId);
   return resultSummary(attemptId, result);
 });

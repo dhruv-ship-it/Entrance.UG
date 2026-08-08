@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Bookmark, CheckCircle2, ChevronLeft, Clock3, Filter, HelpCircle, Layers, Target, Trophy, XCircle } from 'lucide-react';
+import { Bookmark, CheckCircle2, ChevronLeft, Clock3, Compass, Filter, HelpCircle, Layers, Target, Trophy, XCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -84,18 +84,32 @@ export const MockAttemptAnalysisPage = () => {
       <MockTopicAnalysis answers={analysis.answers} sections={analysis.filters.sections} />
       <MockDifficultyAnalysis answers={analysis.answers} sections={analysis.filters.sections} />
 
-      <Card className="overflow-hidden p-0">
-        <div className="grid gap-4 bg-gradient-to-r from-moss-900 to-moss-700 p-6 text-white md:grid-cols-[1fr_auto] md:items-center">
-          <div>
-            <Badge className="bg-white/15 text-lime">Answer review</Badge>
-            <h2 className="mt-3 text-2xl font-bold">Open your attempted answers</h2>
-            <p className="mt-1 text-sm text-moss-100/80">Detailed question review, filters, explanations and bookmarks are now on a separate page so this analysis stays clean.</p>
+      <section className="grid gap-5 lg:grid-cols-2">
+        <Card className="overflow-hidden p-0">
+          <div className="grid h-full gap-4 bg-gradient-to-r from-moss-900 to-moss-700 p-6 text-white md:grid-cols-[1fr_auto] md:items-center">
+            <div>
+              <Badge className="bg-white/15 text-lime">Answer review</Badge>
+              <h2 className="mt-3 text-2xl font-bold">Open your attempted answers</h2>
+              <p className="mt-1 text-sm text-moss-100/80">Detailed question review, filters, explanations and bookmarks are now on a separate page so this analysis stays clean.</p>
+            </div>
+            <Link to={`/student/mock-tests/attempts/${attemptId}/review`} className="inline-flex items-center justify-center rounded-2xl bg-lime px-5 py-3 text-sm font-bold text-moss-950 shadow-card hover:bg-lime/90">
+              View attempted answers
+            </Link>
           </div>
-          <Link to={`/student/mock-tests/attempts/${attemptId}/review`} className="inline-flex items-center justify-center rounded-2xl bg-lime px-5 py-3 text-sm font-bold text-moss-950 shadow-card hover:bg-lime/90">
-            View attempted answers
-          </Link>
-        </div>
-      </Card>
+        </Card>
+        <Card className="overflow-hidden p-0">
+          <div className="grid h-full gap-4 bg-[#173f33] p-6 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)] md:grid-cols-[1fr_auto] md:items-center">
+            <div>
+              <Badge className="bg-amber-100 text-amber-800">SWOT brief</Badge>
+              <h2 className="mt-3 text-2xl font-bold">See your SWOT analysis</h2>
+              <p className="mt-1 text-sm text-emerald-50/85">A compact strengths, weaknesses, opportunities and threats brief generated from this exact mock attempt.</p>
+            </div>
+            <Link to={`/student/mock-tests/attempts/${attemptId}/swot`} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-100 px-5 py-3 text-sm font-bold text-moss-950 shadow-card hover:bg-amber-50">
+              <Compass size={17} /> View SWOT
+            </Link>
+          </div>
+        </Card>
+      </section>
     </div>
   );
 };

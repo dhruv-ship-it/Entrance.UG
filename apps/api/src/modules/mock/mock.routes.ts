@@ -5,6 +5,7 @@ import { validateBody } from '../../shared/http/validate.js';
 import {
   answer,
   attemptAnalysis,
+  attemptSwotAnalysis,
   begin,
   bookmarkAnswer,
   bookmarks,
@@ -30,6 +31,7 @@ mockRouter.get('/analytics', categoryAnalytics);
 mockRouter.get('/bookmarks', bookmarks);
 mockRouter.get('/exams/:examId', examDetail);
 mockRouter.get('/attempts/:attemptId/analysis', attemptAnalysis);
+mockRouter.get('/attempts/:attemptId/swot', attemptSwotAnalysis);
 mockRouter.patch('/attempt-answers/:answerId/bookmark', bookmarkAnswer);
 mockRouter.get('/', catalog);
 

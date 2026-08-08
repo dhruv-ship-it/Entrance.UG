@@ -124,7 +124,7 @@ async function loadContext() {
 
 async function main() {
   const context = await loadContext();
-  const mocks = await Promise.all([seedMock(2, context), seedMock(3, context)]);
+  const mocks = await Promise.all([seedMock(2, context), seedMock(3, context), seedMock(4, context), seedMock(5, context)]);
   console.info('Seeded additional mock sequence tests:', mocks.map((mock) => mock.name));
 }
 

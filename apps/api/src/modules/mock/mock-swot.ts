@@ -17,8 +17,11 @@ const round = (value: number) => Number(value.toFixed(2));
 const priority = (value: number, high = 70, medium = 45): SwotItem['priority'] => value >= high ? 'HIGH' : value >= medium ? 'MEDIUM' : 'LOW';
 
 const item = (title: string, description: string, metric: string, priorityValue: SwotItem['priority'] = 'MEDIUM'): SwotItem => ({ title, description, metric, priority: priorityValue });
-const evidenceThreshold = (totalQuestions: number) => Math.max(3, Math.ceil(totalQuestions * 0.12));
+const evidenceThreshold = (totalQuestions: number) => totalQuestions <= 20 ? 2 : Math.max(2, Math.ceil(totalQuestions * 0.08));
 const hasEvidence = (row: PerformanceRow | undefined, totalQuestions: number) => Boolean(row && row.total >= evidenceThreshold(totalQuestions));
+const isStrongCluster = (row: PerformanceRow | undefined, totalQuestions: number) => Boolean(row && hasEvidence(row, totalQuestions) && row.correctShare >= 80 && row.accuracy >= 80 && row.incorrect === 0);
+const isOpportunityCluster = (row: PerformanceRow | undefined, totalQuestions: number) => Boolean(row && hasEvidence(row, totalQuestions) && row.accuracy >= 70 && row.unattemptedShare >= 25 && row.correct > 0);
+const isWeakCluster = (row: PerformanceRow | undefined, totalQuestions: number) => Boolean(row && hasEvidence(row, totalQuestions) && (row.accuracy < 55 || row.incorrectShare >= 40));
 
 type PerformanceRow = {
   name: string;
@@ -29,6 +32,7 @@ type PerformanceRow = {
   attempted: number;
   accuracy: number;
   correctShare: number;
+  incorrectShare: number;
   unattemptedShare: number;
 };
 
@@ -110,16 +114,25 @@ const buildMockSwotPayload = (attempt: Prisma.MockAttemptGetPayload<{ include: t
     unattempted: section.unattemptedAnswers,
     total: section.correctAnswers + section.incorrectAnswers + section.unattemptedAnswers,
     time: section.timeTakenSeconds,
+  })).map((section) => ({
+    ...section,
+    attempted: section.correct + section.incorrect,
+    correctShare: pct(section.correct, section.total),
+    incorrectShare: pct(section.incorrect, section.total),
+    unattemptedShare: pct(section.unattempted, section.total),
   }));
   const topicRows = groupedPerformance(attempt.answers, (answer) => answer.mockQuestion.topic.name);
   const subjectRows = groupedPerformance(attempt.answers, (answer) => answer.mockQuestion.topic.subject?.name ?? 'General');
   const difficultyRows = groupedPerformance(attempt.answers, (answer) => answer.mockQuestion.difficulty.name);
-  const bestSection = [...sections].filter((row) => row.total >= evidenceThreshold(totalQuestions) && row.accuracy >= 70 && row.correct > row.incorrect).sort((a, b) => b.accuracy - a.accuracy || b.score - a.score)[0];
-  const weakestSection = [...sections].filter((row) => row.total >= evidenceThreshold(totalQuestions) && (row.accuracy <= 50 || row.incorrect + row.unattempted > row.correct)).sort((a, b) => a.accuracy - b.accuracy || b.incorrect + b.unattempted - (a.incorrect + a.unattempted))[0];
-  const bestTopic = [...topicRows].filter((row) => hasEvidence(row, totalQuestions) && row.accuracy >= 75 && row.correctShare >= 70 && row.unattemptedShare <= 15).sort((a, b) => b.accuracy - a.accuracy || b.correct - a.correct)[0];
-  const bestSubject = [...subjectRows].filter((row) => hasEvidence(row, totalQuestions) && row.accuracy >= 70 && row.correctShare >= 65).sort((a, b) => b.accuracy - a.accuracy || b.correct - a.correct)[0];
-  const weakestTopic = [...topicRows].filter((row) => hasEvidence(row, totalQuestions) && (row.accuracy <= 55 || row.unattemptedShare >= 35)).sort((a, b) => a.accuracy - b.accuracy || b.incorrect + b.unattempted - (a.incorrect + a.unattempted))[0];
-  const partialTopic = [...topicRows].filter((row) => hasEvidence(row, totalQuestions) && row.accuracy > 45 && row.accuracy < 75).sort((a, b) => b.total - a.total || b.unattempted - a.unattempted)[0];
+  const bestSection = [...sections].filter((row) => row.total >= evidenceThreshold(totalQuestions) && row.correctShare >= 70 && row.accuracy >= 80 && row.incorrectShare <= 15).sort((a, b) => b.correctShare - a.correctShare || b.accuracy - a.accuracy)[0];
+  const sectionOpportunity = [...sections].filter((row) => row.total >= evidenceThreshold(totalQuestions) && row.accuracy >= 75 && row.unattemptedShare >= 25 && row.correct > 0).sort((a, b) => b.unattemptedShare - a.unattemptedShare || b.accuracy - a.accuracy)[0];
+  const weakestSection = [...sections].filter((row) => row.total >= evidenceThreshold(totalQuestions) && (row.accuracy < 55 || row.incorrectShare >= 35)).sort((a, b) => a.accuracy - b.accuracy || b.incorrectShare - a.incorrectShare)[0];
+  const bestTopic = [...topicRows].filter((row) => isStrongCluster(row, totalQuestions)).sort((a, b) => b.correctShare - a.correctShare || b.correct - a.correct)[0];
+  const bestSubject = [...subjectRows].filter((row) => isStrongCluster(row, totalQuestions) || (hasEvidence(row, totalQuestions) && row.correctShare >= 75 && row.accuracy >= 80)).sort((a, b) => b.correctShare - a.correctShare || b.correct - a.correct)[0];
+  const topicOpportunity = [...topicRows].filter((row) => isOpportunityCluster(row, totalQuestions)).sort((a, b) => b.unattemptedShare - a.unattemptedShare || b.correctShare - a.correctShare)[0];
+  const subjectOpportunity = [...subjectRows].filter((row) => isOpportunityCluster(row, totalQuestions)).sort((a, b) => b.unattemptedShare - a.unattemptedShare || b.correctShare - a.correctShare)[0];
+  const weakestTopic = [...topicRows].filter((row) => isWeakCluster(row, totalQuestions)).sort((a, b) => a.accuracy - b.accuracy || b.incorrectShare - a.incorrectShare)[0];
+  const partialTopic = [...topicRows].filter((row) => hasEvidence(row, totalQuestions) && !isStrongCluster(row, totalQuestions) && !isWeakCluster(row, totalQuestions) && row.correct > 0).sort((a, b) => b.total - a.total || b.unattempted - a.unattempted)[0];
   const weakestDifficulty = [...difficultyRows].filter((row) => hasEvidence(row, totalQuestions) || row.total >= 2).sort((a, b) => a.accuracy - b.accuracy || b.incorrect + b.unattempted - (a.incorrect + a.unattempted))[0];
 
   const strengths: SwotItem[] = [];
@@ -129,9 +142,9 @@ const buildMockSwotPayload = (attempt: Prisma.MockAttemptGetPayload<{ include: t
 
   if (scorePercent >= 60) strengths.push(item('Healthy score base', `You scored ${score}/${totalMarks}, which gives you a strong base to build from.`, `${scorePercent}% score`, priority(scorePercent)));
   if (accuracy >= 65) strengths.push(item('Reliable accuracy', 'Your attempted-question accuracy is strong, so scaling attempts can improve score without changing fundamentals.', `${accuracy}% accuracy`, priority(accuracy)));
-  if (bestSection) strengths.push(item(`Strong section: ${bestSection.name}`, `This section had enough question coverage and a clean accuracy pattern to be treated as a genuine strength.`, `${bestSection.correct}/${bestSection.total} correct`, priority(bestSection.accuracy)));
-  if (bestTopic) strengths.push(item(`Concept strength: ${bestTopic.name}`, `This topic had enough evidence and a strong correct-answer share, so it can be protected while improving weaker areas.`, `${bestTopic.correct}/${bestTopic.total} correct`, priority(bestTopic.accuracy)));
-  if (!bestTopic && bestSubject) strengths.push(item(`Subject strength: ${bestSubject.name}`, `Your performance was strongest at subject level here, but individual topics need more attempts before calling them strengths.`, `${bestSubject.correct}/${bestSubject.total} correct`, priority(bestSubject.accuracy)));
+  if (bestSection) strengths.push(item(`Strong section: ${bestSection.name}`, `This section shows a clean scoring pattern with high accuracy and very little negative leakage.`, `${bestSection.correct}/${bestSection.total} correct`, priority(bestSection.accuracy)));
+  if (bestTopic) strengths.push(item(`Topic strength: ${bestTopic.name}`, `This topic has a clear high-quality signal in this paper, so keep it protected while improving weaker areas.`, `${bestTopic.correct}/${bestTopic.total} correct`, priority(bestTopic.correctShare)));
+  if (!bestTopic && bestSubject) strengths.push(item(`Subject strength: ${bestSubject.name}`, `At subject level, this was one of your cleaner scoring zones in the attempt.`, `${bestSubject.correct}/${bestSubject.total} correct`, priority(bestSubject.correctShare)));
   if (!strengths.length) strengths.push(item('Clear baseline captured', 'Even if the score is not high yet, this attempt gives enough evidence to plan focused improvement.', `${totalQuestions} questions analyzed`, 'MEDIUM'));
 
   if (accuracy < 55) weaknesses.push(item('Accuracy needs attention', 'Incorrect answers are reducing your score. Review why wrong options felt attractive.', `${accuracy}% accuracy`, accuracy < 40 ? 'HIGH' : 'MEDIUM'));
@@ -140,10 +153,13 @@ const buildMockSwotPayload = (attempt: Prisma.MockAttemptGetPayload<{ include: t
   if (incorrect > correct) weaknesses.push(item('Wrong answers outweighed correct answers', 'The attempt pattern suggests guessing or concept confusion in multiple places.', `${incorrect} incorrect vs ${correct} correct`, 'HIGH'));
   if (!weaknesses.length) weaknesses.push(item('Fine-tune weaker pockets', 'No severe weakness stands out, so focus on converting medium-confidence questions.', `${incorrect + unattempted} questions to review`, 'LOW'));
 
-  if (unattempted > 0) opportunities.push(item('Convert skipped questions', 'Start with skipped questions that came from familiar topics; these are often the fastest score gains.', `${unattempted} skipped`, pct(unattempted, totalQuestions) > 25 ? 'HIGH' : 'MEDIUM'));
-  if (weakestDifficulty) opportunities.push(item(`Practice ${weakestDifficulty.name.toLowerCase()} difficulty`, 'Your next practice set should include this difficulty band with solution review.', `${weakestDifficulty.accuracy}% accuracy`, weakestDifficulty.accuracy < 50 ? 'HIGH' : 'MEDIUM'));
+  if (sectionOpportunity) opportunities.push(item(`Attempt more in ${sectionOpportunity.name}`, `You were accurate when you attempted this section, but left score on the table through unattempted questions.`, `${sectionOpportunity.accuracy}% accuracy, ${sectionOpportunity.unattempted} skipped`, sectionOpportunity.unattemptedShare >= 40 ? 'HIGH' : 'MEDIUM'));
   if (weakestTopic) opportunities.push(item(`Revise ${weakestTopic.name}`, 'Revise basics, then solve a short topic drill before the next mock.', `${weakestTopic.total} questions in this mock`, 'HIGH'));
+  if (!weakestTopic && topicOpportunity) opportunities.push(item(`Attempt more in ${topicOpportunity.name}`, 'You answered this topic accurately when attempted, so the next gain is coverage rather than concept relearning.', `${topicOpportunity.correct}/${topicOpportunity.total} correct, ${topicOpportunity.unattempted} skipped`, 'MEDIUM'));
+  if (!topicOpportunity && subjectOpportunity) opportunities.push(item(`Expand coverage in ${subjectOpportunity.name}`, 'At subject level, accuracy was promising but skipped questions kept the score capped.', `${subjectOpportunity.accuracy}% accuracy`, 'MEDIUM'));
   if (!weakestTopic && partialTopic) opportunities.push(item(`Push ${partialTopic.name} higher`, 'This topic is not weak enough to be a red flag, but it has enough mixed evidence to become a quick improvement area.', `${partialTopic.correct}/${partialTopic.total} correct`, 'MEDIUM'));
+  if (weakestDifficulty) opportunities.push(item(`Practice ${weakestDifficulty.name.toLowerCase()} difficulty`, 'Your next practice set should include this difficulty band with solution review.', `${weakestDifficulty.accuracy}% accuracy`, weakestDifficulty.accuracy < 50 ? 'HIGH' : 'MEDIUM'));
+  if (unattempted > 0) opportunities.push(item('Convert skipped questions', 'Start with skipped questions that came from familiar topics; these are often the fastest score gains.', `${unattempted} skipped`, pct(unattempted, totalQuestions) > 25 ? 'HIGH' : 'MEDIUM'));
   const smallSampleCorrectTopic = [...topicRows].filter((row) => row.total < evidenceThreshold(totalQuestions) && row.correct > 0 && row.correctShare >= 50).sort((a, b) => b.correctShare - a.correctShare)[0];
   if (smallSampleCorrectTopic) opportunities.push(item(`Validate ${smallSampleCorrectTopic.name}`, 'You got some of this topic right, but there were too few questions to call it a strength yet. Confirm it with more practice.', `${smallSampleCorrectTopic.correct}/${smallSampleCorrectTopic.total} correct`, 'LOW'));
   opportunities.push(item('Use the answer review page', 'Bookmark 5-10 questions from this attempt and revisit them before the next mock.', `${incorrect + unattempted} review candidates`, 'MEDIUM'));
@@ -167,7 +183,7 @@ const groupedPerformance = (answers: any[], keyFn: (answer: any) => string) => {
   const map = new Map<string, PerformanceRow>();
   for (const answer of answers) {
     const name = keyFn(answer) || 'Untitled';
-    const row = map.get(name) ?? { name, total: 0, correct: 0, incorrect: 0, unattempted: 0, attempted: 0, accuracy: 0, correctShare: 0, unattemptedShare: 0 };
+    const row = map.get(name) ?? { name, total: 0, correct: 0, incorrect: 0, unattempted: 0, attempted: 0, accuracy: 0, correctShare: 0, incorrectShare: 0, unattemptedShare: 0 };
     row.total += 1;
     if (answer.status === AnswerStatus.CORRECT) row.correct += 1;
     else if (answer.status === AnswerStatus.UNATTEMPTED) row.unattempted += 1;
@@ -175,6 +191,7 @@ const groupedPerformance = (answers: any[], keyFn: (answer: any) => string) => {
     row.attempted = row.correct + row.incorrect;
     row.accuracy = pct(row.correct, row.attempted);
     row.correctShare = pct(row.correct, row.total);
+    row.incorrectShare = pct(row.incorrect, row.total);
     row.unattemptedShare = pct(row.unattempted, row.total);
     map.set(name, row);
   }

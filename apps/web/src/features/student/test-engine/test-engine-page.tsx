@@ -452,8 +452,7 @@ const QuestionInput = ({ question, selected, onChange }: { question: EngineQuest
           <button
             key={option.value}
             className={cn(
-              'flex w-full items-start gap-3 rounded-md border px-4 py-3 text-left transition hover:border-[#75a9d4] hover:bg-[#f7fbff]',
-              checked ? 'border-[#2f74af] bg-[#e8f3fc] shadow-[inset_4px_0_0_#2f74af]' : 'border-[#d7e0ea] bg-white',
+              'flex w-full items-start gap-3 rounded-md border border-[#d7e0ea] bg-white px-4 py-3 text-left transition hover:border-[#75a9d4] hover:bg-[#f7fbff]',
             )}
             onClick={() => question.questionType === 'MULTIPLE_CORRECT' ? onChange(checked ? selected.filter((value) => value !== option.value) : [...selected, option.value]) : onChange([option.value])}
           >

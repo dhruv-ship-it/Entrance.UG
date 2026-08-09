@@ -17,6 +17,7 @@ import {
   examTypes,
   mockExamTypes,
   submit,
+  submittedAttempts,
 } from './mock.controller.js';
 import { answerSchema, submitSchema } from './mock.schemas.js';
 
@@ -29,6 +30,7 @@ mockRouter.get('/mock-exam-types', mockExamTypes);
 mockRouter.get('/exams', exams);
 mockRouter.get('/analytics', categoryAnalytics);
 mockRouter.get('/bookmarks', bookmarks);
+mockRouter.get('/attempts', submittedAttempts);
 mockRouter.get('/exams/:examId', examDetail);
 mockRouter.get('/attempts/:attemptId/analysis', attemptAnalysis);
 mockRouter.get('/attempts/:attemptId/swot', attemptSwotAnalysis);

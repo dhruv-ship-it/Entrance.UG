@@ -50,6 +50,10 @@ export const batchTestAttemptAnalysis = async (request: AuthenticatedRequest, re
   response.json({ analysis: await service.testAttemptAnalysis(request.auth!.sub, String(request.params.attemptId)) });
 };
 
+export const submittedBatchAttempts = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ attempts: await service.submittedBatchTestAttempts(request.auth!.sub) });
+};
+
 export const batchAttemptAnswerBookmark = async (request: AuthenticatedRequest, response: Response) => {
   response.json({ answer: await service.setBatchAnswerBookmark(request.auth!.sub, String(request.params.answerId), request.body.bookmarked) });
 };

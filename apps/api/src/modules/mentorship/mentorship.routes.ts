@@ -23,6 +23,7 @@ import {
   replyPinned,
   satisfied,
   sessionJoin,
+  submittedBatchAttempts,
   taskCompletion,
 } from './mentorship.controller.js';
 import { doubtSchema, doubtStatusSchema, replyPinSchema, replySchema, satisfiedSchema } from './mentorship.schemas.js';
@@ -47,6 +48,7 @@ mentorshipRouter.post('/batches/:batchId/doubts', validateBody(doubtSchema), cre
 
 mentorshipRouter.patch('/tasks/:taskId/completion', validateBody(z.object({ completed: z.boolean() })), taskCompletion);
 mentorshipRouter.post('/sessions/:sessionId/join', sessionJoin);
+mentorshipRouter.get('/test-attempts', submittedBatchAttempts);
 mentorshipRouter.get('/test-attempts/:attemptId/analysis', batchTestAttemptAnalysis);
 mentorshipRouter.patch('/test-attempt-answers/:answerId/bookmark', validateBody(z.object({ bookmarked: z.boolean() })), batchAttemptAnswerBookmark);
 

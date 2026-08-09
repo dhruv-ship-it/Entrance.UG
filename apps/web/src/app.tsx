@@ -5,6 +5,7 @@ import { SignupPage } from './features/auth/signup-page';
 import { LandingPage, RolePendingPage } from './features/misc-pages';
 import { MockExamTypesPage } from './features/student/mock-tests/exam-types-page';
 import { AccountPage } from './features/student/account-page';
+import { MentorshipAnalysisAttemptsPage, MockAnalysisAttemptsPage } from './features/student/analysis-attempts-page';
 import { AnalysisHubPage } from './features/student/analysis-hub-page';
 import { ContentAttemptDetailPage, ContentBookmarksPage, ContentPage } from './features/student/content/content-page';
 import {
@@ -50,6 +51,8 @@ export const App = () => (
       <Route path="/student" element={<StudentLayout />}>
         <Route path="dashboard" element={<OverviewPage />} />
         <Route path="analysis" element={<AnalysisHubPage />} />
+        <Route path="analysis/mock-tests" element={<MockAnalysisAttemptsPage />} />
+        <Route path="analysis/mentorship" element={<MentorshipAnalysisAttemptsPage />} />
         <Route path="mock-tests" element={<MockExamTypesPage />} />
         <Route path="mock-tests/bookmarks" element={<MockBookmarksPage />} />
         <Route path="mock-tests/attempts/:attemptId/analysis" element={<MockAttemptAnalysisPage />} />

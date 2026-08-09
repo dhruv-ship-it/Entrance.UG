@@ -329,6 +329,49 @@ export const getAttemptAnalysis = async (studentId: string, attemptId: string) =
 
 export const getAttemptSwotAnalysis = async (studentId: string, attemptId: string) => getOrCreateMockAttemptSwotAnalysis(studentId, attemptId);
 
+export const listSubmittedAttempts = async (studentId: string) => {
+  const attempts = await prisma.mockAttempt.findMany({
+    where: { studentId, status: { in: submitted } },
+    orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }],
+    include: {
+      mockExam: {
+        include: {
+          examType: { select: { id: true, name: true } },
+          mockExamType: { select: { id: true, name: true } },
+          difficulty: { select: { id: true, name: true } },
+          sections: { select: { id: true, _count: { select: { questions: { where: { isActive: true } } } } } },
+        },
+      },
+    },
+  });
+
+  return attempts.map((attempt) => ({
+    id: attempt.id,
+    submittedAt: attempt.submittedAt,
+    timeTakenSeconds: attempt.timeTakenSeconds,
+    totalMarks: n(attempt.totalMarks),
+    marksScored: n(attempt.marksScored),
+    percentage: n(attempt.totalMarks) ? Number(((n(attempt.marksScored) / n(attempt.totalMarks)) * 100).toFixed(2)) : 0,
+    accuracy: n(attempt.accuracy),
+    correctAnswers: attempt.correctAnswers,
+    incorrectAnswers: attempt.incorrectAnswers,
+    unattemptedAnswers: attempt.unattemptedAnswers,
+    rank: attempt.rank,
+    percentile: attempt.percentile == null ? null : n(attempt.percentile),
+    test: {
+      id: attempt.mockExam.id,
+      name: attempt.mockExam.name,
+      examType: attempt.mockExam.examType,
+      mockExamType: attempt.mockExam.mockExamType,
+      difficulty: attempt.mockExam.difficulty,
+      durationMinutes: attempt.mockExam.durationMinutes,
+      totalMarks: n(attempt.mockExam.totalMarks),
+      sectionCount: attempt.mockExam.sections.length,
+      questionCount: attempt.mockExam.sections.reduce((sum, section) => sum + section._count.questions, 0),
+    },
+  }));
+};
+
 export const setAttemptAnswerBookmark = async (studentId: string, answerId: string, bookmarked: boolean) => {
   const answer = await prisma.mockAttemptAnswer.findFirst({
     where: { id: answerId, mockAttempt: { studentId, status: { in: submitted } } },

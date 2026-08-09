@@ -543,6 +543,63 @@ export const testAttemptAnalysis = async (studentId: string, attemptId: string) 
   };
 };
 
+export const submittedBatchTestAttempts = async (studentId: string) => {
+  const attempts = await prisma.batchAttempt.findMany({
+    where: {
+      studentId,
+      status: { in: ['SUBMITTED', 'AUTO_SUBMITTED'] },
+      batchTest: {
+        mentorshipBatch: {
+          isActive: true,
+          studentAccesses: { some: activeMembership(studentId) },
+        },
+      },
+    },
+    orderBy: [{ submittedAt: 'desc' }, { createdAt: 'desc' }],
+    include: {
+      batchTest: {
+        include: {
+          difficulty: { select: { id: true, name: true } },
+          mentorshipBatch: {
+            select: {
+              id: true,
+              name: true,
+              mentorshipProgram: { select: { id: true, name: true } },
+            },
+          },
+          sections: { select: { id: true, _count: { select: { questions: true } } } },
+        },
+      },
+    },
+  });
+
+  return attempts.map((attempt) => ({
+    id: attempt.id,
+    submittedAt: attempt.submittedAt,
+    timeTakenSeconds: attempt.timeTakenSeconds,
+    totalMarks: toNumber(attempt.totalMarks),
+    marksScored: toNumber(attempt.marksScored),
+    percentage: toNumber(attempt.totalMarks) ? Number(((toNumber(attempt.marksScored) / toNumber(attempt.totalMarks)) * 100).toFixed(2)) : 0,
+    accuracy: toNumber(attempt.accuracy),
+    correctAnswers: attempt.correctAnswers,
+    incorrectAnswers: attempt.incorrectAnswers,
+    unattemptedAnswers: attempt.unattemptedAnswers,
+    test: {
+      id: attempt.batchTest.id,
+      name: attempt.batchTest.name,
+      difficulty: attempt.batchTest.difficulty,
+      durationMinutes: attempt.batchTest.durationMinutes,
+      totalMarks: toNumber(attempt.batchTest.totalMarks),
+      startDatetime: attempt.batchTest.startDatetime,
+      endDatetime: attempt.batchTest.endDatetime,
+      sectionCount: attempt.batchTest.sections.length,
+      questionCount: attempt.batchTest.sections.reduce((sum, section) => sum + section._count.questions, 0),
+      batch: attempt.batchTest.mentorshipBatch,
+      program: attempt.batchTest.mentorshipBatch.mentorshipProgram,
+    },
+  }));
+};
+
 export const setBatchAnswerBookmark = async (studentId: string, answerId: string, bookmarked: boolean) => {
   const answer = await prisma.batchAttemptAnswer.findFirst({
     where: { id: answerId, batchAttempt: { studentId, status: { in: ['SUBMITTED', 'AUTO_SUBMITTED'] } } },

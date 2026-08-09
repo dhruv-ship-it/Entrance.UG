@@ -6,15 +6,15 @@ import { Card } from '../../components/ui/card';
 const analysisLinks = [
   {
     title: 'Analyze mock tests',
-    description: 'Open mock-test categories and view your series-level and attempt-level analysis.',
-    to: '/student/mock-tests',
+    description: 'View every submitted mock attempt across exam types and open individual analysis.',
+    to: '/student/analysis/mock-tests',
     icon: ClipboardList,
     tone: 'bg-moss-50 text-moss-800',
   },
   {
     title: 'Analyze mentorship',
-    description: 'Open your mentorship batches and enter the existing Analyze yourself sections.',
-    to: '/student/mentorship',
+    description: 'View submitted batch tests across mentorship programs and batches.',
+    to: '/student/analysis/mentorship',
     icon: UsersRound,
     tone: 'bg-lime/35 text-moss-900',
   },

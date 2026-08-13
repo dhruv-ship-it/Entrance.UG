@@ -241,7 +241,7 @@ model Student {
   id                       String   @id @default(uuid()) @db.Uuid
   name                     String   @db.VarChar(150)
   username                 String   @unique @db.VarChar(50)
-  email                    String   @unique @db.VarChar(320)
+  email                    String?  @unique @db.VarChar(320)
   emailVerified            Boolean  @default(false) @map("email_verified")
   emailVerifiedAt          DateTime? @map("email_verified_at") @db.Timestamptz(3)
   phoneNumber              String   @unique @map("phone_number") @db.VarChar(20)

@@ -60,7 +60,7 @@ export const PlansPage = () => {
         name: 'Entrance UG',
         description: plan.name,
         order_id: order.razorpay.orderId,
-        prefill: { name: user?.name, email: user?.email },
+        prefill: { name: user?.name, email: user?.email ?? undefined },
         theme: { color: '#164331' },
         handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
           await verifyPayment.mutateAsync({

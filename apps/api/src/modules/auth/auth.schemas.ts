@@ -7,7 +7,7 @@ const optionalText = (maxLength: number) => z.string().trim().max(maxLength).opt
 export const signupSchema = z.object({
   name: z.string().trim().min(2).max(150),
   username: z.string().trim().toLowerCase().min(3).max(50).regex(/^[a-z0-9_]+$/, 'Username can contain lowercase letters, numbers and underscores only.'),
-  email: z.string().trim().email().max(320).transform((value) => value.toLowerCase()),
+  email: z.string().trim().email().max(320).transform((value) => value.toLowerCase()).optional().or(z.literal('').transform(() => undefined)),
   phoneNumber: z.string().trim().regex(/^\+?[1-9]\d{7,14}$/, 'Use an international phone number.'),
   password: z.string().min(10).max(128),
   dateOfBirth: z.coerce.date().refine((value) => value < new Date(), 'Date of birth must be in the past.'),

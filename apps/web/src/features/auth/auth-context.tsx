@@ -2,13 +2,14 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { api, ApiError } from '../../lib/api';
 
 export type Role = 'STUDENT' | 'PARENT' | 'MENTOR' | 'ADMIN';
-export type AuthUser = { id: string; name: string; username: string; email: string; emailVerified: boolean; role: Role; profileImage: string | null; adminRole: string | null };
+export type AuthUser = { id: string; name: string; username: string; email: string | null; emailVerified: boolean; role: Role; profileImage: string | null; adminRole: string | null };
+export type SignupResult = { user: AuthUser; verification: { email: string; devOtp: string | null; expiresInMinutes: number } | null };
 
 type AuthContextValue = {
   user: AuthUser | null;
   isLoading: boolean;
   login: (input: { role: Role; username: string; password: string }) => Promise<AuthUser>;
-  signup: (input: Record<string, unknown>) => Promise<AuthUser>;
+  signup: (input: Record<string, unknown>) => Promise<SignupResult>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 };
@@ -40,9 +41,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signup = async (input: Record<string, unknown>) => {
-    const result = await api<{ user: AuthUser }>('/api/v1/auth/student/signup', { method: 'POST', body: JSON.stringify(input) });
+    const result = await api<SignupResult>('/api/v1/auth/student/signup', { method: 'POST', body: JSON.stringify(input) });
     setUser(result.user);
-    return result.user;
+    return result;
   };
 
   const logout = async () => { await api('/api/v1/auth/logout', { method: 'POST' }); setUser(null); };

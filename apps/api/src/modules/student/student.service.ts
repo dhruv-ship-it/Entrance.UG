@@ -341,6 +341,7 @@ export const listPurchases = async (studentId: string, status?: string, take = 3
 export const requestEmailVerification = async (studentId: string) => {
   const student = await prisma.student.findUnique({ where: { id: studentId }, select: { email: true, emailVerified: true } });
   if (!student) throw new AppError(404, 'Student account not found.');
+  if (!student.email) throw new AppError(400, 'Add an email address before requesting verification.');
   if (student.emailVerified) return { email: student.email, alreadyVerified: true, devOtp: null };
 
   const otp = String(randomInt(100000, 1000000));
@@ -357,8 +358,9 @@ export const requestEmailVerification = async (studentId: string) => {
 };
 
 export const requestStudentEmailChange = async (studentId: string, email: string) => {
-  const student = await prisma.student.findUnique({ where: { id: studentId }, select: { email: true } });
+  const student = await prisma.student.findUnique({ where: { id: studentId }, select: { email: true, emailVerified: true } });
   if (!student) throw new AppError(404, 'Student account not found.');
+  if (student.email === email && student.emailVerified) return { email, alreadyVerified: true, devOtp: null };
 
   const existing = await prisma.student.findUnique({ where: { email }, select: { id: true } });
   if (existing && existing.id !== studentId) throw new AppError(409, 'That email address is already used by another student.');
@@ -367,20 +369,14 @@ export const requestStudentEmailChange = async (studentId: string, email: string
   const otpHash = await bcrypt.hash(otp, 12);
   const now = new Date();
 
-  await prisma.$transaction([
-    prisma.student.update({
-      where: { id: studentId },
-      data: { email, emailVerified: false, emailVerifiedAt: null },
-    }),
-    prisma.emailVerification.create({
-      data: {
-        email,
-        otpHash,
-        purpose: EmailVerificationPurpose.CHANGE_EMAIL,
-        expiresAt: new Date(now.getTime() + 10 * 60 * 1000),
-      },
-    }),
-  ]);
+  await prisma.emailVerification.create({
+    data: {
+      email,
+      otpHash,
+      purpose: EmailVerificationPurpose.CHANGE_EMAIL,
+      expiresAt: new Date(now.getTime() + 10 * 60 * 1000),
+    },
+  });
 
   return { email, alreadyVerified: false, devOtp: process.env.NODE_ENV === 'production' ? null : otp };
 };
@@ -388,6 +384,7 @@ export const requestStudentEmailChange = async (studentId: string, email: string
 export const verifyStudentEmail = async (studentId: string, otp: string) => {
   const student = await prisma.student.findUnique({ where: { id: studentId }, select: { email: true } });
   if (!student) throw new AppError(404, 'Student account not found.');
+  if (!student.email) throw new AppError(400, 'No email address is attached to this account.');
 
   const record = await prisma.emailVerification.findFirst({
     where: { email: student.email, purpose: EmailVerificationPurpose.REGISTER, verifiedAt: null, expiresAt: { gte: new Date() } },
@@ -407,7 +404,6 @@ export const verifyStudentEmail = async (studentId: string, otp: string) => {
 export const verifyStudentEmailChange = async (studentId: string, email: string, otp: string) => {
   const student = await prisma.student.findUnique({ where: { id: studentId }, select: { email: true } });
   if (!student) throw new AppError(404, 'Student account not found.');
-  if (student.email !== email) throw new AppError(400, 'This code is not for your current profile email.');
 
   const record = await prisma.emailVerification.findFirst({
     where: { email, purpose: EmailVerificationPurpose.CHANGE_EMAIL, verifiedAt: null, expiresAt: { gte: new Date() } },
@@ -418,8 +414,16 @@ export const verifyStudentEmailChange = async (studentId: string, email: string,
 
   const now = new Date();
   const [updatedStudent] = await prisma.$transaction([
-    prisma.student.update({ where: { id: studentId }, data: { emailVerified: true, emailVerifiedAt: now }, select: profileSelect }),
+    prisma.student.update({ where: { id: studentId }, data: { email, emailVerified: true, emailVerifiedAt: now }, select: profileSelect }),
     prisma.emailVerification.update({ where: { id: record.id }, data: { verifiedAt: now } }),
   ]);
   return updatedStudent;
+};
+
+export const removeStudentEmail = async (studentId: string) => {
+  return prisma.student.update({
+    where: { id: studentId },
+    data: { email: null, emailVerified: false, emailVerifiedAt: null },
+    select: profileSelect,
+  });
 };

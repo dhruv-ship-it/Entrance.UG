@@ -15,6 +15,7 @@ import {
   parents,
   profile,
   purchases,
+  removeEmail,
   requestEmailChange,
   requestVerification,
   updateMyProfile,
@@ -45,3 +46,4 @@ studentRouter.post('/email-verification/request', requestVerification);
 studentRouter.post('/email-verification/verify', validateBody(emailOtpSchema), verifyEmail);
 studentRouter.post('/email-verification/change/request', validateBody(emailChangeRequestSchema), requestEmailChange);
 studentRouter.post('/email-verification/change/verify', validateBody(emailChangeVerifySchema), verifyEmailChange);
+studentRouter.delete('/email', removeEmail);

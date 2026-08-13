@@ -7,7 +7,7 @@ import { getCurrentUser, login, registerStudent } from './auth.service.js';
 export const signupStudent = async (request: Request, response: Response) => {
   const result = await registerStudent(request.body);
   response.cookie(AUTH_COOKIE_NAME, result.accessToken, accessCookieOptions);
-  response.status(201).json({ user: result.user });
+  response.status(201).json({ user: result.user, verification: result.verification });
 };
 
 export const loginAccount = async (request: Request, response: Response) => {
@@ -25,4 +25,3 @@ export const currentUser = async (request: AuthenticatedRequest, response: Respo
   const user = await getCurrentUser(request.auth!.sub, request.auth!.role);
   response.status(200).json({ user });
 };
-

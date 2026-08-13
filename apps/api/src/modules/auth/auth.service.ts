@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { Prisma, type AdminRole } from '@prisma/client';
+import { randomInt } from 'crypto';
+import { EmailVerificationPurpose, Prisma, type AdminRole } from '@prisma/client';
 
 import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../shared/http/app-error.js';
@@ -13,7 +14,7 @@ type Account = {
   id: string;
   name: string;
   username: string;
-  email: string;
+  email: string | null;
   emailVerified: boolean;
   passwordHash: string;
   isActive: boolean;
@@ -33,9 +34,9 @@ const serializeAccount = (account: Account, role: AuthRole) => ({
 });
 
 export const registerStudent = async (input: SignupInput) => {
-  const [usernameTaken, emailTaken, phoneTaken] = await prisma.$transaction([
+  const [usernameTaken, emailTaken, phoneTaken] = await Promise.all([
     prisma.student.findUnique({ where: { username: input.username }, select: { id: true } }),
-    prisma.student.findUnique({ where: { email: input.email }, select: { id: true } }),
+    input.email ? prisma.student.findUnique({ where: { email: input.email }, select: { id: true } }) : Promise.resolve(null),
     prisma.student.findUnique({ where: { phoneNumber: input.phoneNumber }, select: { id: true } }),
   ]);
 
@@ -47,14 +48,28 @@ export const registerStudent = async (input: SignupInput) => {
   // credentials and future request-only fields out of the database payload.
   const { password, ...studentInput } = input;
   const passwordHash = await bcrypt.hash(password, passwordRounds);
-  const studentData: Prisma.StudentCreateInput = { ...studentInput, passwordHash };
-  const student = await prisma.student.create({
-    data: studentData,
-    select: { id: true, name: true, username: true, email: true, emailVerified: true, profileImage: true, isActive: true, passwordHash: true },
+  const studentData: Prisma.StudentCreateInput = { ...studentInput, emailVerified: false, emailVerifiedAt: null, passwordHash };
+  const { student, verification } = await prisma.$transaction(async (tx) => {
+    const created = await tx.student.create({
+      data: studentData,
+      select: { id: true, name: true, username: true, email: true, emailVerified: true, profileImage: true, isActive: true, passwordHash: true },
+    });
+    if (!created.email) return { student: created, verification: null };
+    const createdVerification = await createEmailVerification(tx, created.email, EmailVerificationPurpose.REGISTER);
+    return { student: created, verification: createdVerification };
   });
 
   const user = serializeAccount(student, 'STUDENT');
-  return { user, accessToken: signAccessToken({ sub: student.id, role: 'STUDENT' }) };
+  return { user, accessToken: signAccessToken({ sub: student.id, role: 'STUDENT' }), verification };
+};
+
+const createEmailVerification = async (tx: Prisma.TransactionClient, email: string, purpose: EmailVerificationPurpose) => {
+  const otp = String(randomInt(100000, 1000000));
+  const otpHash = await bcrypt.hash(otp, passwordRounds);
+  await tx.emailVerification.create({
+    data: { email, otpHash, purpose, expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
+  });
+  return { email, devOtp: process.env.NODE_ENV === 'production' ? null : otp, expiresInMinutes: 10 };
 };
 
 const findAccount = async (role: AuthRole, username: string): Promise<Account | null> => {

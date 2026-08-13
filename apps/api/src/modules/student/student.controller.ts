@@ -11,6 +11,7 @@ import {
   listParents,
   listPurchases,
   markNotificationRead,
+  removeStudentEmail,
   removeParent,
   requestEmailVerification,
   requestStudentEmailChange,
@@ -92,4 +93,8 @@ export const requestEmailChange = async (request: AuthenticatedRequest, response
 
 export const verifyEmailChange = async (request: AuthenticatedRequest, response: Response) => {
   response.status(200).json({ profile: await verifyStudentEmailChange(request.auth!.sub, request.body.email, request.body.otp) });
+};
+
+export const removeEmail = async (request: AuthenticatedRequest, response: Response) => {
+  response.status(200).json({ profile: await removeStudentEmail(request.auth!.sub) });
 };

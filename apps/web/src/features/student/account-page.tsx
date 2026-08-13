@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CreditCard, Link2, MailCheck, MessageSquareText, Search, ShieldCheck, Star, Trash2, UserPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import { EmptyState } from '../../components/empty-state';
 import { Badge } from '../../components/ui/badge';
@@ -29,7 +30,7 @@ type Purchase = {
   plan: { id: string; name: string; description: string; durationDays: number; isContentIncluded: boolean };
   payment: { amount: string | number; currency: string; gateway: string; status: string; paidAt?: string | null };
 };
-type Account = { parents: ParentLink[]; feedback: Feedback[]; purchases: Purchase[]; email: { address: string; verified: boolean } };
+type Account = { parents: ParentLink[]; feedback: Feedback[]; purchases: Purchase[]; email: { address: string | null; verified: boolean } };
 type ParentSearchResult = ParentLink['parent'] & { alreadyLinked: boolean };
 type PurchaseFilter = 'ALL' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 type ParentConfirmation = { type: 'add' } | { type: 'remove'; link: ParentLink };
@@ -118,13 +119,14 @@ export const AccountPage = () => {
 
   const purchaseRows = purchaseFilter === 'ALL' ? account.data.purchases : purchases.data?.purchases ?? [];
   const feedbackRows = showAllFeedback ? feedback.data?.feedback ?? [] : account.data.feedback;
+  const hasAccountEmail = Boolean(account.data.email.address);
 
   return (
     <div className="space-y-7">
       <section className="overflow-hidden rounded-4xl bg-moss-800 p-7 text-white shadow-card">
         <Badge className="bg-white/12 text-lime">ACCOUNT HUB</Badge>
         <h1 className="mt-4 text-3xl font-semibold tracking-tight">Family, purchases and feedback</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-moss-100/75">Manage linked parents, verify your email, review plan purchases and send private feedback to the team.</p>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-moss-100/75">Manage linked parents, email status, plan purchases and private feedback to the team.</p>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1fr_.85fr]">
@@ -186,12 +188,18 @@ export const AccountPage = () => {
           <div className="flex items-center gap-3">
             <span className="grid size-11 place-items-center rounded-2xl bg-sky/15 text-[#28718d]"><MailCheck size={20} /></span>
             <div>
-              <h2 className="font-bold">Email verification</h2>
-              <p className="text-sm text-stone-500">{account.data.email.address}</p>
+              <h2 className="font-bold">Email status</h2>
+              <p className="text-sm text-stone-500">{account.data.email.address ?? 'No email added yet'}</p>
             </div>
           </div>
-          <Badge className={account.data.email.verified ? 'mt-5 bg-emerald-100 text-emerald-800' : 'mt-5 bg-amber/20 text-[#93620c]'}>{account.data.email.verified ? 'Verified' : 'Not verified'}</Badge>
-          {!account.data.email.verified && (
+          <Badge className={account.data.email.verified ? 'mt-5 bg-emerald-100 text-emerald-800' : hasAccountEmail ? 'mt-5 bg-amber/20 text-[#93620c]' : 'mt-5 bg-stone-100 text-stone-600'}>{account.data.email.verified ? 'Verified' : hasAccountEmail ? 'Not verified' : 'No email'}</Badge>
+          {!hasAccountEmail && (
+            <div className="mt-5 rounded-2xl bg-stone-50 p-4">
+              <p className="text-sm leading-6 text-stone-600">Add an email from your profile first. Once it is added, you can verify it using OTP.</p>
+              <Link className="focus-ring mt-3 inline-flex items-center justify-center rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 transition hover:border-moss-200 hover:bg-moss-50" to="/student/profile">Open profile</Link>
+            </div>
+          )}
+          {hasAccountEmail && !account.data.email.verified && (
             <div className="mt-5 space-y-3">
               <Button onClick={() => requestOtp.mutate()} disabled={requestOtp.isPending}>Request OTP</Button>
               {devOtp && <p className="rounded-xl bg-moss-50 px-3 py-2 text-sm font-semibold text-moss-800">Dev OTP: {devOtp}</p>}
@@ -201,6 +209,8 @@ export const AccountPage = () => {
               </div>
             </div>
           )}
+          {requestOtp.isError && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{requestOtp.error instanceof Error ? requestOtp.error.message : 'Could not request OTP.'}</p>}
+          {verifyOtp.isError && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{verifyOtp.error instanceof Error ? verifyOtp.error.message : 'Could not verify OTP.'}</p>}
         </Card>
       </section>
 

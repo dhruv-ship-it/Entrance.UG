@@ -207,13 +207,12 @@ export const RcPage = () => {
 const LeaderboardPanel = ({ entries }: { entries: LeaderboardEntry[] }) => (
   <section className="overflow-hidden rounded-4xl border border-[#f2e2bd] bg-[#fffaf0] shadow-card">
     <div className="relative border-b border-[#f1dfb7] bg-[#fff3d7] px-5 py-5 sm:px-7">
-      <div className="absolute right-8 top-4 hidden rounded-full border border-white/70 bg-white/60 px-4 py-2 text-sm font-black text-[#9a5a06] shadow-sm md:block">🔥 30-hour grace</div>
       <div className="flex items-center gap-3">
         <span className="grid size-12 place-items-center rounded-2xl bg-[#201308] text-xl shadow-sm">🔥</span>
         <div>
           <p className="eyebrow text-[#9a5a06]">RC Streak Board</p>
           <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#2a1a0a]">Consistency league</h2>
-          <p className="mt-1 text-sm text-[#856037]">Active streaks stay alive when the next RC is submitted within 30 hours.</p>
+          <p className="mt-1 text-sm text-[#856037]">Track the students building the strongest daily reading rhythm.</p>
         </div>
       </div>
     </div>

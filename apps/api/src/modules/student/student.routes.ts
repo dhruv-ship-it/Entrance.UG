@@ -4,6 +4,7 @@ import { requireStudent } from '../../shared/auth/auth.middleware.js';
 import { validateBody } from '../../shared/http/validate.js';
 import {
   accountSummary,
+  changePassword,
   createFeedback,
   createParentLink,
   deleteParentLink,
@@ -23,7 +24,7 @@ import {
   verifyEmailChange,
   verifyEmail,
 } from './student.controller.js';
-import { emailChangeRequestSchema, emailChangeVerifySchema, emailOtpSchema, feedbackSchema, parentLinkSchema, parentRelationshipSchema, updateProfileSchema } from './student.schemas.js';
+import { changePasswordSchema, emailChangeRequestSchema, emailChangeVerifySchema, emailOtpSchema, feedbackSchema, parentLinkSchema, parentRelationshipSchema, updateProfileSchema } from './student.schemas.js';
 
 export const studentRouter = Router();
 
@@ -47,3 +48,4 @@ studentRouter.post('/email-verification/verify', validateBody(emailOtpSchema), v
 studentRouter.post('/email-verification/change/request', validateBody(emailChangeRequestSchema), requestEmailChange);
 studentRouter.post('/email-verification/change/verify', validateBody(emailChangeVerifySchema), verifyEmailChange);
 studentRouter.delete('/email', removeEmail);
+studentRouter.patch('/password', validateBody(changePasswordSchema), changePassword);

@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 
 import type { AuthenticatedRequest } from '../../shared/auth/auth.middleware.js';
 import { AUTH_COOKIE_NAME, accessCookieOptions } from '../../shared/auth/jwt.js';
-import { getCurrentUser, login, registerStudent } from './auth.service.js';
+import { getCurrentUser, login, registerStudent, requestForgotPassword, resetForgotPassword } from './auth.service.js';
 
 export const signupStudent = async (request: Request, response: Response) => {
   const result = await registerStudent(request.body);
@@ -14,6 +14,14 @@ export const loginAccount = async (request: Request, response: Response) => {
   const result = await login(request.body);
   response.cookie(AUTH_COOKIE_NAME, result.accessToken, accessCookieOptions);
   response.status(200).json({ user: result.user });
+};
+
+export const forgotPasswordRequest = async (request: Request, response: Response) => {
+  response.status(200).json(await requestForgotPassword(request.body));
+};
+
+export const forgotPasswordReset = async (request: Request, response: Response) => {
+  response.status(200).json(await resetForgotPassword(request.body));
 };
 
 export const logout = (_request: Request, response: Response) => {

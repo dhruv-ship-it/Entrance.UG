@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../../shared/auth/auth.middleware.js';
 import {
   addParent,
+  changeStudentPassword,
   getAccountSummary,
   getNotifications,
   getOverview,
@@ -97,4 +98,8 @@ export const verifyEmailChange = async (request: AuthenticatedRequest, response:
 
 export const removeEmail = async (request: AuthenticatedRequest, response: Response) => {
   response.status(200).json({ profile: await removeStudentEmail(request.auth!.sub) });
+};
+
+export const changePassword = async (request: AuthenticatedRequest, response: Response) => {
+  response.status(200).json(await changeStudentPassword(request.auth!.sub, request.body));
 };

@@ -34,7 +34,10 @@ export const LoginPage = () => {
         {roles.map((item) => <button type="button" key={item.value} onClick={() => setRole(item.value)} className={`focus-ring rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${role === item.value ? 'border-moss-700 bg-moss-50 text-moss-800' : 'border-stone-200 text-stone-500 hover:bg-stone-50'}`}>{item.label}</button>)}
       </div></fieldset>
       <Field label="Username" icon={UserRound}><Input required name="username" autoComplete="username" placeholder="your_username" /></Field>
-      <Field label="Password" icon={LockKeyhole}><Input required name="password" type="password" autoComplete="current-password" placeholder="Your password" /></Field>
+      <div>
+        <Field label="Password" icon={LockKeyhole}><Input required name="password" type="password" autoComplete="current-password" placeholder="Your password" /></Field>
+        <div className="mt-2 text-right"><Link className="text-sm font-semibold text-moss-800 hover:underline" to="/forgot-password">Forgot password?</Link></div>
+      </div>
       {error && <p className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700" role="alert">{error}</p>}
       <Button className="w-full" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Signing in…' : <>Sign in <ArrowRight size={17} /></>}</Button>
     </form>

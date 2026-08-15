@@ -1,10 +1,11 @@
-import { AttemptStatus, EmailVerificationPurpose, TaskStatus } from '@prisma/client';
+import { AttemptStatus, EmailVerificationPurpose, TaskStatus, VerificationAccountRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { randomInt } from 'crypto';
 
 import { prisma } from '../../database/prisma.js';
+import { sendOtpEmail } from '../../shared/email/email.service.js';
 import { AppError } from '../../shared/http/app-error.js';
-import type { UpdateProfileInput } from './student.schemas.js';
+import type { ChangePasswordInput, UpdateProfileInput } from './student.schemas.js';
 
 const asNumber = (value: { toNumber(): number } | number | null | undefined) => value == null ? 0 : typeof value === 'number' ? value : value.toNumber();
 
@@ -351,10 +352,19 @@ export const requestEmailVerification = async (studentId: string) => {
       email: student.email,
       otpHash,
       purpose: EmailVerificationPurpose.REGISTER,
+      accountId: studentId,
+      accountRole: VerificationAccountRole.STUDENT,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     },
   });
-  return { email: student.email, alreadyVerified: false, devOtp: process.env.NODE_ENV === 'production' ? null : otp };
+  const delivery = await sendOtpEmail({
+    to: student.email,
+    subject: 'Verify your Entrance UG email',
+    heading: 'Verify your email address',
+    intro: 'Use this OTP to verify the email attached to your Entrance UG student account.',
+    otp,
+  });
+  return { email: student.email, alreadyVerified: false, devOtp: delivery.devOtp, expiresInMinutes: 10 };
 };
 
 export const requestStudentEmailChange = async (studentId: string, email: string) => {
@@ -374,11 +384,20 @@ export const requestStudentEmailChange = async (studentId: string, email: string
       email,
       otpHash,
       purpose: EmailVerificationPurpose.CHANGE_EMAIL,
+      accountId: studentId,
+      accountRole: VerificationAccountRole.STUDENT,
       expiresAt: new Date(now.getTime() + 10 * 60 * 1000),
     },
   });
 
-  return { email, alreadyVerified: false, devOtp: process.env.NODE_ENV === 'production' ? null : otp };
+  const delivery = await sendOtpEmail({
+    to: email,
+    subject: 'Confirm your new Entrance UG email',
+    heading: 'Confirm your new email',
+    intro: 'Use this OTP to confirm your new Entrance UG account email. Your old email stays active until this is verified.',
+    otp,
+  });
+  return { email, alreadyVerified: false, devOtp: delivery.devOtp, expiresInMinutes: 10 };
 };
 
 export const verifyStudentEmail = async (studentId: string, otp: string) => {
@@ -387,7 +406,7 @@ export const verifyStudentEmail = async (studentId: string, otp: string) => {
   if (!student.email) throw new AppError(400, 'No email address is attached to this account.');
 
   const record = await prisma.emailVerification.findFirst({
-    where: { email: student.email, purpose: EmailVerificationPurpose.REGISTER, verifiedAt: null, expiresAt: { gte: new Date() } },
+    where: { email: student.email, purpose: EmailVerificationPurpose.REGISTER, accountId: studentId, accountRole: VerificationAccountRole.STUDENT, verifiedAt: null, expiresAt: { gte: new Date() } },
     orderBy: { createdAt: 'desc' },
   });
   if (!record) throw new AppError(404, 'No active verification code found.');
@@ -406,11 +425,14 @@ export const verifyStudentEmailChange = async (studentId: string, email: string,
   if (!student) throw new AppError(404, 'Student account not found.');
 
   const record = await prisma.emailVerification.findFirst({
-    where: { email, purpose: EmailVerificationPurpose.CHANGE_EMAIL, verifiedAt: null, expiresAt: { gte: new Date() } },
+    where: { email, purpose: EmailVerificationPurpose.CHANGE_EMAIL, accountId: studentId, accountRole: VerificationAccountRole.STUDENT, verifiedAt: null, expiresAt: { gte: new Date() } },
     orderBy: { createdAt: 'desc' },
   });
   if (!record) throw new AppError(404, 'No active email change code found.');
   if (!(await bcrypt.compare(otp, record.otpHash))) throw new AppError(400, 'Invalid verification code.');
+
+  const existing = await prisma.student.findUnique({ where: { email }, select: { id: true } });
+  if (existing && existing.id !== studentId) throw new AppError(409, 'That email address is already used by another student.');
 
   const now = new Date();
   const [updatedStudent] = await prisma.$transaction([
@@ -421,9 +443,40 @@ export const verifyStudentEmailChange = async (studentId: string, email: string,
 };
 
 export const removeStudentEmail = async (studentId: string) => {
-  return prisma.student.update({
-    where: { id: studentId },
-    data: { email: null, emailVerified: false, emailVerifiedAt: null },
-    select: profileSelect,
-  });
+  const now = new Date();
+  const [updatedStudent] = await prisma.$transaction([
+    prisma.student.update({
+      where: { id: studentId },
+      data: { email: null, emailVerified: false, emailVerifiedAt: null },
+      select: profileSelect,
+    }),
+    prisma.emailVerification.updateMany({
+      where: { accountId: studentId, accountRole: VerificationAccountRole.STUDENT, verifiedAt: null },
+      data: { verifiedAt: now },
+    }),
+  ]);
+  return updatedStudent;
+};
+
+export const changeStudentPassword = async (studentId: string, input: ChangePasswordInput) => {
+  if (input.currentPassword === input.newPassword) {
+    throw new AppError(400, 'New password must be different from your current password.');
+  }
+
+  const student = await prisma.student.findUnique({ where: { id: studentId }, select: { passwordHash: true } });
+  if (!student) throw new AppError(404, 'Student account not found.');
+  if (!(await bcrypt.compare(input.currentPassword, student.passwordHash))) {
+    throw new AppError(400, 'Current password is incorrect.');
+  }
+
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.student.update({ where: { id: studentId }, data: { passwordHash: await bcrypt.hash(input.newPassword, 12) } }),
+    prisma.emailVerification.updateMany({
+      where: { accountId: studentId, accountRole: VerificationAccountRole.STUDENT, purpose: EmailVerificationPurpose.FORGOT_PASSWORD, verifiedAt: null },
+      data: { verifiedAt: now },
+    }),
+  ]);
+
+  return { message: 'Password changed successfully.' };
 };

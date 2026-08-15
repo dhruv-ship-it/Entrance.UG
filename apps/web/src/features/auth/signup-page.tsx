@@ -91,7 +91,11 @@ export const SignupPage = () => {
         {error && <p className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700" role="alert">{error}</p>}
         <Button className="w-full" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Creating account...' : <>Create account <ArrowRight size={17} /></>}</Button>
       </form>
-      <p className="mt-7 text-center text-sm text-stone-500">Already have an account? <Link className="font-semibold text-moss-800 hover:underline" to="/login">Sign in</Link></p>
+      <p className="mt-7 text-center text-sm text-stone-500">
+        Already have an account? <Link className="font-semibold text-moss-800 hover:underline" to="/login">Sign in</Link>
+        <span className="mx-2 text-stone-300">/</span>
+        <Link className="font-semibold text-moss-800 hover:underline" to="/forgot-password">Forgot password?</Link>
+      </p>
     </AuthFrame>
   );
 };

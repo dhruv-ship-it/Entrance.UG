@@ -46,3 +46,10 @@ export const emailChangeRequestSchema = z.object({
 export const emailChangeVerifySchema = emailChangeRequestSchema.extend({
   otp: z.string().trim().regex(/^\d{6}$/, 'Enter the 6 digit OTP.'),
 });
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(128),
+  newPassword: z.string().min(10).max(128),
+});
+
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

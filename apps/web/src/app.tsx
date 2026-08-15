@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './features/auth/login-page';
+import { ForgotPasswordPage } from './features/auth/forgot-password-page';
 import { ProtectedStudentRoute } from './features/auth/protected-route';
 import { SignupPage } from './features/auth/signup-page';
 import { LandingPage, RolePendingPage } from './features/misc-pages';
@@ -44,6 +45,7 @@ export const App = () => (
   <Routes>
     <Route path="/" element={<LandingPage />} />
     <Route path="/login" element={<LoginPage />} />
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/signup" element={<SignupPage />} />
     <Route path="/access/pending" element={<RolePendingPage />} />
     <Route element={<ProtectedStudentRoute />}>

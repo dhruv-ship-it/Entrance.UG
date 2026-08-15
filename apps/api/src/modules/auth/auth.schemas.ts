@@ -24,5 +24,17 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(128),
 });
 
+export const forgotPasswordRequestSchema = z.object({
+  role: z.enum(authRoles),
+  username: z.string().trim().toLowerCase().min(3).max(50),
+});
+
+export const forgotPasswordResetSchema = forgotPasswordRequestSchema.extend({
+  otp: z.string().trim().regex(/^\d{6}$/, 'OTP must be a 6 digit code.'),
+  password: z.string().min(10).max(128),
+});
+
 export type SignupInput = z.infer<typeof signupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgotPasswordRequestInput = z.infer<typeof forgotPasswordRequestSchema>;
+export type ForgotPasswordResetInput = z.infer<typeof forgotPasswordResetSchema>;

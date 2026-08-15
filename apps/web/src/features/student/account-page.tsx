@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CreditCard, Link2, MailCheck, MessageSquareText, Search, ShieldCheck, Star, Trash2, UserPlus } from 'lucide-react';
+import { CreditCard, KeyRound, Link2, MailCheck, MessageSquareText, Search, ShieldCheck, Star, Trash2, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { EmptyState } from '../../components/empty-state';
@@ -50,6 +50,8 @@ export const AccountPage = () => {
   const [relationship, setRelationship] = useState<Relationship>('FATHER');
   const [purchaseFilter, setPurchaseFilter] = useState<PurchaseFilter>('ALL');
   const [feedbackForm, setFeedbackForm] = useState({ rating: 5, title: '', comment: '' });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordMessage, setPasswordMessage] = useState('');
   const [otp, setOtp] = useState('');
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const [showAllFeedback, setShowAllFeedback] = useState(false);
@@ -113,6 +115,16 @@ export const AccountPage = () => {
       await refresh();
     },
   });
+  const changePassword = useMutation({
+    mutationFn: () => api<{ message: string }>('/api/v1/students/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword: passwordForm.currentPassword, newPassword: passwordForm.newPassword }),
+    }),
+    onSuccess: (data) => {
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordMessage(data.message);
+    },
+  });
 
   if (account.isLoading) return <Skeleton className="h-[620px] rounded-4xl" />;
   if (!account.data) return <EmptyState icon={ShieldCheck} title="Account could not load" description="Please refresh the page." />;
@@ -120,6 +132,7 @@ export const AccountPage = () => {
   const purchaseRows = purchaseFilter === 'ALL' ? account.data.purchases : purchases.data?.purchases ?? [];
   const feedbackRows = showAllFeedback ? feedback.data?.feedback ?? [] : account.data.feedback;
   const hasAccountEmail = Boolean(account.data.email.address);
+  const passwordsMatch = passwordForm.newPassword === passwordForm.confirmPassword;
 
   return (
     <div className="space-y-7">
@@ -215,6 +228,28 @@ export const AccountPage = () => {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
+        <Card className="p-5 sm:p-6">
+          <div className="flex items-center gap-3">
+            <span className="grid size-11 place-items-center rounded-2xl bg-moss-100 text-moss-800"><KeyRound size={20} /></span>
+            <div>
+              <h2 className="font-bold">Password & security</h2>
+              <p className="text-sm text-stone-500">Change your password using your current password.</p>
+            </div>
+          </div>
+          <form className="mt-5 space-y-3" onSubmit={(event: FormEvent) => { event.preventDefault(); setPasswordMessage(''); changePassword.mutate(); }}>
+            <Input value={passwordForm.currentPassword} onChange={(event) => setPasswordForm((form) => ({ ...form, currentPassword: event.target.value }))} type="password" autoComplete="current-password" placeholder="Current password" />
+            <Input value={passwordForm.newPassword} onChange={(event) => setPasswordForm((form) => ({ ...form, newPassword: event.target.value }))} type="password" autoComplete="new-password" placeholder="New password, minimum 10 characters" />
+            <Input value={passwordForm.confirmPassword} onChange={(event) => setPasswordForm((form) => ({ ...form, confirmPassword: event.target.value }))} type="password" autoComplete="new-password" placeholder="Confirm new password" />
+            {!passwordsMatch && passwordForm.confirmPassword && <p className="rounded-xl bg-amber/15 px-3 py-2 text-sm text-[#8d620f]">Passwords do not match yet.</p>}
+            {passwordMessage && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">{passwordMessage}</p>}
+            {changePassword.isError && <p className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700">{changePassword.error instanceof Error ? changePassword.error.message : 'Could not change password.'}</p>}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Link className="text-sm font-semibold text-moss-800 hover:underline" to="/forgot-password">Forgot current password?</Link>
+              <Button disabled={changePassword.isPending || passwordForm.currentPassword.length < 1 || passwordForm.newPassword.length < 10 || !passwordsMatch} type="submit">{changePassword.isPending ? 'Changing...' : 'Change password'}</Button>
+            </div>
+          </form>
+        </Card>
+
         <Card className="p-5 sm:p-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">

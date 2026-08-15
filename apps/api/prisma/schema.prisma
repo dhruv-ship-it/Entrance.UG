@@ -52,6 +52,13 @@ enum EmailVerificationPurpose {
   CHANGE_EMAIL
 }
 
+enum VerificationAccountRole {
+  STUDENT
+  PARENT
+  MENTOR
+  ADMIN
+}
+
 enum TaskStatus {
   PENDING
   COMPLETED
@@ -1647,11 +1654,14 @@ model EmailVerification {
   email        String   @db.VarChar(320)
   otpHash      String   @map("otp_hash") @db.VarChar(255)
   purpose      EmailVerificationPurpose
+  accountId    String?  @map("account_id") @db.Uuid
+  accountRole  VerificationAccountRole? @map("account_role")
   expiresAt    DateTime @map("expires_at") @db.Timestamptz(3)
   verifiedAt   DateTime? @map("verified_at") @db.Timestamptz(3)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   @@index([email, purpose, expiresAt])
+  @@index([accountRole, accountId, purpose, expiresAt])
   @@map("email_verifications")
 }
 

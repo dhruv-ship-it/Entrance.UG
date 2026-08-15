@@ -1530,6 +1530,7 @@ model RcLeaderboard {
   totalRcAttempted      Int      @default(0) @map("total_rc_attempted")
   averageScore          Decimal  @default(0) @map("average_score") @db.Decimal(10, 2)
   lastCompletedDate     DateTime? @map("last_completed_date") @db.Date
+  lastCompletedAt       DateTime? @map("last_completed_at") @db.Timestamptz(3)
   updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   student               Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 

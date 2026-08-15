@@ -2,6 +2,7 @@ import { prisma } from '../../database/prisma.js';
 import { AppError } from '../../shared/http/app-error.js';
 
 const toNumber = (value: unknown) => Number(value ?? 0);
+const rcStreakGraceMs = 30 * 60 * 60 * 1000;
 
 const phaseFor = (start: Date, end: Date) => {
   const current = new Date();
@@ -70,7 +71,7 @@ export const dashboard = async (studentId: string) => {
     }),
     prisma.rcLeaderboard.findMany({
       orderBy: [{ currentStreak: 'desc' }, { averageScore: 'desc' }, { studentId: 'asc' }],
-      take: 20,
+      take: 100,
       include: { student: { select: { id: true, name: true, profileImage: true } } },
     }),
   ]);
@@ -227,21 +228,48 @@ const mapLeaderboardEntry = (entry: any, rank: number) => ({
   rank,
   id: entry.id,
   studentId: entry.studentId,
-  currentStreak: entry.currentStreak,
+  currentStreak: effectiveCurrentStreak(entry),
+  storedCurrentStreak: entry.currentStreak,
   highestStreak: entry.highestStreak,
   totalRcAttempted: entry.totalRcAttempted,
   averageScore: toNumber(entry.averageScore),
   lastCompletedDate: entry.lastCompletedDate,
+  lastCompletedAt: entry.lastCompletedAt ?? entry.lastCompletedDate,
+  streakExpiresAt: streakExpiresAt(entry),
   student: entry.student,
 });
 
 const rankLeaderboard = (rows: any[], currentStudentId: string) => {
   let lastKey = '';
   let rank = 0;
-  return rows.map((row, index) => {
-    const key = `${row.currentStreak}-${toNumber(row.averageScore)}`;
+  return rows
+    .map((row) => ({ ...row, effectiveCurrentStreak: effectiveCurrentStreak(row) }))
+    .sort((left, right) => (
+      right.effectiveCurrentStreak - left.effectiveCurrentStreak
+      || toNumber(right.averageScore) - toNumber(left.averageScore)
+      || String(left.studentId).localeCompare(String(right.studentId))
+    ))
+    .slice(0, 20)
+    .map((row, index) => {
+    const key = `${row.effectiveCurrentStreak}-${toNumber(row.averageScore)}`;
     if (key !== lastKey) rank = index + 1;
     lastKey = key;
     return { ...mapLeaderboardEntry(row, rank), isCurrentStudent: row.studentId === currentStudentId };
   });
+};
+
+const effectiveCurrentStreak = (entry: any) => {
+  const lastCompletedAt = lastCompletionTime(entry);
+  if (!lastCompletedAt) return 0;
+  return Date.now() - lastCompletedAt.getTime() <= rcStreakGraceMs ? entry.currentStreak : 0;
+};
+
+const streakExpiresAt = (entry: any) => {
+  const lastCompletedAt = lastCompletionTime(entry);
+  return lastCompletedAt ? new Date(lastCompletedAt.getTime() + rcStreakGraceMs) : null;
+};
+
+const lastCompletionTime = (entry: any) => {
+  const value = entry.lastCompletedAt ?? entry.lastCompletedDate;
+  return value ? new Date(value) : null;
 };

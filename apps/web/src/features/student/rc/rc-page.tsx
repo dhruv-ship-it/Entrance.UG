@@ -43,10 +43,13 @@ type LeaderboardEntry = {
   rank: number;
   studentId: string;
   currentStreak: number;
+  storedCurrentStreak?: number;
   highestStreak: number;
   totalRcAttempted: number;
   averageScore: number;
   lastCompletedDate?: string | null;
+  lastCompletedAt?: string | null;
+  streakExpiresAt?: string | null;
   isCurrentStudent?: boolean;
   student: { id: string; name: string; profileImage?: string | null };
 };
@@ -140,7 +143,7 @@ export const RcPage = () => {
             <p className="mt-2 max-w-2xl text-sm leading-6 text-moss-100/75">Build reading speed, accuracy and consistency through passage-first practice.</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white/10 p-4"><p className="text-2xl font-semibold">{data.myLeaderboard?.currentStreak ?? 0}</p><p className="text-xs text-moss-100/70">current streak</p></div>
+            <div className="rounded-2xl bg-white/10 p-4"><p className="text-2xl font-semibold">🔥 {data.myLeaderboard?.currentStreak ?? 0}</p><p className="text-xs text-moss-100/70">active streak</p></div>
             <div className="rounded-2xl bg-white/10 p-4"><p className="text-2xl font-semibold">{data.myLeaderboard?.highestStreak ?? 0}</p><p className="text-xs text-moss-100/70">best streak</p></div>
             <div className="rounded-2xl bg-white/10 p-4"><p className="text-2xl font-semibold">{data.myLeaderboard?.totalRcAttempted ?? 0}</p><p className="text-xs text-moss-100/70">attempted</p></div>
             <div className="rounded-2xl bg-white/10 p-4"><p className="text-2xl font-semibold">{data.myLeaderboard?.averageScore ?? 0}</p><p className="text-xs text-moss-100/70">average score</p></div>
@@ -196,26 +199,72 @@ export const RcPage = () => {
         </Card>
       </section>
 
-      <Card className="p-5">
-        <div className="mb-4 flex items-center justify-between"><h2 className="font-bold">Leaderboard</h2><Medal size={19} className="text-amber" /></div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {data.leaderboard.map((entry) => (
-            <div key={entry.studentId} className={cn('flex items-center gap-3 rounded-2xl border p-3', entry.isCurrentStudent ? 'border-lime bg-lime/15' : 'border-stone-200 bg-white')}>
-              <span className={cn('grid size-9 place-items-center rounded-xl text-sm font-bold', entry.rank === 1 ? 'bg-yellow-100 text-yellow-700' : entry.rank === 2 ? 'bg-slate-100 text-slate-600' : entry.rank === 3 ? 'bg-orange-100 text-orange-700' : 'bg-moss-100 text-moss-800')}>
-                {entry.rank <= 3 ? <Trophy size={17} /> : `#${entry.rank}`}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold">{entry.student.name}</p>
-                <p className="text-xs text-stone-500">{entry.currentStreak} streak · {entry.averageScore} avg</p>
-              </div>
-              <p className="text-xs font-semibold text-stone-500">Best {entry.highestStreak}</p>
-            </div>
-          ))}
-        </div>
-      </Card>
+      <LeaderboardPanel entries={data.leaderboard} />
     </div>
   );
 };
+
+const LeaderboardPanel = ({ entries }: { entries: LeaderboardEntry[] }) => (
+  <section className="overflow-hidden rounded-4xl border border-[#f2e2bd] bg-[#fffaf0] shadow-card">
+    <div className="relative border-b border-[#f1dfb7] bg-[#fff3d7] px-5 py-5 sm:px-7">
+      <div className="absolute right-8 top-4 hidden rounded-full border border-white/70 bg-white/60 px-4 py-2 text-sm font-black text-[#9a5a06] shadow-sm md:block">🔥 30-hour grace</div>
+      <div className="flex items-center gap-3">
+        <span className="grid size-12 place-items-center rounded-2xl bg-[#201308] text-xl shadow-sm">🔥</span>
+        <div>
+          <p className="eyebrow text-[#9a5a06]">RC Streak Board</p>
+          <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#2a1a0a]">Consistency league</h2>
+          <p className="mt-1 text-sm text-[#856037]">Active streaks stay alive when the next RC is submitted within 30 hours.</p>
+        </div>
+      </div>
+    </div>
+    <div className="grid gap-3 p-5 sm:p-6">
+      {entries.length ? entries.map((entry) => <LeaderboardRow key={entry.studentId} entry={entry} />) : (
+        <EmptyState compact icon={Medal} title="No streaks yet" description="Submitted RC attempts will start the leaderboard." />
+      )}
+    </div>
+  </section>
+);
+
+const LeaderboardRow = ({ entry }: { entry: LeaderboardEntry }) => (
+  <div className={cn(
+    'grid gap-3 rounded-3xl border p-4 transition hover:-translate-y-0.5 hover:shadow-card sm:grid-cols-[auto_1fr_auto] sm:items-center',
+    entry.isCurrentStudent ? 'border-lime bg-white shadow-sm ring-2 ring-lime/40' : 'border-[#f0dfb6] bg-white/80',
+  )}>
+    <div className="flex items-center gap-3">
+      <span className={cn('grid size-11 place-items-center rounded-2xl text-sm font-black shadow-sm', rankClass(entry.rank))}>
+        {entry.rank <= 3 ? <Trophy size={18} /> : `#${entry.rank}`}
+      </span>
+      <div className="grid size-11 place-items-center rounded-2xl bg-moss-50 text-sm font-black text-moss-800">{initials(entry.student.name)}</div>
+    </div>
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="truncate font-bold text-stone-950">{entry.student.name}</p>
+        {entry.isCurrentStudent && <Badge className="bg-lime/40 text-moss-900">You</Badge>}
+      </div>
+      <p className="mt-1 text-xs leading-5 text-stone-500">
+        Avg {entry.averageScore} · {entry.totalRcAttempted} RCs attempted · Best streak {entry.highestStreak}
+      </p>
+      {entry.streakExpiresAt && entry.currentStreak > 0 && <p className="mt-1 text-[11px] font-semibold text-[#9a5a06]">Grace window ends {formatDateTime(entry.streakExpiresAt)}</p>}
+    </div>
+    <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#fff3d7] px-4 py-3 sm:min-w-36 sm:justify-center">
+      <span className="text-xl">🔥</span>
+      <div>
+        <p className="text-2xl font-black leading-none text-[#8a3f09]">{entry.currentStreak}</p>
+        <p className="mt-1 text-[11px] font-bold uppercase tracking-[.16em] text-[#9a7650]">active</p>
+      </div>
+    </div>
+  </div>
+);
+
+const rankClass = (rank: number) => rank === 1
+  ? 'bg-yellow-100 text-yellow-700'
+  : rank === 2
+    ? 'bg-slate-100 text-slate-600'
+    : rank === 3
+      ? 'bg-orange-100 text-orange-700'
+      : 'bg-moss-100 text-moss-800';
+
+const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'ST';
 
 export const RcTestsPage = () => {
   const query = useQuery({ queryKey: ['rc-tests'], queryFn: () => api<{ tests: RcTest[] }>('/api/v1/rc/tests') });

@@ -652,25 +652,27 @@ const recalcRcAnalytics = async (tx: Prisma.TransactionClient, rcTestId: string)
 
 const recalcRcLeaderboard = async (tx: Prisma.TransactionClient, studentId: string) => {
   const attempts = await tx.rcAttempt.findMany({ where: { studentId, submittedAt: { not: null } }, orderBy: { submittedAt: 'asc' } });
-  const dates = [...new Set(attempts.map((attempt) => attempt.submittedAt!.toISOString().slice(0, 10)))].sort();
+  const submittedTimes = attempts.map((attempt) => attempt.submittedAt!).filter(Boolean);
   let currentStreak = 0;
   let highestStreak = 0;
   let previous: Date | null = null;
-  for (const value of dates) {
-    const date = new Date(`${value}T00:00:00Z`);
-    if (!previous || Math.round((date.getTime() - previous.getTime()) / 86_400_000) === 1) currentStreak += 1;
+  for (const submittedAt of submittedTimes) {
+    if (!previous || submittedAt.getTime() - previous.getTime() <= rcStreakGraceMs) currentStreak += 1;
     else currentStreak = 1;
     highestStreak = Math.max(highestStreak, currentStreak);
-    previous = date;
+    previous = submittedAt;
   }
   const averageScore = average(attempts.map((attempt) => toNumber(attempt.marksScored)));
-  const lastCompletedDate = dates.length ? new Date(`${dates[dates.length - 1]}T00:00:00Z`) : null;
+  const lastCompletedAt = submittedTimes.length ? submittedTimes[submittedTimes.length - 1] : null;
+  const lastCompletedDate = lastCompletedAt ? new Date(`${lastCompletedAt.toISOString().slice(0, 10)}T00:00:00Z`) : null;
   await tx.rcLeaderboard.upsert({
     where: { studentId },
-    create: { studentId, currentStreak, highestStreak, totalRcAttempted: attempts.length, averageScore, lastCompletedDate },
-    update: { currentStreak, highestStreak, totalRcAttempted: attempts.length, averageScore, lastCompletedDate },
+    create: { studentId, currentStreak, highestStreak, totalRcAttempted: attempts.length, averageScore, lastCompletedDate, lastCompletedAt },
+    update: { currentStreak, highestStreak, totalRcAttempted: attempts.length, averageScore, lastCompletedDate, lastCompletedAt },
   });
 };
+
+const rcStreakGraceMs = 30 * 60 * 60 * 1000;
 
 const attemptAnalyticsData = (attempts: any[]) => ({
   totalAttempts: attempts.length,

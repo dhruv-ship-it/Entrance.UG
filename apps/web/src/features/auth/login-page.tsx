@@ -49,7 +49,11 @@ const Field = ({ label, icon: Icon, children }: { label: string; icon: typeof Us
 
 export const AuthFrame = ({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) => <main className="min-h-screen bg-[radial-gradient(circle_at_0%_0%,#e4efd7,transparent_35%),linear-gradient(135deg,#f8f9f5,#f3f4ee)] px-5 py-8 sm:grid sm:place-items-center">
   <div className="grid w-full max-w-5xl overflow-hidden rounded-4xl border border-white/80 bg-white shadow-float lg:grid-cols-[.9fr_1.1fr]">
-    <aside className="relative hidden min-h-[660px] overflow-hidden bg-moss-800 p-10 text-white lg:block"><div className="absolute -right-24 -top-20 size-72 rounded-full bg-lime/25 blur-2xl" /><div className="relative"><div className="mb-20 flex items-center gap-3 font-bold"><span className="grid size-10 place-items-center rounded-xl bg-white/12"><GraduationCap /></span>Entrance UG</div><p className="eyebrow text-lime">A calmer way to prepare</p><h2 className="mt-4 max-w-sm text-4xl font-semibold leading-tight">Make every focused hour count.</h2><p className="mt-5 max-w-sm text-sm leading-7 text-white/70">Mocks, content, mentorship and RC practice—structured around your entrance goals.</p></div><div className="absolute bottom-10 right-10 left-10 rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur"><p className="text-sm leading-6 text-white/80">“One dashboard. A clearer plan. Better decisions every week.”</p></div></aside>
+    <aside
+      aria-hidden="true"
+      className="hidden min-h-[660px] bg-moss-800 bg-cover bg-center lg:block"
+      style={{ backgroundImage: "url('/assets/auth/auth-left-panel.png')" }}
+    />
     <section className="p-7 sm:p-10 lg:p-12"><Link to="/" className="mb-14 flex items-center gap-2 font-bold text-moss-800 lg:hidden"><GraduationCap /> Entrance UG</Link><p className="eyebrow">Student portal</p><h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink">{title}</h1><p className="mt-2 mb-8 text-sm leading-6 text-stone-500">{subtitle}</p>{children}</section>
   </div>
 </main>;

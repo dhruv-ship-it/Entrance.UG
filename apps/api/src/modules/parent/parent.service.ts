@@ -6,7 +6,7 @@ import { prisma } from '../../database/prisma.js';
 import { sendOtpEmail } from '../../shared/email/email.service.js';
 import { AppError } from '../../shared/http/app-error.js';
 import { getAttemptDetail as getContentAttemptDetail } from '../content/content.service.js';
-import { getAttemptAnalysis as getMockAttemptAnalysis } from '../mock/mock.service.js';
+import { getAttemptAnalysis as getMockAttemptAnalysis, getAttemptSwotAnalysis, getCategoryAnalytics, listBookmarkedQuestions, listExamTypes, listExams, listMockExamTypes } from '../mock/mock.service.js';
 import { testAttemptAnalysis as getBatchAttemptAnalysis } from '../mentorship/mentorship.service.js';
 import { attemptDetail as getRcAttemptDetail } from '../rc/rc.service.js';
 import type { ChangePasswordInput, UpdateParentProfileInput } from './parent.schemas.js';
@@ -153,9 +153,39 @@ export const mockAttempts = async (parentId: string, studentId: string) => {
   }));
 };
 
+export const mockExamTypes = async (parentId: string, studentId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return listExamTypes();
+};
+
+export const mockCategories = async (parentId: string, studentId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return listMockExamTypes();
+};
+
+export const mockExams = async (parentId: string, studentId: string, examTypeId: string, mockExamTypeId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return listExams(studentId, examTypeId, mockExamTypeId);
+};
+
+export const mockCategoryAnalytics = async (parentId: string, studentId: string, examTypeId: string, mockExamTypeId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getCategoryAnalytics(studentId, examTypeId, mockExamTypeId);
+};
+
+export const mockBookmarks = async (parentId: string, studentId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return listBookmarkedQuestions(studentId);
+};
+
 export const mockAttemptDetail = async (parentId: string, studentId: string, attemptId: string) => {
   await requireLinkedStudent(parentId, studentId);
   return getMockAttemptAnalysis(studentId, attemptId);
+};
+
+export const mockAttemptSwot = async (parentId: string, studentId: string, attemptId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getAttemptSwotAnalysis(studentId, attemptId);
 };
 
 export const rcSummary = async (parentId: string, studentId: string) => {

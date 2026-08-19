@@ -23,8 +23,32 @@ export const childMockAttempts = async (request: AuthenticatedRequest, response:
   response.json({ attempts: await service.mockAttempts(request.auth!.sub, String(request.params.studentId)) });
 };
 
+export const childMockExamTypes = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ examTypes: await service.mockExamTypes(request.auth!.sub, String(request.params.studentId)) });
+};
+
+export const childMockCategories = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ mockExamTypes: await service.mockCategories(request.auth!.sub, String(request.params.studentId)) });
+};
+
+export const childMockExams = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ exams: await service.mockExams(request.auth!.sub, String(request.params.studentId), String(request.query.examTypeId ?? ''), String(request.query.mockExamTypeId ?? '')) });
+};
+
+export const childMockCategoryAnalytics = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ analytics: await service.mockCategoryAnalytics(request.auth!.sub, String(request.params.studentId), String(request.query.examTypeId ?? ''), String(request.query.mockExamTypeId ?? '')) });
+};
+
+export const childMockBookmarks = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ bookmarks: await service.mockBookmarks(request.auth!.sub, String(request.params.studentId)) });
+};
+
 export const childMockAttemptDetail = async (request: AuthenticatedRequest, response: Response) => {
   response.json({ analysis: await service.mockAttemptDetail(request.auth!.sub, String(request.params.studentId), String(request.params.attemptId)) });
+};
+
+export const childMockAttemptSwot = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ swot: await service.mockAttemptSwot(request.auth!.sub, String(request.params.studentId), String(request.params.attemptId)) });
 };
 
 export const childContentProgress = async (request: AuthenticatedRequest, response: Response) => {

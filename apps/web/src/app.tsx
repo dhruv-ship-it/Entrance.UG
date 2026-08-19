@@ -48,13 +48,20 @@ import {
   ParentMentorshipBatchPage,
   ParentMentorshipBatchesPage,
   ParentMentorshipProgramsPage,
-  ParentMockAttemptAnalysisPage,
-  ParentMockPage,
   ParentProfilePage,
   ParentRcAttemptDetailPage,
   ParentRcPage,
   ParentStudentHomePage,
 } from './features/parent/parent-pages';
+import {
+  ParentMockAttemptAnalysisPage,
+  ParentMockAttemptReviewPage,
+  ParentMockBookmarksPage,
+  ParentMockCategoriesPage,
+  ParentMockExamTypesPage,
+  ParentMockSeriesPage,
+  ParentMockSwotPage,
+} from './features/parent/parent-mock-pages';
 
 export const App = () => (
   <Routes>
@@ -114,8 +121,13 @@ export const App = () => (
       <Route path="/parent" element={<ParentLayout />}>
         <Route path="dashboard" element={<ParentDashboardPage />} />
         <Route path="students/:studentId" element={<ParentStudentHomePage />} />
-        <Route path="students/:studentId/mock-tests" element={<ParentMockPage />} />
+        <Route path="students/:studentId/mock-tests" element={<ParentMockExamTypesPage />} />
+        <Route path="students/:studentId/mock-tests/bookmarks" element={<ParentMockBookmarksPage />} />
+        <Route path="students/:studentId/mock-tests/:examTypeId" element={<ParentMockCategoriesPage />} />
+        <Route path="students/:studentId/mock-tests/:examTypeId/:mockExamTypeId" element={<ParentMockSeriesPage />} />
         <Route path="students/:studentId/mock-tests/attempts/:attemptId" element={<ParentMockAttemptAnalysisPage />} />
+        <Route path="students/:studentId/mock-tests/attempts/:attemptId/review" element={<ParentMockAttemptReviewPage />} />
+        <Route path="students/:studentId/mock-tests/attempts/:attemptId/swot" element={<ParentMockSwotPage />} />
         <Route path="students/:studentId/content" element={<ParentContentPage />} />
         <Route path="students/:studentId/rc" element={<ParentRcPage />} />
         <Route path="students/:studentId/rc/attempts/:attemptId" element={<ParentRcAttemptDetailPage />} />

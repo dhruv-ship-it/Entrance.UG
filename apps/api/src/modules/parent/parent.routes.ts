@@ -11,7 +11,13 @@ import {
   childMentorshipBatches,
   childMentorshipPrograms,
   childMockAttemptDetail,
+  childMockAttemptSwot,
   childMockAttempts,
+  childMockBookmarks,
+  childMockCategories,
+  childMockCategoryAnalytics,
+  childMockExams,
+  childMockExamTypes,
   childOverview,
   childRcAttemptDetail,
   childRcSummary,
@@ -37,8 +43,14 @@ parentRouter.post('/email-verification/change/request', validateBody(emailChange
 parentRouter.post('/email-verification/change/verify', validateBody(emailChangeVerifySchema), verifyEmailChange);
 parentRouter.get('/dashboard', parentDashboard);
 parentRouter.get('/students/:studentId', childOverview);
+parentRouter.get('/students/:studentId/mock/exam-types', childMockExamTypes);
+parentRouter.get('/students/:studentId/mock/mock-exam-types', childMockCategories);
+parentRouter.get('/students/:studentId/mock/exams', childMockExams);
+parentRouter.get('/students/:studentId/mock/analytics', childMockCategoryAnalytics);
+parentRouter.get('/students/:studentId/mock/bookmarks', childMockBookmarks);
 parentRouter.get('/students/:studentId/mock-attempts', childMockAttempts);
 parentRouter.get('/students/:studentId/mock-attempts/:attemptId', childMockAttemptDetail);
+parentRouter.get('/students/:studentId/mock-attempts/:attemptId/swot', childMockAttemptSwot);
 parentRouter.get('/students/:studentId/content', childContentProgress);
 parentRouter.get('/students/:studentId/content-attempts/:attemptId', childContentAttemptDetail);
 parentRouter.get('/students/:studentId/rc', childRcSummary);

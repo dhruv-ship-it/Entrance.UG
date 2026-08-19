@@ -17,6 +17,7 @@ export const SignupPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pending, setPending] = useState<{ user: AuthUser; email: string; devOtp: string | null } | null>(null);
   const [otp, setOtp] = useState('');
+  const [accountType, setAccountType] = useState<'STUDENT' | 'PARENT'>('STUDENT');
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -24,7 +25,7 @@ export const SignupPage = () => {
     setIsSubmitting(true);
     const form = new FormData(event.currentTarget);
     try {
-      const result = await signup(Object.fromEntries(form));
+      const result = await signup(Object.fromEntries(form), accountType);
       if (result.verification) {
         setPending({ user: result.user, email: result.verification.email, devOtp: result.verification.devOtp });
         return;
@@ -38,7 +39,7 @@ export const SignupPage = () => {
   };
 
   const verify = useMutation({
-    mutationFn: () => api('/api/v1/students/email-verification/verify', { method: 'POST', body: JSON.stringify({ otp }) }),
+    mutationFn: () => api(pending?.user.role === 'PARENT' ? '/api/v1/parents/email-verification/verify' : '/api/v1/students/email-verification/verify', { method: 'POST', body: JSON.stringify({ otp }) }),
     onSuccess: async () => {
       await refresh();
       navigate(pending ? dashboardPath(pending.user) : '/student/dashboard', { replace: true });
@@ -65,28 +66,37 @@ export const SignupPage = () => {
   }
 
   return (
-    <AuthFrame title="Create your study space" subtitle="Student accounts are free to create. You can personalise the rest later.">
+    <AuthFrame title={accountType === 'PARENT' ? 'Create your parent space' : 'Create your study space'} subtitle="Students and parents can create accounts here. Mentor and admin accounts are provisioned internally.">
       <form onSubmit={submit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-2 rounded-2xl bg-moss-50 p-1">
+          {(['STUDENT', 'PARENT'] as const).map((role) => (
+            <button key={role} type="button" onClick={() => setAccountType(role)} className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${accountType === role ? 'bg-white text-moss-900 shadow-card' : 'text-stone-500 hover:text-moss-800'}`}>
+              {role === 'STUDENT' ? 'Student' : 'Parent'}
+            </button>
+          ))}
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Label text="Full name"><Input required name="name" minLength={2} placeholder="Your name" /></Label>
           <Label text="Username"><Input required name="username" minLength={3} maxLength={50} pattern="[a-z0-9_]+" placeholder="your_username" /></Label>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Label text="Phone number"><Input required name="phoneNumber" placeholder="+919876543210" /></Label>
-          <Label text="Email address (optional)"><Input name="email" type="email" placeholder="you@example.com" /></Label>
+          <Label text={accountType === 'PARENT' ? 'Email address' : 'Email address (optional)'}><Input required={accountType === 'PARENT'} name="email" type="email" placeholder="you@example.com" /></Label>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Label text="Date of birth"><Input required name="dateOfBirth" type="date" /></Label>
-          <Label text="Gender">
-            <select required name="gender" className="focus-ring h-11 w-full rounded-xl border border-stone-200 bg-white px-3.5 text-sm">
-              <option value="">Select</option>
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
-              <option value="OTHER">Other</option>
-              <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
-            </select>
-          </Label>
-        </div>
+        {accountType === 'STUDENT' ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Label text="Date of birth"><Input required name="dateOfBirth" type="date" /></Label>
+            <Label text="Gender">
+              <select required name="gender" className="focus-ring h-11 w-full rounded-xl border border-stone-200 bg-white px-3.5 text-sm">
+                <option value="">Select</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+                <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+              </select>
+            </Label>
+          </div>
+        ) : <Label text="Occupation (optional)"><Input name="occupation" placeholder="Business, teacher, homemaker..." /></Label>}
         <Label text="Password"><Input required name="password" type="password" minLength={10} autoComplete="new-password" placeholder="At least 10 characters" /></Label>
         {error && <p className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700" role="alert">{error}</p>}
         <Button className="w-full" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Creating account...' : <>Create account <ArrowRight size={17} /></>}</Button>

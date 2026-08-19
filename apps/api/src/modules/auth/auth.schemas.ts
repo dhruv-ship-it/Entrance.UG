@@ -18,6 +18,15 @@ export const signupSchema = z.object({
   state: optionalText(100),
 });
 
+export const parentSignupSchema = z.object({
+  name: z.string().trim().min(2).max(150),
+  username: z.string().trim().toLowerCase().min(3).max(50).regex(/^[a-z0-9_]+$/, 'Username can contain lowercase letters, numbers and underscores only.'),
+  email: z.string().trim().email().max(320).transform((value) => value.toLowerCase()),
+  phoneNumber: z.string().trim().regex(/^\+?[1-9]\d{7,14}$/, 'Use an international phone number.'),
+  password: z.string().min(10).max(128),
+  occupation: optionalText(255),
+});
+
 export const loginSchema = z.object({
   role: z.enum(authRoles),
   username: z.string().trim().toLowerCase().min(3).max(50),
@@ -35,6 +44,7 @@ export const forgotPasswordResetSchema = forgotPasswordRequestSchema.extend({
 });
 
 export type SignupInput = z.infer<typeof signupSchema>;
+export type ParentSignupInput = z.infer<typeof parentSignupSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ForgotPasswordRequestInput = z.infer<typeof forgotPasswordRequestSchema>;
 export type ForgotPasswordResetInput = z.infer<typeof forgotPasswordResetSchema>;

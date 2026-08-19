@@ -8,6 +8,7 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { contentRouter } from './modules/content/content.routes.js';
 import { mockRouter } from './modules/mock/mock.routes.js';
 import { mentorshipRouter } from './modules/mentorship/mentorship.routes.js';
+import { parentRouter } from './modules/parent/parent.routes.js';
 import { razorpayWebhook } from './modules/plans/plans.controller.js';
 import { plansRouter } from './modules/plans/plans.routes.js';
 import { rcRouter } from './modules/rc/rc.routes.js';
@@ -30,6 +31,7 @@ app.get('/health', (_request, response) => {
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/students', studentRouter);
+app.use('/api/v1/parents', parentRouter);
 app.use('/api/v1/mock-tests', mockRouter);
 app.use('/api/v1/mentorship', mentorshipRouter);
 app.use('/api/v1/content', contentRouter);

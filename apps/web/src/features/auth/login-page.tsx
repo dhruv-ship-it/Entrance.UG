@@ -41,7 +41,7 @@ export const LoginPage = () => {
       {error && <p className="rounded-xl bg-red-50 px-3 py-2.5 text-sm text-red-700" role="alert">{error}</p>}
       <Button className="w-full" size="lg" disabled={isSubmitting}>{isSubmitting ? 'Signing in…' : <>Sign in <ArrowRight size={17} /></>}</Button>
     </form>
-    <p className="mt-7 text-center text-sm text-stone-500">New to Entrance UG? <Link className="font-semibold text-moss-800 hover:underline" to="/signup">Create a student account</Link></p>
+    <p className="mt-7 text-center text-sm text-stone-500">New to Entrance UG? <Link className="font-semibold text-moss-800 hover:underline" to="/signup">Create student or parent account</Link></p>
   </AuthFrame>;
 };
 
@@ -54,6 +54,6 @@ export const AuthFrame = ({ title, subtitle, children }: { title: string; subtit
       className="hidden min-h-[660px] bg-moss-800 bg-cover bg-center lg:block"
       style={{ backgroundImage: "url('/assets/auth/auth-left-panel.png')" }}
     />
-    <section className="p-7 sm:p-10 lg:p-12"><Link to="/" className="mb-14 flex items-center gap-2 font-bold text-moss-800 lg:hidden"><GraduationCap /> Entrance UG</Link><p className="eyebrow">Student portal</p><h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink">{title}</h1><p className="mt-2 mb-8 text-sm leading-6 text-stone-500">{subtitle}</p>{children}</section>
+    <section className="p-7 sm:p-10 lg:p-12"><Link to="/" className="mb-14 flex items-center gap-2 font-bold text-moss-800 lg:hidden"><GraduationCap /> Entrance UG</Link><p className="eyebrow">Entrance UG portal</p><h1 className="mt-3 text-3xl font-semibold tracking-tight text-ink">{title}</h1><p className="mt-2 mb-8 text-sm leading-6 text-stone-500">{subtitle}</p>{children}</section>
   </div>
 </main>;

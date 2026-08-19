@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './features/auth/login-page';
 import { ForgotPasswordPage } from './features/auth/forgot-password-page';
-import { ProtectedStudentRoute } from './features/auth/protected-route';
+import { ProtectedParentRoute, ProtectedStudentRoute } from './features/auth/protected-route';
 import { SignupPage } from './features/auth/signup-page';
 import { LandingPage, RolePendingPage } from './features/misc-pages';
 import { MockExamTypesPage } from './features/student/mock-tests/exam-types-page';
@@ -40,6 +40,21 @@ import { ProfilePage } from './features/student/profile-page';
 import { RcAttemptDetailPage, RcAttemptReviewPage, RcAttemptsPage, RcPage, RcTestDetailPage, RcTestsPage } from './features/student/rc/rc-page';
 import { StudentLayout } from './features/student/student-layout';
 import { TestEnginePage } from './features/student/test-engine/test-engine-page';
+import { ParentLayout } from './features/parent/parent-layout';
+import {
+  ParentContentPage,
+  ParentDashboardPage,
+  ParentBatchAttemptAnalysisPage,
+  ParentMentorshipBatchPage,
+  ParentMentorshipBatchesPage,
+  ParentMentorshipProgramsPage,
+  ParentMockAttemptAnalysisPage,
+  ParentMockPage,
+  ParentProfilePage,
+  ParentRcAttemptDetailPage,
+  ParentRcPage,
+  ParentStudentHomePage,
+} from './features/parent/parent-pages';
 
 export const App = () => (
   <Routes>
@@ -92,6 +107,23 @@ export const App = () => (
         <Route path="account" element={<AccountPage />} />
         <Route path="plans" element={<PlansPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
+        <Route index element={<Navigate to="dashboard" replace />} />
+      </Route>
+    </Route>
+    <Route element={<ProtectedParentRoute />}>
+      <Route path="/parent" element={<ParentLayout />}>
+        <Route path="dashboard" element={<ParentDashboardPage />} />
+        <Route path="students/:studentId" element={<ParentStudentHomePage />} />
+        <Route path="students/:studentId/mock-tests" element={<ParentMockPage />} />
+        <Route path="students/:studentId/mock-tests/attempts/:attemptId" element={<ParentMockAttemptAnalysisPage />} />
+        <Route path="students/:studentId/content" element={<ParentContentPage />} />
+        <Route path="students/:studentId/rc" element={<ParentRcPage />} />
+        <Route path="students/:studentId/rc/attempts/:attemptId" element={<ParentRcAttemptDetailPage />} />
+        <Route path="students/:studentId/mentorship" element={<ParentMentorshipProgramsPage />} />
+        <Route path="students/:studentId/mentorship/programs/:programId/batches" element={<ParentMentorshipBatchesPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId" element={<ParentMentorshipBatchPage />} />
+        <Route path="students/:studentId/mentorship/batch-attempts/:attemptId" element={<ParentBatchAttemptAnalysisPage />} />
+        <Route path="profile" element={<ParentProfilePage />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>
     </Route>

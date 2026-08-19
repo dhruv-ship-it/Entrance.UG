@@ -2,10 +2,16 @@ import type { Request, Response } from 'express';
 
 import type { AuthenticatedRequest } from '../../shared/auth/auth.middleware.js';
 import { AUTH_COOKIE_NAME, accessCookieOptions } from '../../shared/auth/jwt.js';
-import { getCurrentUser, login, registerStudent, requestForgotPassword, resetForgotPassword } from './auth.service.js';
+import { getCurrentUser, login, registerParent, registerStudent, requestForgotPassword, resetForgotPassword } from './auth.service.js';
 
 export const signupStudent = async (request: Request, response: Response) => {
   const result = await registerStudent(request.body);
+  response.cookie(AUTH_COOKIE_NAME, result.accessToken, accessCookieOptions);
+  response.status(201).json({ user: result.user, verification: result.verification });
+};
+
+export const signupParent = async (request: Request, response: Response) => {
+  const result = await registerParent(request.body);
   response.cookie(AUTH_COOKIE_NAME, result.accessToken, accessCookieOptions);
   response.status(201).json({ user: result.user, verification: result.verification });
 };

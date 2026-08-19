@@ -7,7 +7,7 @@ import { AppError } from '../../shared/http/app-error.js';
 import { signAccessToken } from '../../shared/auth/jwt.js';
 import { sendOtpEmail } from '../../shared/email/email.service.js';
 import type { AuthRole } from '../../shared/auth/auth.types.js';
-import type { ForgotPasswordRequestInput, ForgotPasswordResetInput, LoginInput, SignupInput } from './auth.schemas.js';
+import type { ForgotPasswordRequestInput, ForgotPasswordResetInput, LoginInput, ParentSignupInput, SignupInput } from './auth.schemas.js';
 
 const passwordRounds = 12;
 
@@ -65,6 +65,38 @@ export const registerStudent = async (input: SignupInput) => {
     : null;
   const user = serializeAccount(student, 'STUDENT');
   return { user, accessToken: signAccessToken({ sub: student.id, role: 'STUDENT' }), verification: deliveredVerification };
+};
+
+export const registerParent = async (input: ParentSignupInput) => {
+  const [usernameTaken, emailTaken, phoneTaken] = await Promise.all([
+    prisma.parent.findUnique({ where: { username: input.username }, select: { id: true } }),
+    prisma.parent.findUnique({ where: { email: input.email }, select: { id: true } }),
+    prisma.parent.findUnique({ where: { phoneNumber: input.phoneNumber }, select: { id: true } }),
+  ]);
+
+  if (usernameTaken || emailTaken || phoneTaken) {
+    throw new AppError(409, 'A parent account with this username, email or phone number already exists.');
+  }
+
+  const { password, ...parentInput } = input;
+  const passwordHash = await bcrypt.hash(password, passwordRounds);
+  const { parent, verification } = await prisma.$transaction(async (tx) => {
+    const created = await tx.parent.create({
+      data: { ...parentInput, emailVerified: false, emailVerifiedAt: null, passwordHash },
+      select: { id: true, name: true, username: true, email: true, emailVerified: true, isActive: true, passwordHash: true },
+    });
+    const createdVerification = await createEmailVerification(tx, created.email, EmailVerificationPurpose.REGISTER, created.id, VerificationAccountRole.PARENT);
+    return { parent: created, verification: createdVerification };
+  });
+
+  const deliveredVerification = await deliverVerificationOtp(
+    verification,
+    'Verify your Entrance UG parent email',
+    'Verify your parent account email',
+    'Use this OTP to verify the email attached to your Entrance UG parent account.',
+  );
+  const user = serializeAccount(parent, 'PARENT');
+  return { user, accessToken: signAccessToken({ sub: parent.id, role: 'PARENT' }), verification: deliveredVerification };
 };
 
 const createEmailVerification = async (tx: Prisma.TransactionClient, email: string, purpose: EmailVerificationPurpose, accountId: string, accountRole: VerificationAccountRole) => {

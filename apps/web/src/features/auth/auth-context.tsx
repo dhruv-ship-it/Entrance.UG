@@ -9,14 +9,18 @@ type AuthContextValue = {
   user: AuthUser | null;
   isLoading: boolean;
   login: (input: { role: Role; username: string; password: string }) => Promise<AuthUser>;
-  signup: (input: Record<string, unknown>) => Promise<SignupResult>;
+  signup: (input: Record<string, unknown>, role?: 'STUDENT' | 'PARENT') => Promise<SignupResult>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export const dashboardPath = (user: AuthUser) => user.role === 'STUDENT' ? '/student/dashboard' : '/access/pending';
+export const dashboardPath = (user: AuthUser) => {
+  if (user.role === 'STUDENT') return '/student/dashboard';
+  if (user.role === 'PARENT') return '/parent/dashboard';
+  return '/access/pending';
+};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -40,8 +44,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return result.user;
   };
 
-  const signup = async (input: Record<string, unknown>) => {
-    const result = await api<SignupResult>('/api/v1/auth/student/signup', { method: 'POST', body: JSON.stringify(input) });
+  const signup = async (input: Record<string, unknown>, role: 'STUDENT' | 'PARENT' = 'STUDENT') => {
+    const endpoint = role === 'PARENT' ? '/api/v1/auth/parent/signup' : '/api/v1/auth/student/signup';
+    const result = await api<SignupResult>(endpoint, { method: 'POST', body: JSON.stringify(input) });
     setUser(result.user);
     return result;
   };

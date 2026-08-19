@@ -3,8 +3,8 @@ import rateLimit from 'express-rate-limit';
 
 import { requireAuth } from '../../shared/auth/auth.middleware.js';
 import { validateBody } from '../../shared/http/validate.js';
-import { currentUser, forgotPasswordRequest, forgotPasswordReset, loginAccount, logout, signupStudent } from './auth.controller.js';
-import { forgotPasswordRequestSchema, forgotPasswordResetSchema, loginSchema, signupSchema } from './auth.schemas.js';
+import { currentUser, forgotPasswordRequest, forgotPasswordReset, loginAccount, logout, signupParent, signupStudent } from './auth.controller.js';
+import { forgotPasswordRequestSchema, forgotPasswordResetSchema, loginSchema, parentSignupSchema, signupSchema } from './auth.schemas.js';
 
 export const authRouter = Router();
 
@@ -17,6 +17,7 @@ const authenticationLimiter = rateLimit({
 });
 
 authRouter.post('/student/signup', authenticationLimiter, validateBody(signupSchema), signupStudent);
+authRouter.post('/parent/signup', authenticationLimiter, validateBody(parentSignupSchema), signupParent);
 authRouter.post('/login', authenticationLimiter, validateBody(loginSchema), loginAccount);
 authRouter.post('/forgot-password/request', authenticationLimiter, validateBody(forgotPasswordRequestSchema), forgotPasswordRequest);
 authRouter.post('/forgot-password/reset', authenticationLimiter, validateBody(forgotPasswordResetSchema), forgotPasswordReset);

@@ -55,8 +55,16 @@ export const childContentProgress = async (request: AuthenticatedRequest, respon
   response.json(await service.contentProgress(request.auth!.sub, String(request.params.studentId)));
 };
 
+export const childContentAttempts = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ attempts: await service.contentAttempts(request.auth!.sub, String(request.params.studentId)) });
+};
+
 export const childContentAttemptDetail = async (request: AuthenticatedRequest, response: Response) => {
   response.json({ attempt: await service.contentAttemptDetail(request.auth!.sub, String(request.params.studentId), String(request.params.attemptId)) });
+};
+
+export const childContentBookmarks = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ answers: await service.contentBookmarks(request.auth!.sub, String(request.params.studentId)) });
 };
 
 export const childRcSummary = async (request: AuthenticatedRequest, response: Response) => {

@@ -5,7 +5,7 @@ import { randomInt } from 'crypto';
 import { prisma } from '../../database/prisma.js';
 import { sendOtpEmail } from '../../shared/email/email.service.js';
 import { AppError } from '../../shared/http/app-error.js';
-import { getAttemptDetail as getContentAttemptDetail } from '../content/content.service.js';
+import { bookmarkedAttemptAnswers as getContentBookmarks, getAttemptDetail as getContentAttemptDetail, getLearningTree as getContentLearningTree, listAttempts as getContentAttempts } from '../content/content.service.js';
 import { getAttemptAnalysis as getMockAttemptAnalysis, getAttemptSwotAnalysis, getCategoryAnalytics, listBookmarkedQuestions, listExamTypes, listExams, listMockExamTypes } from '../mock/mock.service.js';
 import {
   attendanceCalendar as getBatchAttendanceCalendar,
@@ -266,72 +266,22 @@ export const childNotifications = async (parentId: string, studentId: string) =>
 
 export const contentProgress = async (parentId: string, studentId: string) => {
   await requireLinkedStudent(parentId, studentId);
-  const [subjects, attempts] = await Promise.all([
-    prisma.subject.findMany({
-      where: { isActive: true },
-      orderBy: { displayOrder: 'asc' },
-      include: {
-        topics: {
-          where: { isActive: true },
-          orderBy: { displayOrder: 'asc' },
-          include: {
-            contentTests: { where: { isActive: true }, include: { attempts: { where: { studentId, status: { in: submitted } }, select: { id: true } } } },
-            subtopics: {
-              where: { isActive: true },
-              orderBy: { displayOrder: 'asc' },
-              include: {
-                contents: { where: { isActive: true }, include: { completions: { where: { studentId }, select: { completedAt: true } } }, orderBy: { sequenceNumber: 'asc' } },
-              },
-            },
-          },
-        },
-      },
-    }),
-    prisma.contentAttempt.findMany({
-      where: { studentId, status: { in: submitted } },
-      orderBy: { submittedAt: 'desc' },
-      take: 10,
-      include: { contentTest: { include: { topic: { include: { subject: { select: { name: true } } } } } } },
-    }),
-  ]);
+  return getContentLearningTree(studentId);
+};
 
-  return {
-    subjects: subjects.map((subject) => {
-      const topics = subject.topics.map((topic) => {
-        const subtopics = topic.subtopics.map((subtopic) => ({
-          id: subtopic.id,
-          name: subtopic.name,
-          totalContent: subtopic.contents.length,
-          completedContent: subtopic.contents.filter((content) => content.completions.length).length,
-          contents: subtopic.contents.map((content) => ({ id: content.id, title: content.title, contentType: content.contentType, completedAt: content.completions[0]?.completedAt ?? null })),
-        }));
-        const total = subtopics.reduce((sum, item) => sum + item.totalContent, 0);
-        const completed = subtopics.reduce((sum, item) => sum + item.completedContent, 0);
-        return {
-          id: topic.id,
-          name: topic.name,
-          totalContent: total,
-          completedContent: completed,
-          completionPercent: total ? Math.round((completed / total) * 100) : 0,
-          tests: topic.contentTests.map((test) => ({ id: test.id, name: test.name, attempted: test.attempts.length > 0 })),
-          subtopics,
-        };
-      });
-      const total = topics.reduce((sum, item) => sum + item.totalContent, 0);
-      const completed = topics.reduce((sum, item) => sum + item.completedContent, 0);
-      return { id: subject.id, name: subject.name, description: subject.description, totalContent: total, completedContent: completed, completionPercent: total ? Math.round((completed / total) * 100) : 0, topics };
-    }),
-    attempts: attempts.map((attempt) => ({
-      ...summarizeScore(attempt, attempt.contentTest.name),
-      topic: attempt.contentTest.topic.name,
-      subject: attempt.contentTest.topic.subject.name,
-    })),
-  };
+export const contentAttempts = async (parentId: string, studentId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getContentAttempts(studentId);
 };
 
 export const contentAttemptDetail = async (parentId: string, studentId: string, attemptId: string) => {
   await requireLinkedStudent(parentId, studentId);
   return getContentAttemptDetail(studentId, attemptId);
+};
+
+export const contentBookmarks = async (parentId: string, studentId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getContentBookmarks(studentId);
 };
 
 export const mentorshipPrograms = async (parentId: string, studentId: string) => {

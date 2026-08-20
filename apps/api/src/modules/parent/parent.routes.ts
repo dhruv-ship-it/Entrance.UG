@@ -4,7 +4,9 @@ import { requireParent } from '../../shared/auth/auth.middleware.js';
 import { validateBody } from '../../shared/http/validate.js';
 import {
   changePassword,
+  childContentAttempts,
   childBatchAttemptDetail,
+  childContentBookmarks,
   childContentAttemptDetail,
   childContentProgress,
   childMentorshipBatch,
@@ -68,6 +70,8 @@ parentRouter.get('/students/:studentId/mock-attempts', childMockAttempts);
 parentRouter.get('/students/:studentId/mock-attempts/:attemptId', childMockAttemptDetail);
 parentRouter.get('/students/:studentId/mock-attempts/:attemptId/swot', childMockAttemptSwot);
 parentRouter.get('/students/:studentId/content', childContentProgress);
+parentRouter.get('/students/:studentId/content/attempts', childContentAttempts);
+parentRouter.get('/students/:studentId/content/bookmarks', childContentBookmarks);
 parentRouter.get('/students/:studentId/content-attempts/:attemptId', childContentAttemptDetail);
 parentRouter.get('/students/:studentId/rc', childRcSummary);
 parentRouter.get('/students/:studentId/rc/dashboard', childRcDashboard);

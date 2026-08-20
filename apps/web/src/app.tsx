@@ -44,13 +44,28 @@ import { ParentLayout } from './features/parent/parent-layout';
 import {
   ParentContentPage,
   ParentDashboardPage,
-  ParentBatchAttemptAnalysisPage,
-  ParentMentorshipBatchPage,
-  ParentMentorshipBatchesPage,
-  ParentMentorshipProgramsPage,
   ParentProfilePage,
   ParentStudentHomePage,
 } from './features/parent/parent-pages';
+import {
+  ParentMentorshipAllAttemptsPage,
+  ParentMentorshipAnalysisPage,
+  ParentMentorshipAttemptAnalysisPage,
+  ParentMentorshipAttemptReviewPage,
+  ParentMentorshipBatchBookmarksPage,
+  ParentMentorshipBatchPage,
+  ParentMentorshipBatchesPage,
+  ParentMentorshipClassesPage,
+  ParentMentorshipClosedTasksPage,
+  ParentMentorshipClosedTestsPage,
+  ParentMentorshipDoubtsPage,
+  ParentMentorshipNoticesPage,
+  ParentMentorshipPastClassesPage,
+  ParentMentorshipProgramsPage,
+  ParentMentorshipTasksPage,
+  ParentMentorshipTestDetailPage,
+  ParentMentorshipTestsPage,
+} from './features/parent/parent-mentorship-pages';
 import {
   ParentMockAttemptAnalysisPage,
   ParentMockAttemptReviewPage,
@@ -142,9 +157,23 @@ export const App = () => (
         <Route path="students/:studentId/rc/attempts/:attemptId" element={<ParentRcAttemptAnalysisPage />} />
         <Route path="students/:studentId/rc/attempts/:attemptId/review" element={<ParentRcAttemptReviewPage />} />
         <Route path="students/:studentId/mentorship" element={<ParentMentorshipProgramsPage />} />
+        <Route path="students/:studentId/mentorship/attempts" element={<ParentMentorshipAllAttemptsPage />} />
         <Route path="students/:studentId/mentorship/programs/:programId/batches" element={<ParentMentorshipBatchesPage />} />
         <Route path="students/:studentId/mentorship/batches/:batchId" element={<ParentMentorshipBatchPage />} />
-        <Route path="students/:studentId/mentorship/batch-attempts/:attemptId" element={<ParentBatchAttemptAnalysisPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/tasks" element={<ParentMentorshipTasksPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/tasks/closed" element={<ParentMentorshipClosedTasksPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/classes" element={<ParentMentorshipClassesPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/classes/past" element={<ParentMentorshipPastClassesPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/doubts" element={<ParentMentorshipDoubtsPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/tests" element={<ParentMentorshipTestsPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/tests/closed" element={<ParentMentorshipClosedTestsPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/tests/attempts/:attemptId/analysis" element={<ParentMentorshipAttemptAnalysisPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/tests/attempts/:attemptId/review" element={<ParentMentorshipAttemptReviewPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/test-bookmarks" element={<ParentMentorshipBatchBookmarksPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/tests/:testId" element={<ParentMentorshipTestDetailPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/notices" element={<ParentMentorshipNoticesPage />} />
+        <Route path="students/:studentId/mentorship/batches/:batchId/analysis" element={<ParentMentorshipAnalysisPage />} />
+        <Route path="students/:studentId/mentorship/batch-attempts/:attemptId" element={<ParentMentorshipAttemptAnalysisPage />} />
         <Route path="profile" element={<ParentProfilePage />} />
         <Route index element={<Navigate to="dashboard" replace />} />
       </Route>

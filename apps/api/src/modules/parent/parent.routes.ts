@@ -9,7 +9,17 @@ import {
   childContentProgress,
   childMentorshipBatch,
   childMentorshipBatches,
+  childMentorshipAttendanceCalendar,
+  childMentorshipAttempts,
+  childMentorshipBookmarks,
+  childMentorshipDoubtReplies,
+  childMentorshipDoubts,
+  childMentorshipNotices,
   childMentorshipPrograms,
+  childMentorshipSessions,
+  childMentorshipTasks,
+  childMentorshipTestDetail,
+  childMentorshipTests,
   childMockAttemptDetail,
   childMockAttemptSwot,
   childMockAttempts,
@@ -67,5 +77,15 @@ parentRouter.get('/students/:studentId/rc-attempts', childRcAttempts);
 parentRouter.get('/students/:studentId/rc-attempts/:attemptId', childRcAttemptDetail);
 parentRouter.get('/students/:studentId/mentorship/programs', childMentorshipPrograms);
 parentRouter.get('/students/:studentId/mentorship/programs/:programId/batches', childMentorshipBatches);
+parentRouter.get('/students/:studentId/mentorship/attempts', childMentorshipAttempts);
+parentRouter.get('/students/:studentId/mentorship/doubts/:doubtId/replies', childMentorshipDoubtReplies);
 parentRouter.get('/students/:studentId/mentorship/batches/:batchId', childMentorshipBatch);
+parentRouter.get('/students/:studentId/mentorship/batches/:batchId/tasks', childMentorshipTasks);
+parentRouter.get('/students/:studentId/mentorship/batches/:batchId/sessions', childMentorshipSessions);
+parentRouter.get('/students/:studentId/mentorship/batches/:batchId/attendance-calendar', childMentorshipAttendanceCalendar);
+parentRouter.get('/students/:studentId/mentorship/batches/:batchId/notices', childMentorshipNotices);
+parentRouter.get('/students/:studentId/mentorship/batches/:batchId/tests', childMentorshipTests);
+parentRouter.get('/students/:studentId/mentorship/batches/:batchId/test-bookmarks', childMentorshipBookmarks);
+parentRouter.get('/students/:studentId/mentorship/batches/:batchId/doubts', childMentorshipDoubts);
+parentRouter.get('/students/:studentId/mentorship/batches/:batchId/tests/:testId', childMentorshipTestDetail);
 parentRouter.get('/students/:studentId/mentorship/batch-attempts/:attemptId', childBatchAttemptDetail);

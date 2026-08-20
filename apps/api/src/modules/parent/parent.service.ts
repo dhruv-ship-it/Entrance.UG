@@ -7,7 +7,22 @@ import { sendOtpEmail } from '../../shared/email/email.service.js';
 import { AppError } from '../../shared/http/app-error.js';
 import { getAttemptDetail as getContentAttemptDetail } from '../content/content.service.js';
 import { getAttemptAnalysis as getMockAttemptAnalysis, getAttemptSwotAnalysis, getCategoryAnalytics, listBookmarkedQuestions, listExamTypes, listExams, listMockExamTypes } from '../mock/mock.service.js';
-import { testAttemptAnalysis as getBatchAttemptAnalysis } from '../mentorship/mentorship.service.js';
+import {
+  attendanceCalendar as getBatchAttendanceCalendar,
+  batches as getMentorshipBatches,
+  bookmarkedBatchAnswers as getBookmarkedBatchAnswers,
+  listDoubts as getBatchDoubts,
+  notices as getBatchNotices,
+  overview as getMentorshipBatchOverview,
+  programs as getMentorshipPrograms,
+  replies as getDoubtReplies,
+  sessions as getBatchSessions,
+  submittedBatchTestAttempts as getSubmittedBatchTestAttempts,
+  tasks as getBatchTasks,
+  testAttemptAnalysis as getBatchAttemptAnalysis,
+  testDetail as getBatchTestDetail,
+  tests as getBatchTests,
+} from '../mentorship/mentorship.service.js';
 import { attemptDetail as getRcAttemptDetail, attempts as getRcAttempts, dashboard as getRcDashboard, testDetail as getRcTestDetail, tests as getRcTests } from '../rc/rc.service.js';
 import { getNotifications as getStudentNotifications } from '../student/student.service.js';
 import type { ChangePasswordInput, UpdateParentProfileInput } from './parent.schemas.js';
@@ -321,66 +336,72 @@ export const contentAttemptDetail = async (parentId: string, studentId: string, 
 
 export const mentorshipPrograms = async (parentId: string, studentId: string) => {
   await requireLinkedStudent(parentId, studentId);
-  return prisma.mentorshipProgram.findMany({
-    where: { isActive: true, batches: { some: { studentAccesses: { some: { studentId, isActive: true, expiryDate: { gte: new Date() } } } } } },
-    orderBy: { name: 'asc' },
-    include: { _count: { select: { batches: { where: { studentAccesses: { some: { studentId, isActive: true, expiryDate: { gte: new Date() } } } } } } } },
-  });
+  return getMentorshipPrograms(studentId);
 };
 
 export const mentorshipBatches = async (parentId: string, studentId: string, programId: string) => {
   await requireLinkedStudent(parentId, studentId);
-  const now = new Date();
-  return prisma.mentorshipBatch.findMany({
-    where: { mentorshipProgramId: programId, isActive: true, studentAccesses: { some: { studentId, isActive: true, expiryDate: { gte: now } } } },
-    orderBy: { name: 'asc' },
-    include: {
-      mentorAssignments: { where: { isActive: true }, include: { mentor: { select: { name: true, qualification: true } } } },
-      _count: {
-        select: {
-          tasks: { where: { startDatetime: { lte: now }, endDatetime: { gte: now } } },
-          liveSessions: { where: { startDatetime: { lte: now }, endDatetime: { gte: now } } },
-          tests: { where: { isActive: true, startDatetime: { lte: now }, endDatetime: { gte: now } } },
-        },
-      },
-    },
-  });
+  return getMentorshipBatches(studentId, programId);
 };
 
 export const mentorshipBatch = async (parentId: string, studentId: string, batchId: string) => {
   await requireLinkedStudent(parentId, studentId);
-  const now = new Date();
-  const batch = await prisma.mentorshipBatch.findFirst({
-    where: { id: batchId, isActive: true, studentAccesses: { some: { studentId, isActive: true, expiryDate: { gte: now } } } },
-    include: {
-      mentorshipProgram: { select: { id: true, name: true } },
-      mentorAssignments: { where: { isActive: true }, include: { mentor: { select: { name: true, qualification: true } } } },
-      tasks: { orderBy: { endDatetime: 'asc' }, take: 8, include: { completions: { where: { studentId } } } },
-      liveSessions: { orderBy: { startDatetime: 'asc' }, take: 8, include: { attendance: { where: { studentId } } } },
-      notices: { orderBy: { createdAt: 'desc' }, take: 5 },
-      tests: { where: { isActive: true }, orderBy: { startDatetime: 'desc' }, take: 8, include: { attempts: { where: { studentId }, take: 1, orderBy: { createdAt: 'desc' } }, _count: { select: { sections: true } } } },
-    },
-  });
-  if (!batch) throw new AppError(404, 'Mentorship batch not found for this student.');
-  return {
-    id: batch.id,
-    name: batch.name,
-    description: batch.description,
-    program: batch.mentorshipProgram,
-    mentors: batch.mentorAssignments.map((assignment) => assignment.mentor),
-    tasks: batch.tasks.map((task) => ({ id: task.id, title: task.title, description: task.description, startDatetime: task.startDatetime, endDatetime: task.endDatetime, status: task.completions[0]?.status ?? TaskStatus.PENDING, completedAt: task.completions[0]?.completedAt ?? null, isActiveNow: task.startDatetime <= now && task.endDatetime >= now })),
-    sessions: batch.liveSessions.map((session) => ({ id: session.id, title: session.title, description: session.description, startDatetime: session.startDatetime, endDatetime: session.endDatetime, attended: session.attendance.length > 0, isActiveNow: session.startDatetime <= now && session.endDatetime >= now })),
-    notices: batch.notices,
-    tests: batch.tests.map((test) => {
-      const attempt = test.attempts[0];
-      return { id: test.id, name: test.name, description: test.description, startDatetime: test.startDatetime, endDatetime: test.endDatetime, totalMarks: n(test.totalMarks), sectionCount: test._count.sections, isActiveNow: test.startDatetime <= now && test.endDatetime >= now, attempted: Boolean(attempt && isSubmitted(attempt.status)), attemptId: attempt?.id ?? null, score: attempt ? n(attempt.marksScored) : null };
-    }),
-  };
+  return getMentorshipBatchOverview(studentId, batchId);
 };
 
 export const batchAttemptDetail = async (parentId: string, studentId: string, attemptId: string) => {
   await requireLinkedStudent(parentId, studentId);
   return getBatchAttemptAnalysis(studentId, attemptId);
+};
+
+export const mentorshipTasks = async (parentId: string, studentId: string, batchId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getBatchTasks(studentId, batchId);
+};
+
+export const mentorshipSessions = async (parentId: string, studentId: string, batchId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getBatchSessions(studentId, batchId);
+};
+
+export const mentorshipAttendanceCalendar = async (parentId: string, studentId: string, batchId: string, month?: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getBatchAttendanceCalendar(studentId, batchId, month);
+};
+
+export const mentorshipNotices = async (parentId: string, studentId: string, batchId: string, take = 20) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getBatchNotices(studentId, batchId, take);
+};
+
+export const mentorshipTests = async (parentId: string, studentId: string, batchId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getBatchTests(studentId, batchId);
+};
+
+export const mentorshipTestDetail = async (parentId: string, studentId: string, batchId: string, testId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getBatchTestDetail(studentId, batchId, testId);
+};
+
+export const mentorshipAttempts = async (parentId: string, studentId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getSubmittedBatchTestAttempts(studentId);
+};
+
+export const mentorshipBookmarks = async (parentId: string, studentId: string, batchId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getBookmarkedBatchAnswers(studentId, batchId);
+};
+
+export const mentorshipDoubts = async (parentId: string, studentId: string, batchId: string, options: { scope?: string; status?: string }) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getBatchDoubts(studentId, batchId, options);
+};
+
+export const mentorshipDoubtReplies = async (parentId: string, studentId: string, doubtId: string, parentReplyId?: string | null, take = 3, skip = 0) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getDoubtReplies(studentId, doubtId, parentReplyId, take, skip);
 };
 
 export const changeParentPassword = async (parentId: string, input: ChangePasswordInput) => {

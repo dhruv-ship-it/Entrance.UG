@@ -103,6 +103,56 @@ export const childBatchAttemptDetail = async (request: AuthenticatedRequest, res
   response.json({ analysis: await service.batchAttemptDetail(request.auth!.sub, String(request.params.studentId), String(request.params.attemptId)) });
 };
 
+export const childMentorshipTasks = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ tasks: await service.mentorshipTasks(request.auth!.sub, String(request.params.studentId), String(request.params.batchId)) });
+};
+
+export const childMentorshipSessions = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ sessions: await service.mentorshipSessions(request.auth!.sub, String(request.params.studentId), String(request.params.batchId)) });
+};
+
+export const childMentorshipAttendanceCalendar = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ calendar: await service.mentorshipAttendanceCalendar(request.auth!.sub, String(request.params.studentId), String(request.params.batchId), String(request.query.month ?? '')) });
+};
+
+export const childMentorshipNotices = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ notices: await service.mentorshipNotices(request.auth!.sub, String(request.params.studentId), String(request.params.batchId), Number(request.query.take ?? 20)) });
+};
+
+export const childMentorshipTests = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ tests: await service.mentorshipTests(request.auth!.sub, String(request.params.studentId), String(request.params.batchId)) });
+};
+
+export const childMentorshipTestDetail = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ test: await service.mentorshipTestDetail(request.auth!.sub, String(request.params.studentId), String(request.params.batchId), String(request.params.testId)) });
+};
+
+export const childMentorshipAttempts = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ attempts: await service.mentorshipAttempts(request.auth!.sub, String(request.params.studentId)) });
+};
+
+export const childMentorshipBookmarks = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ answers: await service.mentorshipBookmarks(request.auth!.sub, String(request.params.studentId), String(request.params.batchId)) });
+};
+
+export const childMentorshipDoubts = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ doubts: await service.mentorshipDoubts(request.auth!.sub, String(request.params.studentId), String(request.params.batchId), {
+    scope: String(request.query.scope ?? ''),
+    status: String(request.query.status ?? ''),
+  }) });
+};
+
+export const childMentorshipDoubtReplies = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ replies: await service.mentorshipDoubtReplies(
+    request.auth!.sub,
+    String(request.params.studentId),
+    String(request.params.doubtId),
+    request.query.parentReplyId ? String(request.query.parentReplyId) : null,
+    Number(request.query.take ?? 3),
+    Number(request.query.skip ?? 0),
+  ) });
+};
+
 export const changePassword = async (request: AuthenticatedRequest, response: Response) => {
   response.json(await service.changeParentPassword(request.auth!.sub, request.body));
 };

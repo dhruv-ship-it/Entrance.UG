@@ -73,8 +73,8 @@ export const batches = async (mentorId: string, programId: string) => {
       studentAccesses: { where: { isActive: true, expiryDate: { gte: now } }, select: { id: true } },
       _count: {
         select: {
-          tasks: { where: { startDatetime: { lte: now }, endDatetime: { gte: now } } },
-          liveSessions: { where: { startDatetime: { lte: now }, endDatetime: { gte: now } } },
+          tasks: { where: { isDeleted: false, startDatetime: { lte: now }, endDatetime: { gte: now } } },
+          liveSessions: { where: { isDeleted: false, startDatetime: { lte: now }, endDatetime: { gte: now } } },
           tests: { where: { isActive: true, startDatetime: { lte: now }, endDatetime: { gte: now } } },
           doubts: { where: { status: 'OPEN' } },
         },
@@ -92,12 +92,26 @@ const noticeIncludes = {
   deletedByAdmin: { select: { id: true, name: true, role: true } },
 } as const;
 
+const taskIncludes = {
+  createdBy: { select: { id: true, name: true } },
+  updatedBy: { select: { id: true, name: true } },
+  deletedBy: { select: { id: true, name: true } },
+  completions: { include: { student: { select: { id: true, name: true, username: true } } } },
+} as const;
+
+const sessionIncludes = {
+  createdBy: { select: { id: true, name: true } },
+  updatedBy: { select: { id: true, name: true } },
+  deletedBy: { select: { id: true, name: true } },
+  attendance: { include: { student: { select: { id: true, name: true, username: true } } } },
+} as const;
+
 export const overview = async (mentorId: string, batchId: string) => {
   const batch = await requireBatch(mentorId, batchId);
   const now = new Date();
   const [tasks, sessions, notices, tests, students, doubts] = await Promise.all([
-    prisma.batchTask.findMany({ where: { mentorshipBatchId: batchId, startDatetime: { lte: now }, endDatetime: { gte: now } }, orderBy: { endDatetime: 'asc' }, take: 4, include: { completions: { select: { id: true } } } }),
-    prisma.liveSession.findMany({ where: { mentorshipBatchId: batchId, startDatetime: { lte: now }, endDatetime: { gte: now } }, orderBy: { endDatetime: 'asc' }, take: 4, include: { attendance: { select: { id: true } } } }),
+    prisma.batchTask.findMany({ where: { mentorshipBatchId: batchId, isDeleted: false, startDatetime: { lte: now }, endDatetime: { gte: now } }, orderBy: { endDatetime: 'asc' }, take: 4, include: { completions: { select: { id: true } } } }),
+    prisma.liveSession.findMany({ where: { mentorshipBatchId: batchId, isDeleted: false, startDatetime: { lte: now }, endDatetime: { gte: now } }, orderBy: { endDatetime: 'asc' }, take: 4, include: { attendance: { select: { id: true } } } }),
     prisma.batchNotice.findMany({ where: { mentorshipBatchId: batchId, isDeleted: false }, orderBy: { createdAt: 'desc' }, take: 5, include: noticeIncludes }),
     prisma.batchTest.findMany({ where: { mentorshipBatchId: batchId, isActive: true, startDatetime: { lte: now }, endDatetime: { gte: now } }, orderBy: { endDatetime: 'asc' }, take: 4, include: { attempts: { where: { status: { in: [...submitted] } }, select: { id: true } }, sections: { select: { _count: { select: { questions: true } } } }, difficulty: { select: { name: true } } } }),
     prisma.studentBatchAccess.count({ where: { mentorshipBatchId: batchId, isActive: true, expiryDate: { gte: now } } }),
@@ -211,8 +225,8 @@ export const studentAttendanceCalendar = async (mentorId: string, batchId: strin
   const start = new Date(Date.UTC(selectedYear, selectedMonth, 1));
   const end = new Date(Date.UTC(selectedYear, selectedMonth + 1, 1));
   const [sessionsInMonth, attendedInMonth] = await Promise.all([
-    prisma.liveSession.findMany({ where: { mentorshipBatchId: batchId, startDatetime: { gte: start, lt: end } }, select: { id: true, title: true, startDatetime: true } }),
-    prisma.attendance.findMany({ where: { studentId, joinedAt: { gte: start, lt: end }, liveSession: { mentorshipBatchId: batchId } }, select: { joinedAt: true, liveSessionId: true, liveSession: { select: { title: true } } } }),
+    prisma.liveSession.findMany({ where: { mentorshipBatchId: batchId, isDeleted: false, startDatetime: { gte: start, lt: end } }, select: { id: true, title: true, startDatetime: true } }),
+    prisma.attendance.findMany({ where: { studentId, joinedAt: { gte: start, lt: end }, liveSession: { mentorshipBatchId: batchId, isDeleted: false } }, select: { joinedAt: true, liveSessionId: true, liveSession: { select: { title: true } } } }),
   ]);
   const daysInMonth = new Date(Date.UTC(selectedYear, selectedMonth + 1, 0)).getUTCDate();
   return {
@@ -230,7 +244,7 @@ export const studentAttendanceCalendar = async (mentorId: string, batchId: strin
 export const tasks = async (mentorId: string, batchId: string) => {
   await requireBatch(mentorId, batchId);
   const totalStudents = await prisma.studentBatchAccess.count({ where: { mentorshipBatchId: batchId, isActive: true, expiryDate: { gte: new Date() } } });
-  const rows = await prisma.batchTask.findMany({ where: { mentorshipBatchId: batchId }, orderBy: { startDatetime: 'desc' }, include: { completions: { include: { student: { select: { id: true, name: true, username: true } } } } } });
+  const rows = await prisma.batchTask.findMany({ where: { mentorshipBatchId: batchId }, orderBy: [{ isDeleted: 'asc' }, { startDatetime: 'desc' }], include: taskIncludes });
   return rows.map((task) => ({ ...task, phase: phaseFor(task.startDatetime, task.endDatetime), completionCount: task.completions.filter((item) => item.status === 'COMPLETED').length, completionPercent: totalStudents ? Math.round((task.completions.filter((item) => item.status === 'COMPLETED').length / totalStudents) * 100) : 0 }));
 };
 
@@ -244,21 +258,31 @@ export const updateTask = async (mentorId: string, taskId: string, data: TaskInp
   return prisma.batchTask.update({ where: { id: taskId }, data: { title: data.title, description: data.description, attachmentUrl: data.attachmentUrl ?? null, startDatetime: new Date(data.startDatetime), endDatetime: new Date(data.endDatetime), updatedById: mentorId } });
 };
 
+export const deleteTask = async (mentorId: string, taskId: string) => {
+  await requireTask(mentorId, taskId);
+  return prisma.batchTask.update({ where: { id: taskId }, data: { isDeleted: true, deletedAt: new Date(), deletedById: mentorId, updatedById: mentorId } });
+};
+
 export const sessions = async (mentorId: string, batchId: string) => {
   await requireBatch(mentorId, batchId);
   const totalStudents = await prisma.studentBatchAccess.count({ where: { mentorshipBatchId: batchId, isActive: true, expiryDate: { gte: new Date() } } });
-  const rows = await prisma.liveSession.findMany({ where: { mentorshipBatchId: batchId }, orderBy: { startDatetime: 'desc' }, include: { attendance: { include: { student: { select: { id: true, name: true, username: true } } } } } });
+  const rows = await prisma.liveSession.findMany({ where: { mentorshipBatchId: batchId }, orderBy: [{ isDeleted: 'asc' }, { startDatetime: 'desc' }], include: sessionIncludes });
   return rows.map((session) => ({ ...session, phase: phaseFor(session.startDatetime, session.endDatetime), attendanceCount: session.attendance.length, attendancePercent: totalStudents ? Math.round((session.attendance.length / totalStudents) * 100) : 0 }));
 };
 
 export const createSession = async (mentorId: string, batchId: string, data: SessionInput) => {
   await requireBatch(mentorId, batchId);
-  return prisma.liveSession.create({ data: { mentorshipBatchId: batchId, title: data.title, description: data.description, meetingLink: data.meetingLink, startDatetime: new Date(data.startDatetime), endDatetime: new Date(data.endDatetime), createdById: mentorId } });
+  return prisma.liveSession.create({ data: { mentorshipBatchId: batchId, title: data.title, description: data.description, meetingLink: data.meetingLink, startDatetime: new Date(data.startDatetime), endDatetime: new Date(data.endDatetime), createdById: mentorId, updatedById: mentorId } });
 };
 
 export const updateSession = async (mentorId: string, sessionId: string, data: SessionInput) => {
   await requireSession(mentorId, sessionId);
-  return prisma.liveSession.update({ where: { id: sessionId }, data: { title: data.title, description: data.description, meetingLink: data.meetingLink, startDatetime: new Date(data.startDatetime), endDatetime: new Date(data.endDatetime) } });
+  return prisma.liveSession.update({ where: { id: sessionId }, data: { title: data.title, description: data.description, meetingLink: data.meetingLink, startDatetime: new Date(data.startDatetime), endDatetime: new Date(data.endDatetime), updatedById: mentorId } });
+};
+
+export const deleteSession = async (mentorId: string, sessionId: string) => {
+  await requireSession(mentorId, sessionId);
+  return prisma.liveSession.update({ where: { id: sessionId }, data: { isDeleted: true, deletedAt: new Date(), deletedById: mentorId, updatedById: mentorId } });
 };
 
 export const notices = async (mentorId: string, batchId: string) => {

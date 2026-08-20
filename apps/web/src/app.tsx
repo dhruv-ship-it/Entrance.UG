@@ -47,6 +47,9 @@ import {
   MentorBatchDashboardPage,
   MentorBatchesPage,
   MentorClassesPage,
+  MentorDeletedClassesPage,
+  MentorDeletedNoticesPage,
+  MentorDeletedTasksPage,
   MentorDoubtsPage,
   MentorNoticesPage,
   MentorProgramsPage,
@@ -213,12 +216,15 @@ export const App = () => (
         <Route path="batches/:batchId/students/:studentId" element={<MentorStudentDetailPage />} />
         <Route path="batches/:batchId/students/:studentId/attempts" element={<MentorStudentAttemptsPage />} />
         <Route path="batches/:batchId/tasks" element={<MentorTasksPage />} />
+        <Route path="batches/:batchId/tasks/deleted" element={<MentorDeletedTasksPage />} />
         <Route path="batches/:batchId/classes" element={<MentorClassesPage />} />
+        <Route path="batches/:batchId/classes/deleted" element={<MentorDeletedClassesPage />} />
         <Route path="batches/:batchId/doubts" element={<MentorDoubtsPage />} />
         <Route path="batches/:batchId/tests" element={<MentorTestsPage />} />
         <Route path="batches/:batchId/tests/attempts/:attemptId/analysis" element={<MentorAttemptAnalysisPage />} />
         <Route path="batches/:batchId/tests/:testId" element={<MentorTestDetailPage />} />
         <Route path="batches/:batchId/notices" element={<MentorNoticesPage />} />
+        <Route path="batches/:batchId/notices/deleted" element={<MentorDeletedNoticesPage />} />
         <Route index element={<Navigate to="programs" replace />} />
       </Route>
     </Route>

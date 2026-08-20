@@ -229,11 +229,14 @@ model Mentor {
   batchAssignments          MentorBatchAssignment[]
   createdBatchTasks         BatchTask[] @relation("MentorCreatedBatchTasks")
   updatedBatchTasks         BatchTask[] @relation("MentorUpdatedBatchTasks")
+  deletedBatchTasks         BatchTask[] @relation("MentorDeletedBatchTasks")
   createdBatchNotices       BatchNotice[] @relation("MentorCreatedBatchNotices")
   updatedBatchNotices       BatchNotice[] @relation("MentorUpdatedBatchNotices")
   deletedBatchNotices       BatchNotice[] @relation("MentorDeletedBatchNotices")
   doubtReplies              DoubtReply[]
-  createdLiveSessions       LiveSession[]
+  createdLiveSessions       LiveSession[] @relation("MentorCreatedLiveSessions")
+  updatedLiveSessions       LiveSession[] @relation("MentorUpdatedLiveSessions")
+  deletedLiveSessions       LiveSession[] @relation("MentorDeletedLiveSessions")
   createdBatchTests         BatchTest[] @relation("MentorCreatedBatchTests")
   updatedBatchTests         BatchTest[] @relation("MentorUpdatedBatchTests")
   createdBatchSections      BatchSection[] @relation("MentorCreatedBatchSections")
@@ -1060,14 +1063,19 @@ model BatchTask {
   endDatetime        DateTime @map("end_datetime") @db.Timestamptz(3)
   createdById        String   @map("created_by") @db.Uuid
   updatedById        String   @map("updated_by") @db.Uuid
+  isDeleted          Boolean  @default(false) @map("is_deleted")
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
+  deletedById        String?  @map("deleted_by") @db.Uuid
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Cascade)
   createdBy          Mentor   @relation("MentorCreatedBatchTasks", fields: [createdById], references: [id], onDelete: Restrict)
   updatedBy          Mentor   @relation("MentorUpdatedBatchTasks", fields: [updatedById], references: [id], onDelete: Restrict)
+  deletedBy          Mentor?  @relation("MentorDeletedBatchTasks", fields: [deletedById], references: [id], onDelete: SetNull)
   completions        CompletedTask[]
 
   @@index([mentorshipBatchId, startDatetime])
+  @@index([mentorshipBatchId, isDeleted, startDatetime])
   @@map("batch_tasks")
 }
 
@@ -1173,13 +1181,20 @@ model LiveSession {
   startDatetime      DateTime @map("start_datetime") @db.Timestamptz(3)
   endDatetime        DateTime @map("end_datetime") @db.Timestamptz(3)
   createdById        String   @map("created_by") @db.Uuid
+  updatedById        String?  @map("updated_by") @db.Uuid
+  isDeleted          Boolean  @default(false) @map("is_deleted")
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
+  deletedById        String?  @map("deleted_by") @db.Uuid
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Cascade)
-  createdBy          Mentor   @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdBy          Mentor   @relation("MentorCreatedLiveSessions", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy          Mentor?  @relation("MentorUpdatedLiveSessions", fields: [updatedById], references: [id], onDelete: SetNull)
+  deletedBy          Mentor?  @relation("MentorDeletedLiveSessions", fields: [deletedById], references: [id], onDelete: SetNull)
   attendance         Attendance[]
 
   @@index([mentorshipBatchId, startDatetime])
+  @@index([mentorshipBatchId, isDeleted, startDatetime])
   @@map("live_sessions")
 }
 

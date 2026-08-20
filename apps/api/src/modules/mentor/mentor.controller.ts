@@ -13,9 +13,11 @@ export const studentAttendanceCalendar = async (request: AuthenticatedRequest, r
 export const tasks = async (request: AuthenticatedRequest, response: Response) => response.json({ tasks: await service.tasks(request.auth!.sub, String(request.params.batchId)) });
 export const createTask = async (request: AuthenticatedRequest, response: Response) => response.status(201).json({ task: await service.createTask(request.auth!.sub, String(request.params.batchId), request.body) });
 export const updateTask = async (request: AuthenticatedRequest, response: Response) => response.json({ task: await service.updateTask(request.auth!.sub, String(request.params.taskId), request.body) });
+export const deleteTask = async (request: AuthenticatedRequest, response: Response) => response.json({ task: await service.deleteTask(request.auth!.sub, String(request.params.taskId)) });
 export const sessions = async (request: AuthenticatedRequest, response: Response) => response.json({ sessions: await service.sessions(request.auth!.sub, String(request.params.batchId)) });
 export const createSession = async (request: AuthenticatedRequest, response: Response) => response.status(201).json({ session: await service.createSession(request.auth!.sub, String(request.params.batchId), request.body) });
 export const updateSession = async (request: AuthenticatedRequest, response: Response) => response.json({ session: await service.updateSession(request.auth!.sub, String(request.params.sessionId), request.body) });
+export const deleteSession = async (request: AuthenticatedRequest, response: Response) => response.json({ session: await service.deleteSession(request.auth!.sub, String(request.params.sessionId)) });
 export const notices = async (request: AuthenticatedRequest, response: Response) => response.json({ notices: await service.notices(request.auth!.sub, String(request.params.batchId)) });
 export const createNotice = async (request: AuthenticatedRequest, response: Response) => response.status(201).json({ notice: await service.createNotice(request.auth!.sub, String(request.params.batchId), request.body) });
 export const updateNotice = async (request: AuthenticatedRequest, response: Response) => response.json({ notice: await service.updateNotice(request.auth!.sub, String(request.params.noticeId), request.body) });

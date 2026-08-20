@@ -94,7 +94,7 @@ export const overview = async (studentId: string, batchId: string) => {
 
   const [tasks, notices, liveSessions, tests, completedCount, doubtCount, attendanceCount] = await Promise.all([
     prisma.batchTask.findMany({
-      where: { mentorshipBatchId: batchId, startDatetime: { lte: current }, endDatetime: { gte: current } },
+      where: { mentorshipBatchId: batchId, isDeleted: false, startDatetime: { lte: current }, endDatetime: { gte: current } },
       orderBy: { endDatetime: 'asc' },
       take: 3,
       include: { completions: { where: { studentId }, select: { status: true, completedAt: true } } },
@@ -109,7 +109,7 @@ export const overview = async (studentId: string, batchId: string) => {
       },
     }),
     prisma.liveSession.findMany({
-      where: { mentorshipBatchId: batchId, startDatetime: { lte: current }, endDatetime: { gte: current } },
+      where: { mentorshipBatchId: batchId, isDeleted: false, startDatetime: { lte: current }, endDatetime: { gte: current } },
       orderBy: { endDatetime: 'asc' },
       take: 3,
       include: { attendance: { where: { studentId }, select: { id: true, joinedAt: true } } },
@@ -124,9 +124,9 @@ export const overview = async (studentId: string, batchId: string) => {
         attempts: { where: { studentId }, orderBy: { createdAt: 'desc' }, take: 1 },
       },
     }),
-    prisma.completedTask.count({ where: { studentId, batchTask: { mentorshipBatchId: batchId }, status: 'COMPLETED' } }),
+    prisma.completedTask.count({ where: { studentId, batchTask: { mentorshipBatchId: batchId, isDeleted: false }, status: 'COMPLETED' } }),
     prisma.doubt.count({ where: { mentorshipBatchId: batchId, ...visibleDoubt(studentId) } }),
-    prisma.attendance.count({ where: { studentId, liveSession: { mentorshipBatchId: batchId } } }),
+    prisma.attendance.count({ where: { studentId, liveSession: { mentorshipBatchId: batchId, isDeleted: false } } }),
   ]);
 
   return {
@@ -174,7 +174,7 @@ export const overview = async (studentId: string, batchId: string) => {
 export const tasks = async (studentId: string, batchId: string) => {
   await requireBatchAccess(studentId, batchId);
   const rows = await prisma.batchTask.findMany({
-    where: { mentorshipBatchId: batchId },
+    where: { mentorshipBatchId: batchId, isDeleted: false },
     orderBy: [{ startDatetime: 'desc' }, { endDatetime: 'desc' }],
     include: {
       completions: { where: { studentId }, select: { id: true, status: true, completedAt: true, updatedAt: true } },
@@ -192,7 +192,7 @@ export const tasks = async (studentId: string, batchId: string) => {
 
 export const setTaskCompletion = async (studentId: string, taskId: string, completed: boolean) => {
   const task = await prisma.batchTask.findFirst({
-    where: { id: taskId, mentorshipBatch: { studentAccesses: { some: activeMembership(studentId) } } },
+    where: { id: taskId, isDeleted: false, mentorshipBatch: { studentAccesses: { some: activeMembership(studentId) } } },
   });
   if (!task) throw new AppError(404, 'Task not found.');
 
@@ -214,7 +214,7 @@ export const setTaskCompletion = async (studentId: string, taskId: string, compl
 export const sessions = async (studentId: string, batchId: string) => {
   await requireBatchAccess(studentId, batchId);
   const rows = await prisma.liveSession.findMany({
-    where: { mentorshipBatchId: batchId },
+    where: { mentorshipBatchId: batchId, isDeleted: false },
     orderBy: [{ startDatetime: 'desc' }],
     include: {
       attendance: { where: { studentId }, select: { id: true, joinedAt: true } },
@@ -241,11 +241,11 @@ export const attendanceCalendar = async (studentId: string, batchId: string, mon
 
   const [sessionsInMonth, attendedInMonth] = await Promise.all([
     prisma.liveSession.findMany({
-      where: { mentorshipBatchId: batchId, startDatetime: { gte: start, lt: end } },
+      where: { mentorshipBatchId: batchId, isDeleted: false, startDatetime: { gte: start, lt: end } },
       select: { id: true, title: true, startDatetime: true },
     }),
     prisma.attendance.findMany({
-      where: { studentId, joinedAt: { gte: start, lt: end }, liveSession: { mentorshipBatchId: batchId } },
+      where: { studentId, joinedAt: { gte: start, lt: end }, liveSession: { mentorshipBatchId: batchId, isDeleted: false } },
       select: { joinedAt: true, liveSessionId: true, liveSession: { select: { title: true } } },
     }),
   ]);
@@ -273,7 +273,7 @@ export const attendanceCalendar = async (studentId: string, batchId: string, mon
 
 export const joinSession = async (studentId: string, sessionId: string) => {
   const session = await prisma.liveSession.findFirst({
-    where: { id: sessionId, mentorshipBatch: { studentAccesses: { some: activeMembership(studentId) } } },
+    where: { id: sessionId, isDeleted: false, mentorshipBatch: { studentAccesses: { some: activeMembership(studentId) } } },
     select: { id: true, meetingLink: true, startDatetime: true, endDatetime: true },
   });
   if (!session) throw new AppError(404, 'Live session not found.');

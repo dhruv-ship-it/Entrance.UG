@@ -19,9 +19,11 @@ mentorRouter.get('/batches/:batchId/students/:studentId/attendance-calendar', co
 mentorRouter.get('/batches/:batchId/tasks', controller.tasks);
 mentorRouter.post('/batches/:batchId/tasks', validateBody(taskSchema), controller.createTask);
 mentorRouter.put('/tasks/:taskId', validateBody(taskSchema), controller.updateTask);
+mentorRouter.delete('/tasks/:taskId', controller.deleteTask);
 mentorRouter.get('/batches/:batchId/sessions', controller.sessions);
 mentorRouter.post('/batches/:batchId/sessions', validateBody(sessionSchema), controller.createSession);
 mentorRouter.put('/sessions/:sessionId', validateBody(sessionSchema), controller.updateSession);
+mentorRouter.delete('/sessions/:sessionId', controller.deleteSession);
 mentorRouter.get('/batches/:batchId/notices', controller.notices);
 mentorRouter.post('/batches/:batchId/notices', validateBody(noticeSchema), controller.createNotice);
 mentorRouter.put('/notices/:noticeId', validateBody(noticeSchema), controller.updateNotice);

@@ -63,8 +63,28 @@ export const childRcSummary = async (request: AuthenticatedRequest, response: Re
   response.json(await service.rcSummary(request.auth!.sub, String(request.params.studentId)));
 };
 
+export const childRcDashboard = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ dashboard: await service.rcDashboard(request.auth!.sub, String(request.params.studentId)) });
+};
+
+export const childRcTests = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ tests: await service.rcTests(request.auth!.sub, String(request.params.studentId)) });
+};
+
+export const childRcTestDetail = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ test: await service.rcTestDetail(request.auth!.sub, String(request.params.studentId), String(request.params.testId)) });
+};
+
+export const childRcAttempts = async (request: AuthenticatedRequest, response: Response) => {
+  response.json({ attempts: await service.rcAttempts(request.auth!.sub, String(request.params.studentId)) });
+};
+
 export const childRcAttemptDetail = async (request: AuthenticatedRequest, response: Response) => {
   response.json({ attempt: await service.rcAttemptDetail(request.auth!.sub, String(request.params.studentId), String(request.params.attemptId)) });
+};
+
+export const childNotifications = async (request: AuthenticatedRequest, response: Response) => {
+  response.json(await service.childNotifications(request.auth!.sub, String(request.params.studentId)));
 };
 
 export const childMentorshipPrograms = async (request: AuthenticatedRequest, response: Response) => {

@@ -8,7 +8,8 @@ import { AppError } from '../../shared/http/app-error.js';
 import { getAttemptDetail as getContentAttemptDetail } from '../content/content.service.js';
 import { getAttemptAnalysis as getMockAttemptAnalysis, getAttemptSwotAnalysis, getCategoryAnalytics, listBookmarkedQuestions, listExamTypes, listExams, listMockExamTypes } from '../mock/mock.service.js';
 import { testAttemptAnalysis as getBatchAttemptAnalysis } from '../mentorship/mentorship.service.js';
-import { attemptDetail as getRcAttemptDetail } from '../rc/rc.service.js';
+import { attemptDetail as getRcAttemptDetail, attempts as getRcAttempts, dashboard as getRcDashboard, testDetail as getRcTestDetail, tests as getRcTests } from '../rc/rc.service.js';
+import { getNotifications as getStudentNotifications } from '../student/student.service.js';
 import type { ChangePasswordInput, UpdateParentProfileInput } from './parent.schemas.js';
 
 const submitted = [AttemptStatus.SUBMITTED, AttemptStatus.AUTO_SUBMITTED];
@@ -218,9 +219,34 @@ export const rcSummary = async (parentId: string, studentId: string) => {
   };
 };
 
+export const rcDashboard = async (parentId: string, studentId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getRcDashboard(studentId);
+};
+
+export const rcTests = async (parentId: string, studentId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getRcTests(studentId);
+};
+
+export const rcTestDetail = async (parentId: string, studentId: string, testId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getRcTestDetail(studentId, testId);
+};
+
+export const rcAttempts = async (parentId: string, studentId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getRcAttempts(studentId);
+};
+
 export const rcAttemptDetail = async (parentId: string, studentId: string, attemptId: string) => {
   await requireLinkedStudent(parentId, studentId);
   return getRcAttemptDetail(studentId, attemptId);
+};
+
+export const childNotifications = async (parentId: string, studentId: string) => {
+  await requireLinkedStudent(parentId, studentId);
+  return getStudentNotifications(studentId);
 };
 
 export const contentProgress = async (parentId: string, studentId: string) => {

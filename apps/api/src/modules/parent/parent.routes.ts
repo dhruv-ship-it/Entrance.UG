@@ -19,8 +19,13 @@ import {
   childMockExams,
   childMockExamTypes,
   childOverview,
+  childNotifications,
+  childRcAttempts,
+  childRcDashboard,
   childRcAttemptDetail,
   childRcSummary,
+  childRcTestDetail,
+  childRcTests,
   parentDashboard,
   profile,
   requestEmailChange,
@@ -43,6 +48,7 @@ parentRouter.post('/email-verification/change/request', validateBody(emailChange
 parentRouter.post('/email-verification/change/verify', validateBody(emailChangeVerifySchema), verifyEmailChange);
 parentRouter.get('/dashboard', parentDashboard);
 parentRouter.get('/students/:studentId', childOverview);
+parentRouter.get('/students/:studentId/notifications', childNotifications);
 parentRouter.get('/students/:studentId/mock/exam-types', childMockExamTypes);
 parentRouter.get('/students/:studentId/mock/mock-exam-types', childMockCategories);
 parentRouter.get('/students/:studentId/mock/exams', childMockExams);
@@ -54,6 +60,10 @@ parentRouter.get('/students/:studentId/mock-attempts/:attemptId/swot', childMock
 parentRouter.get('/students/:studentId/content', childContentProgress);
 parentRouter.get('/students/:studentId/content-attempts/:attemptId', childContentAttemptDetail);
 parentRouter.get('/students/:studentId/rc', childRcSummary);
+parentRouter.get('/students/:studentId/rc/dashboard', childRcDashboard);
+parentRouter.get('/students/:studentId/rc/tests', childRcTests);
+parentRouter.get('/students/:studentId/rc/tests/:testId', childRcTestDetail);
+parentRouter.get('/students/:studentId/rc-attempts', childRcAttempts);
 parentRouter.get('/students/:studentId/rc-attempts/:attemptId', childRcAttemptDetail);
 parentRouter.get('/students/:studentId/mentorship/programs', childMentorshipPrograms);
 parentRouter.get('/students/:studentId/mentorship/programs/:programId/batches', childMentorshipBatches);

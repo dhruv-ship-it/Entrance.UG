@@ -49,8 +49,6 @@ import {
   ParentMentorshipBatchesPage,
   ParentMentorshipProgramsPage,
   ParentProfilePage,
-  ParentRcAttemptDetailPage,
-  ParentRcPage,
   ParentStudentHomePage,
 } from './features/parent/parent-pages';
 import {
@@ -62,6 +60,14 @@ import {
   ParentMockSeriesPage,
   ParentMockSwotPage,
 } from './features/parent/parent-mock-pages';
+import {
+  ParentRcAttemptAnalysisPage,
+  ParentRcAttemptReviewPage,
+  ParentRcAttemptsPage,
+  ParentRcDashboardPage,
+  ParentRcTestDetailPage,
+  ParentRcTestsPage,
+} from './features/parent/parent-rc-pages';
 
 export const App = () => (
   <Routes>
@@ -129,8 +135,12 @@ export const App = () => (
         <Route path="students/:studentId/mock-tests/attempts/:attemptId/review" element={<ParentMockAttemptReviewPage />} />
         <Route path="students/:studentId/mock-tests/attempts/:attemptId/swot" element={<ParentMockSwotPage />} />
         <Route path="students/:studentId/content" element={<ParentContentPage />} />
-        <Route path="students/:studentId/rc" element={<ParentRcPage />} />
-        <Route path="students/:studentId/rc/attempts/:attemptId" element={<ParentRcAttemptDetailPage />} />
+        <Route path="students/:studentId/rc" element={<ParentRcDashboardPage />} />
+        <Route path="students/:studentId/rc/tests" element={<ParentRcTestsPage />} />
+        <Route path="students/:studentId/rc/tests/:testId" element={<ParentRcTestDetailPage />} />
+        <Route path="students/:studentId/rc/attempts" element={<ParentRcAttemptsPage />} />
+        <Route path="students/:studentId/rc/attempts/:attemptId" element={<ParentRcAttemptAnalysisPage />} />
+        <Route path="students/:studentId/rc/attempts/:attemptId/review" element={<ParentRcAttemptReviewPage />} />
         <Route path="students/:studentId/mentorship" element={<ParentMentorshipProgramsPage />} />
         <Route path="students/:studentId/mentorship/programs/:programId/batches" element={<ParentMentorshipBatchesPage />} />
         <Route path="students/:studentId/mentorship/batches/:batchId" element={<ParentMentorshipBatchPage />} />

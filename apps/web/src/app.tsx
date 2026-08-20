@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from './features/auth/login-page';
 import { ForgotPasswordPage } from './features/auth/forgot-password-page';
-import { ProtectedParentRoute, ProtectedStudentRoute } from './features/auth/protected-route';
+import { ProtectedMentorRoute, ProtectedParentRoute, ProtectedStudentRoute } from './features/auth/protected-route';
 import { SignupPage } from './features/auth/signup-page';
 import { LandingPage, RolePendingPage } from './features/misc-pages';
 import { MockExamTypesPage } from './features/student/mock-tests/exam-types-page';
@@ -41,6 +41,21 @@ import { RcAttemptDetailPage, RcAttemptReviewPage, RcAttemptsPage, RcPage, RcTes
 import { StudentLayout } from './features/student/student-layout';
 import { TestEnginePage } from './features/student/test-engine/test-engine-page';
 import { ParentLayout } from './features/parent/parent-layout';
+import { MentorLayout } from './features/mentor/mentor-layout';
+import {
+  MentorAttemptAnalysisPage,
+  MentorBatchDashboardPage,
+  MentorBatchesPage,
+  MentorClassesPage,
+  MentorDoubtsPage,
+  MentorNoticesPage,
+  MentorProgramsPage,
+  MentorStudentDetailPage,
+  MentorStudentsPage,
+  MentorTasksPage,
+  MentorTestDetailPage,
+  MentorTestsPage,
+} from './features/mentor/mentor-pages';
 import {
   ParentDashboardPage,
   ParentProfilePage,
@@ -186,6 +201,23 @@ export const App = () => (
         <Route path="students/:studentId/mentorship/batch-attempts/:attemptId" element={<ParentMentorshipAttemptAnalysisPage />} />
         <Route path="profile" element={<ParentProfilePage />} />
         <Route index element={<Navigate to="dashboard" replace />} />
+      </Route>
+    </Route>
+    <Route element={<ProtectedMentorRoute />}>
+      <Route path="/mentor" element={<MentorLayout />}>
+        <Route path="programs" element={<MentorProgramsPage />} />
+        <Route path="programs/:programId" element={<MentorBatchesPage />} />
+        <Route path="batches/:batchId" element={<MentorBatchDashboardPage />} />
+        <Route path="batches/:batchId/students" element={<MentorStudentsPage />} />
+        <Route path="batches/:batchId/students/:studentId" element={<MentorStudentDetailPage />} />
+        <Route path="batches/:batchId/tasks" element={<MentorTasksPage />} />
+        <Route path="batches/:batchId/classes" element={<MentorClassesPage />} />
+        <Route path="batches/:batchId/doubts" element={<MentorDoubtsPage />} />
+        <Route path="batches/:batchId/tests" element={<MentorTestsPage />} />
+        <Route path="batches/:batchId/tests/attempts/:attemptId/analysis" element={<MentorAttemptAnalysisPage />} />
+        <Route path="batches/:batchId/tests/:testId" element={<MentorTestDetailPage />} />
+        <Route path="batches/:batchId/notices" element={<MentorNoticesPage />} />
+        <Route index element={<Navigate to="programs" replace />} />
       </Route>
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />

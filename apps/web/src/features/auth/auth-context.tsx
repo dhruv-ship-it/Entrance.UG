@@ -19,6 +19,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export const dashboardPath = (user: AuthUser) => {
   if (user.role === 'STUDENT') return '/student/dashboard';
   if (user.role === 'PARENT') return '/parent/dashboard';
+  if (user.role === 'MENTOR') return '/mentor/programs';
   return '/access/pending';
 };
 

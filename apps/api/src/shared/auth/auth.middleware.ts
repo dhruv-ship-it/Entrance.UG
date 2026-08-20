@@ -32,3 +32,4 @@ export const requireAuth = (allowedRoles?: AuthRole[]) =>
 
 export const requireStudent = requireAuth(['STUDENT']);
 export const requireParent = requireAuth(['PARENT']);
+export const requireMentor = requireAuth(['MENTOR']);

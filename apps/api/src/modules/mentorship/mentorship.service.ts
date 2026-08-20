@@ -100,7 +100,7 @@ export const overview = async (studentId: string, batchId: string) => {
       include: { completions: { where: { studentId }, select: { status: true, completedAt: true } } },
     }),
     prisma.batchNotice.findMany({
-      where: { mentorshipBatchId: batchId },
+      where: { mentorshipBatchId: batchId, isDeleted: false },
       orderBy: { createdAt: 'desc' },
       take: 5,
       include: {
@@ -290,7 +290,7 @@ export const joinSession = async (studentId: string, sessionId: string) => {
 export const notices = async (studentId: string, batchId: string, take = 20) => {
   await requireBatchAccess(studentId, batchId);
   return prisma.batchNotice.findMany({
-    where: { mentorshipBatchId: batchId },
+    where: { mentorshipBatchId: batchId, isDeleted: false },
     orderBy: { createdAt: 'desc' },
     take: Math.min(Math.max(take, 1), 50),
     include: {

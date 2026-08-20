@@ -1,33 +1,38 @@
 import { z } from 'zod';
 
 const dateString = z.string().trim().min(1);
+const optionalUrl = z.preprocess((value) => value === '' ? null : value, z.string().url().max(2048).nullable().optional());
 
 export const taskSchema = z.object({
   title: z.string().trim().min(3).max(255),
   description: z.string().trim().min(5).max(10_000),
-  attachmentUrl: z.string().url().max(2048).nullable().optional(),
+  attachmentUrl: optionalUrl,
   startDatetime: dateString,
   endDatetime: dateString,
 });
 
 export const sessionSchema = taskSchema.extend({
-  meetingLink: z.string().url().max(2048),
+  meetingLink: z.preprocess((value) => typeof value === 'string' ? value.trim() : value, z.string().url().max(2048)),
 });
 
 export const noticeSchema = z.object({
   title: z.string().trim().min(3).max(255),
   description: z.string().trim().min(5).max(10_000),
-  attachmentUrl: z.string().url().max(2048).nullable().optional(),
+  attachmentUrl: optionalUrl,
 });
 
 export const replySchema = z.object({
   replyText: z.string().trim().min(1).max(10_000),
   parentReplyId: z.string().uuid().nullable().optional(),
-  attachmentUrl: z.string().url().max(2048).nullable().optional(),
+  attachmentUrl: optionalUrl,
 });
 
 export const doubtStatusSchema = z.object({
   status: z.enum(['OPEN', 'ANSWERED', 'CLOSED']),
+});
+
+export const doubtVisibilitySchema = z.object({
+  visibility: z.enum(['PUBLIC', 'PRIVATE']),
 });
 
 export const pinSchema = z.object({ isPinned: z.boolean() });
@@ -67,7 +72,7 @@ export const questionSchema = z.object({
   positiveMarks: z.number(),
   negativeMarks: z.number().default(0),
   explanation: z.string().trim().min(1),
-  imageUrl: z.string().url().max(2048).nullable().optional(),
+  imageUrl: optionalUrl,
   isActive: z.boolean().default(true),
 });
 

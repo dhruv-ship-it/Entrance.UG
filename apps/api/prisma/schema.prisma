@@ -185,6 +185,7 @@ model Admin {
   updatedBatchTests               BatchTest[] @relation("AdminUpdatedBatchTests")
   createdBatchNotices             BatchNotice[] @relation("AdminCreatedBatchNotices")
   updatedBatchNotices             BatchNotice[] @relation("AdminUpdatedBatchNotices")
+  deletedBatchNotices             BatchNotice[] @relation("AdminDeletedBatchNotices")
   createdBatchSections            BatchSection[] @relation("AdminCreatedBatchSections")
   updatedBatchSections            BatchSection[] @relation("AdminUpdatedBatchSections")
   createdBatchComprehensions      BatchComprehension[] @relation("AdminCreatedBatchComprehensions")
@@ -230,6 +231,7 @@ model Mentor {
   updatedBatchTasks         BatchTask[] @relation("MentorUpdatedBatchTasks")
   createdBatchNotices       BatchNotice[] @relation("MentorCreatedBatchNotices")
   updatedBatchNotices       BatchNotice[] @relation("MentorUpdatedBatchNotices")
+  deletedBatchNotices       BatchNotice[] @relation("MentorDeletedBatchNotices")
   doubtReplies              DoubtReply[]
   createdLiveSessions       LiveSession[]
   createdBatchTests         BatchTest[] @relation("MentorCreatedBatchTests")
@@ -1095,6 +1097,10 @@ model BatchNotice {
   createdByAdminId   String?  @map("created_by_admin") @db.Uuid
   updatedByMentorId  String?  @map("updated_by") @db.Uuid
   updatedByAdminId   String?  @map("updated_by_admin") @db.Uuid
+  isDeleted          Boolean  @default(false) @map("is_deleted")
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
+  deletedByMentorId  String?  @map("deleted_by") @db.Uuid
+  deletedByAdminId   String?  @map("deleted_by_admin") @db.Uuid
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
   mentorshipBatch    MentorshipBatch @relation(fields: [mentorshipBatchId], references: [id], onDelete: Cascade)
@@ -1102,8 +1108,11 @@ model BatchNotice {
   createdByAdmin     Admin?   @relation("AdminCreatedBatchNotices", fields: [createdByAdminId], references: [id], onDelete: Restrict)
   updatedByMentor    Mentor?  @relation("MentorUpdatedBatchNotices", fields: [updatedByMentorId], references: [id], onDelete: Restrict)
   updatedByAdmin     Admin?   @relation("AdminUpdatedBatchNotices", fields: [updatedByAdminId], references: [id], onDelete: Restrict)
+  deletedByMentor    Mentor?  @relation("MentorDeletedBatchNotices", fields: [deletedByMentorId], references: [id], onDelete: SetNull)
+  deletedByAdmin     Admin?   @relation("AdminDeletedBatchNotices", fields: [deletedByAdminId], references: [id], onDelete: SetNull)
 
   @@index([mentorshipBatchId, createdAt])
+  @@index([mentorshipBatchId, isDeleted, createdAt])
   @@map("batch_notices")
 }
 

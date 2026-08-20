@@ -83,13 +83,22 @@ export const batches = async (mentorId: string, programId: string) => {
   });
 };
 
+const noticeIncludes = {
+  createdByMentor: { select: { id: true, name: true } },
+  createdByAdmin: { select: { id: true, name: true, role: true } },
+  updatedByMentor: { select: { id: true, name: true } },
+  updatedByAdmin: { select: { id: true, name: true, role: true } },
+  deletedByMentor: { select: { id: true, name: true } },
+  deletedByAdmin: { select: { id: true, name: true, role: true } },
+} as const;
+
 export const overview = async (mentorId: string, batchId: string) => {
   const batch = await requireBatch(mentorId, batchId);
   const now = new Date();
   const [tasks, sessions, notices, tests, students, doubts] = await Promise.all([
     prisma.batchTask.findMany({ where: { mentorshipBatchId: batchId, startDatetime: { lte: now }, endDatetime: { gte: now } }, orderBy: { endDatetime: 'asc' }, take: 4, include: { completions: { select: { id: true } } } }),
     prisma.liveSession.findMany({ where: { mentorshipBatchId: batchId, startDatetime: { lte: now }, endDatetime: { gte: now } }, orderBy: { endDatetime: 'asc' }, take: 4, include: { attendance: { select: { id: true } } } }),
-    prisma.batchNotice.findMany({ where: { mentorshipBatchId: batchId }, orderBy: { createdAt: 'desc' }, take: 5 }),
+    prisma.batchNotice.findMany({ where: { mentorshipBatchId: batchId, isDeleted: false }, orderBy: { createdAt: 'desc' }, take: 5, include: noticeIncludes }),
     prisma.batchTest.findMany({ where: { mentorshipBatchId: batchId, isActive: true, startDatetime: { lte: now }, endDatetime: { gte: now } }, orderBy: { endDatetime: 'asc' }, take: 4, include: { attempts: { where: { status: { in: [...submitted] } }, select: { id: true } }, sections: { select: { _count: { select: { questions: true } } } }, difficulty: { select: { name: true } } } }),
     prisma.studentBatchAccess.count({ where: { mentorshipBatchId: batchId, isActive: true, expiryDate: { gte: now } } }),
     prisma.doubt.count({ where: { mentorshipBatchId: batchId, status: 'OPEN' } }),
@@ -105,19 +114,29 @@ export const overview = async (mentorId: string, batchId: string) => {
   };
 };
 
-export const students = async (mentorId: string, batchId: string, search = '') => {
+export const students = async (mentorId: string, batchId: string, search = '', page = 1, pageSize = 12) => {
   await requireBatch(mentorId, batchId);
-  const accesses = await prisma.studentBatchAccess.findMany({
-    where: {
-      mentorshipBatchId: batchId, isActive: true, expiryDate: { gte: new Date() },
-      student: search ? { OR: [{ username: { contains: search, mode: 'insensitive' } }, { name: { contains: search, mode: 'insensitive' } }] } : undefined,
-    },
-    orderBy: { joinedAt: 'desc' },
-    include: {
-      student: { select: { id: true, name: true, username: true, profileImage: true, className: true, schoolName: true } },
-    },
-  });
-  return Promise.all(accesses.map(async (access) => {
+  const safePage = Math.max(page, 1);
+  const safePageSize = Math.min(Math.max(pageSize, 6), 50);
+  const where = {
+    mentorshipBatchId: batchId,
+    isActive: true,
+    expiryDate: { gte: new Date() },
+    ...(search ? { student: { OR: [{ username: { contains: search, mode: 'insensitive' as const } }, { name: { contains: search, mode: 'insensitive' as const } }] } } : {}),
+  };
+  const [total, accesses] = await Promise.all([
+    prisma.studentBatchAccess.count({ where }),
+    prisma.studentBatchAccess.findMany({
+      where,
+      orderBy: { joinedAt: 'desc' },
+      skip: (safePage - 1) * safePageSize,
+      take: safePageSize,
+      include: {
+        student: { select: { id: true, name: true, username: true, profileImage: true, className: true, schoolName: true } },
+      },
+    }),
+  ]);
+  const rows = await Promise.all(accesses.map(async (access) => {
     const [completedTasks, attendedSessions, attempts, openDoubts] = await Promise.all([
       prisma.completedTask.count({ where: { studentId: access.studentId, status: 'COMPLETED', batchTask: { mentorshipBatchId: batchId } } }),
       prisma.attendance.count({ where: { studentId: access.studentId, liveSession: { mentorshipBatchId: batchId } } }),
@@ -138,6 +157,7 @@ export const students = async (mentorId: string, batchId: string, search = '') =
       },
     };
   }));
+  return { rows, pagination: { page: safePage, pageSize: safePageSize, total, totalPages: Math.max(Math.ceil(total / safePageSize), 1) } };
 };
 
 export const studentDetail = async (mentorId: string, batchId: string, studentId: string) => {
@@ -157,6 +177,53 @@ export const studentDetail = async (mentorId: string, batchId: string, studentId
     sessions: sessions.map((row) => ({ id: row.liveSessionId, title: row.liveSession.title, joinedAt: row.joinedAt, startDatetime: row.liveSession.startDatetime })),
     attempts: attempts.map((attempt) => ({ id: attempt.id, submittedAt: attempt.submittedAt, marksScored: n(attempt.marksScored), totalMarks: n(attempt.totalMarks), accuracy: n(attempt.accuracy), correctAnswers: attempt.correctAnswers, incorrectAnswers: attempt.incorrectAnswers, unattemptedAnswers: attempt.unattemptedAnswers, test: { id: attempt.batchTest.id, name: attempt.batchTest.name, difficulty: attempt.batchTest.difficulty.name, questionCount: attempt.batchTest.sections.reduce((sum, section) => sum + section._count.questions, 0) } })),
     doubts,
+  };
+};
+
+export const studentAttempts = async (mentorId: string, batchId: string, studentId: string, page = 1, pageSize = 12) => {
+  await requireBatch(mentorId, batchId);
+  const safePage = Math.max(page, 1);
+  const safePageSize = Math.min(Math.max(pageSize, 6), 50);
+  const where = { studentId, status: { in: [...submitted] }, batchTest: { mentorshipBatchId: batchId } };
+  const [total, attempts] = await Promise.all([
+    prisma.batchAttempt.count({ where }),
+    prisma.batchAttempt.findMany({
+      where,
+      orderBy: { submittedAt: 'desc' },
+      skip: (safePage - 1) * safePageSize,
+      take: safePageSize,
+      include: { batchTest: { include: { difficulty: { select: { name: true } }, sections: { select: { _count: { select: { questions: true } } } } } } },
+    }),
+  ]);
+  return {
+    attempts: attempts.map((attempt) => ({ id: attempt.id, submittedAt: attempt.submittedAt, marksScored: n(attempt.marksScored), totalMarks: n(attempt.totalMarks), accuracy: n(attempt.accuracy), correctAnswers: attempt.correctAnswers, incorrectAnswers: attempt.incorrectAnswers, unattemptedAnswers: attempt.unattemptedAnswers, test: { id: attempt.batchTest.id, name: attempt.batchTest.name, difficulty: attempt.batchTest.difficulty.name, questionCount: attempt.batchTest.sections.reduce((sum, section) => sum + section._count.questions, 0) } })),
+    pagination: { page: safePage, pageSize: safePageSize, total, totalPages: Math.max(Math.ceil(total / safePageSize), 1) },
+  };
+};
+
+export const studentAttendanceCalendar = async (mentorId: string, batchId: string, studentId: string, month?: string) => {
+  await requireBatch(mentorId, batchId);
+  const link = await prisma.studentBatchAccess.findFirst({ where: { studentId, mentorshipBatchId: batchId }, select: { id: true } });
+  if (!link) throw new AppError(404, 'Student is not in this batch.');
+  const [year, monthNumber] = (month ?? '').split('-').map((part) => Number(part));
+  const selectedYear = Number.isInteger(year) && year > 2000 ? year : new Date().getFullYear();
+  const selectedMonth = Number.isInteger(monthNumber) && monthNumber >= 1 && monthNumber <= 12 ? monthNumber - 1 : new Date().getMonth();
+  const start = new Date(Date.UTC(selectedYear, selectedMonth, 1));
+  const end = new Date(Date.UTC(selectedYear, selectedMonth + 1, 1));
+  const [sessionsInMonth, attendedInMonth] = await Promise.all([
+    prisma.liveSession.findMany({ where: { mentorshipBatchId: batchId, startDatetime: { gte: start, lt: end } }, select: { id: true, title: true, startDatetime: true } }),
+    prisma.attendance.findMany({ where: { studentId, joinedAt: { gte: start, lt: end }, liveSession: { mentorshipBatchId: batchId } }, select: { joinedAt: true, liveSessionId: true, liveSession: { select: { title: true } } } }),
+  ]);
+  const daysInMonth = new Date(Date.UTC(selectedYear, selectedMonth + 1, 0)).getUTCDate();
+  return {
+    month: `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`,
+    days: Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1;
+      const key = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const daySessions = sessionsInMonth.filter((session) => session.startDatetime.toISOString().slice(0, 10) === key);
+      const attendance = attendedInMonth.filter((item) => item.joinedAt.toISOString().slice(0, 10) === key);
+      return { date: key, sessionCount: daySessions.length, attendedCount: attendance.length, sessions: daySessions.map((session) => ({ id: session.id, title: session.title })), attendedSessions: attendance.map((item) => ({ id: item.liveSessionId, title: item.liveSession.title })) };
+    }),
   };
 };
 
@@ -196,7 +263,7 @@ export const updateSession = async (mentorId: string, sessionId: string, data: S
 
 export const notices = async (mentorId: string, batchId: string) => {
   await requireBatch(mentorId, batchId);
-  return prisma.batchNotice.findMany({ where: { mentorshipBatchId: batchId }, orderBy: { createdAt: 'desc' }, include: { createdByMentor: { select: { id: true, name: true } }, createdByAdmin: { select: { id: true, name: true, role: true } } } });
+  return prisma.batchNotice.findMany({ where: { mentorshipBatchId: batchId }, orderBy: [{ isDeleted: 'asc' }, { createdAt: 'desc' }], include: noticeIncludes });
 };
 
 export const createNotice = async (mentorId: string, batchId: string, data: NoticeInput) => {
@@ -207,6 +274,11 @@ export const createNotice = async (mentorId: string, batchId: string, data: Noti
 export const updateNotice = async (mentorId: string, noticeId: string, data: NoticeInput) => {
   await requireNotice(mentorId, noticeId);
   return prisma.batchNotice.update({ where: { id: noticeId }, data: { title: data.title, description: data.description, attachmentUrl: data.attachmentUrl ?? null, updatedByMentorId: mentorId } });
+};
+
+export const deleteNotice = async (mentorId: string, noticeId: string) => {
+  await requireNotice(mentorId, noticeId);
+  return prisma.batchNotice.update({ where: { id: noticeId }, data: { isDeleted: true, deletedAt: new Date(), deletedByMentorId: mentorId, updatedByMentorId: mentorId } });
 };
 
 export const doubts = async (mentorId: string, batchId: string, options: { status?: string; visibility?: string; search?: string }) => {
@@ -248,6 +320,12 @@ export const setDoubtStatus = async (mentorId: string, doubtId: string, status: 
   const doubt = await prisma.doubt.findFirst({ where: { id: doubtId, mentorshipBatch: { mentorAssignments: { some: { mentorId, isActive: true } } } } });
   if (!doubt) throw new AppError(404, 'Doubt not found.');
   return prisma.doubt.update({ where: { id: doubtId }, data: { status } });
+};
+
+export const setDoubtVisibility = async (mentorId: string, doubtId: string, visibility: 'PUBLIC' | 'PRIVATE') => {
+  const doubt = await prisma.doubt.findFirst({ where: { id: doubtId, mentorshipBatch: { mentorAssignments: { some: { mentorId, isActive: true } } } } });
+  if (!doubt) throw new AppError(404, 'Doubt not found.');
+  return prisma.doubt.update({ where: { id: doubtId }, data: { visibility } });
 };
 
 export const setDoubtPinned = async (mentorId: string, doubtId: string, isPinned: boolean) => {

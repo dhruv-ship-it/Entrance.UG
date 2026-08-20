@@ -18,12 +18,14 @@ type Batch = { id: string; name: string; description: string; mentorshipProgram?
 type Overview = { id: string; name: string; description: string; program: { id: string; name: string }; stats: { activeTasks: number; liveSessions: number; liveTests: number; students: number; openDoubts: number }; tasks: Task[]; sessions: Session[]; notices: Notice[]; tests: Test[] };
 type Task = { id: string; title: string; description: string; attachmentUrl?: string | null; startDatetime: string; endDatetime: string; phase: Phase; completionCount?: number; completionPercent?: number };
 type Session = { id: string; title: string; description: string; meetingLink: string; startDatetime: string; endDatetime: string; phase: Phase; attendanceCount: number; attendancePercent: number };
-type Notice = { id: string; title: string; description: string; attachmentUrl?: string | null; createdAt: string };
+type Person = { id: string; name: string; role?: string };
+type Notice = { id: string; title: string; description: string; attachmentUrl?: string | null; createdAt: string; updatedAt: string; isDeleted?: boolean; deletedAt?: string | null; createdByMentor?: Person | null; createdByAdmin?: Person | null; updatedByMentor?: Person | null; updatedByAdmin?: Person | null; deletedByMentor?: Person | null; deletedByAdmin?: Person | null };
 type Test = { id: string; name: string; description: string; instructions?: string; startDatetime: string; endDatetime: string; durationMinutes: number; totalMarks: number; difficulty: string | { id: string; name: string }; phase: Phase; questionCount: number; sectionCount?: number; attemptCount: number; isActive?: boolean; analytics?: { totalAttempts: number; averageScore: number; highestScore: number; averageAccuracy: number } | null };
 type StudentRow = { student: { id: string; name: string; username: string; profileImage?: string | null; className?: string | null; schoolName?: string | null }; joinedAt: string; expiryDate: string; stats: { completedTasks: number; attendedSessions: number; testsAttempted: number; averageScore: number; averageAccuracy: number; openDoubts: number } };
 type Doubt = { id: string; title: string; description: string; visibility: 'PUBLIC' | 'PRIVATE'; status: 'OPEN' | 'ANSWERED' | 'CLOSED'; isPinned: boolean; createdAt: string; student: { id: string; name: string; username: string }; _count: { replies: number } };
 type Reply = { id: string; replyText: string; isPinned: boolean; createdAt: string; student?: { id: string; name: string; username?: string } | null; mentor?: { id: string; name: string } | null; admin?: { id: string; name: string; role: string } | null; _count: { childReplies: number } };
-type AttemptAnalysis = { attempt: { id: string; marksScored: number; totalMarks: number; accuracy: number; correctAnswers: number; incorrectAnswers: number; unattemptedAnswers: number; submittedAt: string | null }; test: { name: string; batchName: string; marksDistribution: { label: string; count: number }[] }; sections: { id: string; name: string; marksScored: number; totalMarks: number; accuracy: number; correctAnswers: number; incorrectAnswers: number; unattemptedAnswers: number }[]; answers: { id: string; sectionName: string; question: string; status: string; marksAwarded: number; explanation: string }[] };
+type AttemptAnalysis = { attempt: { id: string; marksScored: number; totalMarks: number; accuracy: number; percentage?: number; correctAnswers: number; incorrectAnswers: number; unattemptedAnswers: number; timeTakenSeconds?: number; submittedAt: string | null }; test: { name: string; batchName: string; marksDistribution: { label: string; count: number }[]; analytics?: any }; sections: { id: string; name: string; marksScored: number; totalMarks: number; accuracy: number; correctAnswers: number; incorrectAnswers: number; unattemptedAnswers: number; timeTakenSeconds?: number; analytics?: any }[]; answers: { id: string; sectionName: string; question: string; options?: any; selectedAnswers?: any; correctAnswers?: any; status: string; marksAwarded: number; explanation: string; timeTakenSeconds?: number; averageTimeTakenSeconds?: number; difficulty?: { name: string }; topic?: { name: string; subject?: { name: string } }; subtopic?: { name: string } }[] };
+type CalendarDay = { date: string; sessionCount: number; attendedCount: number };
 
 const root = '/mentor';
 const batchRoot = (batchId: string) => `${root}/batches/${batchId}`;
@@ -57,8 +59,10 @@ export const MentorBatchDashboardPage = () => {
 export const MentorStudentsPage = () => {
   const { batchId = '' } = useParams();
   const [search, setSearch] = useState('');
-  const query = useQuery({ queryKey: ['mentor-students', batchId, search], queryFn: () => api<{ students: StudentRow[] }>(`/api/v1/mentor/batches/${batchId}/students?search=${encodeURIComponent(search)}`) });
-  return <div className="space-y-6"><BatchBack batchId={batchId} /><Header title="Students" eyebrow="Batch roster" action={<div className="relative"><Search className="absolute left-3 top-3 text-stone-400" size={16} /><Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or username" /></div>} />{query.isLoading ? <PageSkeleton /> : <div className="grid gap-4 lg:grid-cols-2">{query.data?.students.map((row) => <Link key={row.student.id} to={`${batchRoot(batchId)}/students/${row.student.id}`}><Card className="p-5 transition hover:shadow-card"><div className="flex justify-between gap-3"><div><h2 className="font-bold">{row.student.name}</h2><p className="text-sm text-stone-500">@{row.student.username}</p></div><Badge>{row.stats.testsAttempted} tests</Badge></div><div className="mt-4 grid grid-cols-4 gap-2"><Mini label="tasks" value={row.stats.completedTasks} /><Mini label="classes" value={row.stats.attendedSessions} /><Mini label="avg score" value={row.stats.averageScore} /><Mini label="doubts" value={row.stats.openDoubts} /></div></Card></Link>)}</div>}</div>;
+  const [page, setPage] = useState(1);
+  const query = useQuery({ queryKey: ['mentor-students', batchId, search, page], queryFn: () => api<{ rows: StudentRow[]; pagination: { page: number; totalPages: number; total: number } }>(`/api/v1/mentor/batches/${batchId}/students?search=${encodeURIComponent(search)}&page=${page}&pageSize=12`) });
+  const pagination = query.data?.pagination;
+  return <div className="space-y-6"><BatchBack batchId={batchId} /><Header title="Students" eyebrow="Batch roster" action={<div className="relative"><Search className="absolute left-3 top-3 text-stone-400" size={16} /><Input className="pl-9" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search name or username" /></div>} />{query.isLoading ? <PageSkeleton /> : <><div className="grid gap-4 lg:grid-cols-2">{query.data?.rows.map((row) => <Link key={row.student.id} to={`${batchRoot(batchId)}/students/${row.student.id}`}><Card className="p-5 transition hover:shadow-card"><div className="flex justify-between gap-3"><div><h2 className="font-bold">{row.student.name}</h2><p className="text-sm text-stone-500">@{row.student.username}</p></div><Badge>{row.stats.testsAttempted} tests</Badge></div><div className="mt-4 grid grid-cols-4 gap-2"><Mini label="tasks" value={row.stats.completedTasks} /><Mini label="classes" value={row.stats.attendedSessions} /><Mini label="avg score" value={row.stats.averageScore} /><Mini label="doubts" value={row.stats.openDoubts} /></div></Card></Link>)}</div>{pagination && <div className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm"><p className="text-sm text-stone-500">Showing page {pagination.page} of {pagination.totalPages} · {pagination.total} students</p><div className="flex gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>Prev</Button><Button size="sm" variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage((value) => value + 1)}>Next</Button></div></div>}</>}</div>;
 };
 
 export const MentorStudentDetailPage = () => {
@@ -67,12 +71,42 @@ export const MentorStudentDetailPage = () => {
   if (query.isLoading) return <PageSkeleton />;
   const data = query.data?.student;
   if (!data) return <EmptyState icon={UsersRound} title="Student unavailable" description="Could not open this student." />;
-  return <div className="space-y-6"><Back to={`${batchRoot(batchId)}/students`}>Students</Back><Hero eyebrow="Student batch profile" title={data.student.name} text={`@${data.student.username} · ${data.student.className ?? ''} ${data.student.schoolName ?? ''}`} stats={[['tests', data.attempts.length], ['tasks done', data.tasks.length], ['classes attended', data.sessions.length], ['doubts', data.doubts.length]]} /><section className="grid gap-5 xl:grid-cols-2"><Panel title="Batch test attempts">{data.attempts.map((a: any) => <Link key={a.id} to={`${batchRoot(batchId)}/tests/attempts/${a.id}/analysis`}><Card className="p-4 shadow-none"><div className="flex justify-between"><p className="font-semibold">{a.test.name}</p><Badge>{a.marksScored}/{a.totalMarks}</Badge></div><p className="mt-2 text-sm text-stone-500">{Math.round(a.accuracy)}% accuracy · {a.correctAnswers}C/{a.incorrectAnswers}W/{a.unattemptedAnswers}U</p></Card></Link>)}</Panel><Panel title="Recent doubts">{data.doubts.map((d: any) => <Card key={d.id} className="p-4 shadow-none"><Badge>{d.status}</Badge><p className="mt-2 font-semibold">{d.title}</p><p className="text-sm text-stone-500">{d._count.replies} replies</p></Card>)}</Panel><Panel title="Completed tasks">{data.tasks.map((t: any) => <Card key={t.id} className="p-4 shadow-none"><p className="font-semibold">{t.title}</p><p className="text-sm text-stone-500">{t.completedAt ? formatDateTime(t.completedAt) : t.status}</p></Card>)}</Panel><Panel title="Attendance">{data.sessions.map((s: any) => <Card key={s.id} className="p-4 shadow-none"><p className="font-semibold">{s.title}</p><p className="text-sm text-stone-500">Joined {formatDateTime(s.joinedAt)}</p></Card>)}</Panel></section></div>;
+  return <div className="space-y-6"><Back to={`${batchRoot(batchId)}/students`}>Students</Back><Hero eyebrow="Student batch profile" title={data.student.name} text={`@${data.student.username} · ${data.student.className ?? ''} ${data.student.schoolName ?? ''}`} stats={[['tests', data.attempts.length], ['tasks done', data.tasks.length], ['classes attended', data.sessions.length], ['doubts', data.doubts.length]]} /><section className="grid gap-5 xl:grid-cols-[.9fr_1.1fr]"><StudentAttendanceCard batchId={batchId} studentId={studentId} /><Panel title="Batch test attempts" to="attempts">{data.attempts.slice(0, 5).map((a: any) => <AttemptMiniCard key={a.id} attempt={a} batchId={batchId} />)}{!data.attempts.length && <EmptyState compact icon={Trophy} title="No attempts yet" description="Submitted batch tests will appear here." />}</Panel><Panel title="Recent doubts">{data.doubts.map((d: any) => <Card key={d.id} className="p-4 shadow-none"><Badge>{d.status}</Badge><p className="mt-2 font-semibold">{d.title}</p><p className="text-sm text-stone-500">{d._count.replies} replies</p></Card>)}</Panel><Panel title="Completed tasks">{data.tasks.map((t: any) => <Card key={t.id} className="p-4 shadow-none"><p className="font-semibold">{t.title}</p><p className="text-sm text-stone-500">{t.completedAt ? formatDateTime(t.completedAt) : t.status}</p></Card>)}</Panel></section></div>;
+};
+
+export const MentorStudentAttemptsPage = () => {
+  const { batchId = '', studentId = '' } = useParams();
+  const [page, setPage] = useState(1);
+  const query = useQuery({ queryKey: ['mentor-student-attempts', batchId, studentId, page], queryFn: () => api<{ attempts: any[]; pagination: { page: number; totalPages: number; total: number } }>(`/api/v1/mentor/batches/${batchId}/students/${studentId}/attempts?page=${page}&pageSize=12`) });
+  const pagination = query.data?.pagination;
+  return <div className="space-y-6"><Back to={`${batchRoot(batchId)}/students/${studentId}`}>Student profile</Back><Header title="All attempted tests" eyebrow="Student batch performance" />{query.isLoading ? <PageSkeleton /> : <><div className="grid gap-4 lg:grid-cols-2">{query.data?.attempts.map((attempt) => <AttemptMiniCard key={attempt.id} attempt={attempt} batchId={batchId} />)}</div>{pagination && <div className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm"><p className="text-sm text-stone-500">Showing page {pagination.page} of {pagination.totalPages} · {pagination.total} attempts</p><div className="flex gap-2"><Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>Prev</Button><Button size="sm" variant="outline" disabled={page >= pagination.totalPages} onClick={() => setPage((value) => value + 1)}>Next</Button></div></div>}</>}</div>;
+};
+
+const AttemptMiniCard = ({ attempt, batchId }: { attempt: any; batchId: string }) => <Link to={`${batchRoot(batchId)}/tests/attempts/${attempt.id}/analysis`}><Card className="p-4 shadow-none transition hover:shadow-card"><div className="flex justify-between"><p className="font-semibold">{attempt.test.name}</p><Badge>{attempt.marksScored}/{attempt.totalMarks}</Badge></div><p className="mt-2 text-sm text-stone-500">{Math.round(attempt.accuracy)}% accuracy · {attempt.correctAnswers}C/{attempt.incorrectAnswers}W/{attempt.unattemptedAnswers}U</p><p className="mt-2 text-xs text-stone-400">{attempt.submittedAt ? formatDateTime(attempt.submittedAt) : 'Submitted'}</p></Card></Link>;
+
+const StudentAttendanceCard = ({ batchId, studentId }: { batchId: string; studentId: string }) => {
+  const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
+  const query = useQuery({ queryKey: ['mentor-student-calendar', batchId, studentId, month], queryFn: () => api<{ calendar: { month: string; days: CalendarDay[] } }>(`/api/v1/mentor/batches/${batchId}/students/${studentId}/attendance-calendar?month=${month}`) });
+  const days = query.data?.calendar.days ?? [];
+  const firstDay = days[0] ? new Date(`${days[0].date}T00:00:00`).getDay() : 0;
+  return <Card className="p-5"><div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-bold">Attendance streak calendar</h2><MonthControls month={month} setMonth={setMonth} /></div>{query.isLoading ? <Skeleton className="mt-5 h-64" /> : <><div className="mt-5 grid grid-cols-7 gap-2 text-center text-xs font-bold text-stone-400">{['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day) => <span key={day}>{day}</span>)}</div><div className="mt-2 grid grid-cols-7 gap-2">{Array.from({ length: firstDay }).map((_, index) => <div key={`blank-${index}`} />)}{days.map((day) => <div key={day.date} title={day.sessionCount ? `${day.attendedCount}/${day.sessionCount} attended` : 'No live session'} className={cn('aspect-square rounded-2xl border p-1.5 text-left text-xs font-semibold', day.sessionCount === 0 && 'border-stone-100 bg-stone-50 text-stone-300', day.sessionCount > 0 && day.attendedCount === 0 && 'border-amber/40 bg-amber/10 text-[#8a620b]', day.attendedCount > 0 && 'border-emerald-200 bg-emerald-50 text-emerald-800')}><span>{Number(day.date.slice(-2))}</span>{day.attendedCount > 0 && <span className="mt-2 block size-2 rounded-full bg-emerald-500" />}</div>)}</div></>}</Card>;
 };
 
 export const MentorTasksPage = () => <CrudList kind="tasks" title="Tasks" endpoint="tasks" Form={TaskForm} render={(item: Task) => <TaskCard task={item} />} />;
 export const MentorClassesPage = () => <CrudList kind="classes" title="Live classes" endpoint="sessions" Form={SessionForm} render={(item: Session) => <SessionCard session={item} />} />;
-export const MentorNoticesPage = () => <CrudList kind="notices" title="Notices" endpoint="notices" Form={NoticeForm} render={(item: Notice) => <NoticeCard notice={item} />} />;
+export const MentorNoticesPage = () => {
+  const { batchId = '' } = useParams();
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Notice | null>(null);
+  const client = useQueryClient();
+  const query = useQuery({ queryKey: ['mentor-crud', 'notices', batchId], queryFn: () => api<{ notices: Notice[] }>(`/api/v1/mentor/batches/${batchId}/notices`) });
+  const save = useMutation({ mutationFn: (body: any) => api(editing ? `/api/v1/mentor/notices/${editing.id}` : `/api/v1/mentor/batches/${batchId}/notices`, { method: editing ? 'PUT' : 'POST', body: JSON.stringify(body) }), onSuccess: async () => { setOpen(false); setEditing(null); await client.invalidateQueries({ queryKey: ['mentor-crud', 'notices', batchId] }); } });
+  const remove = useMutation({ mutationFn: (id: string) => api(`/api/v1/mentor/notices/${id}`, { method: 'DELETE' }), onSuccess: async () => { await client.invalidateQueries({ queryKey: ['mentor-crud', 'notices', batchId] }); } });
+  const notices = query.data?.notices ?? [];
+  const active = notices.filter((notice) => !notice.isDeleted);
+  const deleted = notices.filter((notice) => notice.isDeleted);
+  return <div className="space-y-6"><BatchBack batchId={batchId} /><Header title="Notices" eyebrow="Batch announcements" action={<Button onClick={() => { setEditing(null); setOpen(true); }}><Plus size={16} />New notice</Button>} />{open && <NoticeForm initial={editing} pending={save.isPending} onCancel={() => setOpen(false)} onSubmit={(body: any) => save.mutate(body)} />}{query.isLoading ? <PageSkeleton /> : <section className="grid gap-5 xl:grid-cols-[1fr_.8fr]"><Panel title="Active notices">{active.length ? active.map((notice) => <NoticeCard key={notice.id} notice={notice} onEdit={() => { setEditing(notice); setOpen(true); }} onDelete={() => remove.mutate(notice.id)} />) : <EmptyState compact icon={FileText} title="No active notices" description="Create a notice for this batch." />}</Panel><Panel title="Deleted notices">{deleted.length ? deleted.map((notice) => <NoticeCard key={notice.id} notice={notice} deleted />) : <EmptyState compact icon={XCircle} title="No deleted notices" description="Soft-deleted notices will appear here for audit." />}</Panel></section>}</div>;
+};
 
 function CrudList({ title, endpoint, Form, render }: { kind: string; title: string; endpoint: string; Form: any; render: (item: any) => JSX.Element }) {
   const { batchId = '' } = useParams();
@@ -86,7 +120,7 @@ function CrudList({ title, endpoint, Form, render }: { kind: string; title: stri
     onSuccess: async () => { setOpen(false); setEditing(null); await client.invalidateQueries({ queryKey: ['mentor-crud', endpoint, batchId] }); },
   });
   const rows = query.data?.[key] ?? [];
-  return <div className="space-y-6"><BatchBack batchId={batchId} /><Header title={title} eyebrow="Manage batch" action={<Button onClick={() => { setEditing(null); setOpen(true); }}><Plus size={16} />New</Button>} />{open && <Form initial={editing} pending={save.isPending} onCancel={() => setOpen(false)} onSubmit={(body: any) => save.mutate(body)} />}{query.isLoading ? <PageSkeleton /> : <div className="space-y-3">{rows.map((item: any) => <div key={item.id} onDoubleClick={() => { setEditing(item); setOpen(true); }}>{render(item)}</div>)}</div>}</div>;
+  return <div className="space-y-6"><BatchBack batchId={batchId} /><Header title={title} eyebrow="Manage batch" action={<Button onClick={() => { setEditing(null); setOpen(true); }}><Plus size={16} />New</Button>} />{open && <Form initial={editing} pending={save.isPending} onCancel={() => setOpen(false)} onSubmit={(body: any) => save.mutate(body)} />}{query.isLoading ? <PageSkeleton /> : <div className="space-y-3">{rows.map((item: any) => <div key={item.id} className="relative"><div className="absolute right-4 top-4 z-10"><Button size="sm" variant="outline" onClick={() => { setEditing(item); setOpen(true); }}>Edit</Button></div>{render(item)}</div>)}</div>}</div>;
 }
 
 export const MentorDoubtsPage = () => {
@@ -100,16 +134,31 @@ export const MentorDoubtsPage = () => {
 
 const DoubtCard = ({ doubt }: { doubt: Doubt }) => {
   const [open, setOpen] = useState(false);
-  return <Card className="p-5"><div className="flex flex-wrap justify-between gap-3"><div><div className="flex flex-wrap gap-2"><Badge>{doubt.visibility}</Badge><Badge>{doubt.status}</Badge>{doubt.isPinned && <Badge className="bg-lime/40 text-moss-900">Pinned</Badge>}</div><h2 className="mt-3 text-lg font-bold">{doubt.title}</h2><p className="mt-2 text-sm text-stone-600">{doubt.description}</p><p className="mt-3 text-xs text-stone-400">@{doubt.student.username} · {formatDateTime(doubt.createdAt)} · {doubt._count.replies} replies</p></div><Button variant="outline" onClick={() => setOpen(!open)}><MessageSquareReply size={15} />Thread</Button></div>{open && <ReplyThread doubtId={doubt.id} />}</Card>;
+  const client = useQueryClient();
+  const statusMutation = useMutation({ mutationFn: (status: string) => api(`/api/v1/mentor/doubts/${doubt.id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }), onSuccess: async () => { await client.invalidateQueries({ queryKey: ['mentor-doubts'] }); } });
+  const visibilityMutation = useMutation({ mutationFn: (visibility: string) => api(`/api/v1/mentor/doubts/${doubt.id}/visibility`, { method: 'PATCH', body: JSON.stringify({ visibility }) }), onSuccess: async () => { await client.invalidateQueries({ queryKey: ['mentor-doubts'] }); } });
+  return <Card className="p-5"><div className="flex flex-wrap justify-between gap-3"><div><div className="flex flex-wrap gap-2"><Badge>{doubt.visibility}</Badge><Badge>{doubt.status}</Badge>{doubt.isPinned && <Badge className="bg-lime/40 text-moss-900">Pinned</Badge>}</div><h2 className="mt-3 text-lg font-bold">{doubt.title}</h2><p className="mt-2 text-sm text-stone-600">{doubt.description}</p><p className="mt-3 text-xs text-stone-400">@{doubt.student.username} · {formatDateTime(doubt.createdAt)} · {doubt._count.replies} replies</p></div><div className="flex flex-wrap items-start gap-2"><select defaultValue={doubt.visibility} onChange={(e) => visibilityMutation.mutate(e.target.value)} className="rounded-xl border px-3 py-2 text-sm"><option value="PUBLIC">Public</option><option value="PRIVATE">Private</option></select><select defaultValue={doubt.status} onChange={(e) => statusMutation.mutate(e.target.value)} className="rounded-xl border px-3 py-2 text-sm"><option value="OPEN">Open</option><option value="ANSWERED">Answered</option><option value="CLOSED">Closed</option></select><Button variant="outline" onClick={() => setOpen(!open)}><MessageSquareReply size={15} />Thread</Button></div></div>{open && <ReplyThread doubt={doubt} />}</Card>;
 };
 
-const ReplyThread = ({ doubtId }: { doubtId: string }) => {
+const ReplyThread = ({ doubt }: { doubt: Doubt }) => {
   const [text, setText] = useState('');
   const client = useQueryClient();
-  const query = useQuery({ queryKey: ['mentor-replies', doubtId], queryFn: () => api<{ replies: Reply[] }>(`/api/v1/mentor/doubts/${doubtId}/replies?take=10`) });
-  const reply = useMutation({ mutationFn: () => api(`/api/v1/mentor/doubts/${doubtId}/replies`, { method: 'POST', body: JSON.stringify({ replyText: text }) }), onSuccess: async () => { setText(''); await client.invalidateQueries({ queryKey: ['mentor-replies', doubtId] }); } });
-  return <div className="mt-5 rounded-2xl bg-stone-50 p-4"><div className="space-y-3">{query.data?.replies.map((r) => <div key={r.id} className="rounded-2xl bg-white p-4"><Badge>{r.mentor ? 'Mentor' : r.student ? 'Student' : 'Admin'}</Badge><p className="mt-2 text-sm">{r.replyText}</p><p className="mt-2 text-xs text-stone-400">{formatDateTime(r.createdAt)}</p></div>)}</div><div className="mt-4 flex gap-2"><Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Reply as mentor" /><Button disabled={!text.trim() || reply.isPending} onClick={() => reply.mutate()}><Send size={15} />Send</Button></div></div>;
+  const query = useQuery({ queryKey: ['mentor-replies', doubt.id], queryFn: () => api<{ replies: Reply[] }>(`/api/v1/mentor/doubts/${doubt.id}/replies?take=10`) });
+  const reply = useMutation({ mutationFn: (body: { replyText: string; parentReplyId?: string | null }) => api(`/api/v1/mentor/doubts/${doubt.id}/replies`, { method: 'POST', body: JSON.stringify(body) }), onSuccess: async () => { setText(''); await client.invalidateQueries({ queryKey: ['mentor-replies', doubt.id] }); } });
+  return <div className="mt-5 rounded-2xl bg-stone-50 p-4"><div className="space-y-3">{query.data?.replies.map((r) => <ReplyItem key={r.id} reply={r} doubtId={doubt.id} closed={doubt.status === 'CLOSED'} />)}</div>{doubt.status !== 'CLOSED' ? <div className="mt-4 flex gap-2"><Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Reply as mentor" /><Button disabled={!text.trim() || reply.isPending} onClick={() => reply.mutate({ replyText: text })}><Send size={15} />Send</Button></div> : <p className="mt-4 rounded-2xl bg-stone-100 p-3 text-sm font-semibold text-stone-500">This doubt is closed. Replies are locked.</p>}</div>;
 };
+
+const ReplyItem = ({ reply, doubtId, closed }: { reply: Reply; doubtId: string; closed: boolean }) => {
+  const [childrenOpen, setChildrenOpen] = useState(false);
+  const [replying, setReplying] = useState(false);
+  const [text, setText] = useState('');
+  const client = useQueryClient();
+  const children = useQuery({ queryKey: ['mentor-replies', doubtId, reply.id], enabled: childrenOpen, queryFn: () => api<{ replies: Reply[] }>(`/api/v1/mentor/doubts/${doubtId}/replies?parentReplyId=${reply.id}&take=10`) });
+  const send = useMutation({ mutationFn: () => api(`/api/v1/mentor/doubts/${doubtId}/replies`, { method: 'POST', body: JSON.stringify({ replyText: text, parentReplyId: reply.id }) }), onSuccess: async () => { setText(''); setReplying(false); setChildrenOpen(true); await Promise.all([client.invalidateQueries({ queryKey: ['mentor-replies', doubtId] }), client.invalidateQueries({ queryKey: ['mentor-replies', doubtId, reply.id] })]); } });
+  return <div className="rounded-2xl bg-white p-4"><div className="flex flex-wrap items-center gap-2"><RoleBadge reply={reply} />{reply.isPinned && <Badge className="bg-lime/40 text-moss-900">Pinned</Badge>}</div><p className="mt-2 text-sm">{reply.replyText}</p><p className="mt-2 text-xs text-stone-400">{formatDateTime(reply.createdAt)}</p><div className="mt-3 flex flex-wrap gap-2">{reply._count.childReplies > 0 && <Button size="sm" variant="outline" onClick={() => setChildrenOpen(!childrenOpen)}>{childrenOpen ? 'Hide replies' : `Show ${reply._count.childReplies} replies`}</Button>}{!closed && <Button size="sm" variant="ghost" onClick={() => setReplying(!replying)}>Reply</Button>}</div>{replying && !closed && <div className="mt-3 flex gap-2"><Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Reply to this message" /><Button size="sm" disabled={!text.trim() || send.isPending} onClick={() => send.mutate()}>Send</Button></div>}{childrenOpen && <div className="mt-3 space-y-3 border-l border-stone-200 pl-4">{children.data?.replies.map((child) => <ReplyItem key={child.id} reply={child} doubtId={doubtId} closed={closed} />)}</div>}</div>;
+};
+
+const RoleBadge = ({ reply }: { reply: Reply }) => reply.mentor ? <Badge className="bg-moss-100 text-moss-800">Mentor · {reply.mentor.name}</Badge> : reply.admin ? <Badge className="bg-purple-100 text-purple-800">{reply.admin.role === 'SUPER_ADMIN' ? 'Super admin' : 'Admin'} · {reply.admin.name}</Badge> : <Badge className="bg-sky-100 text-sky-800">Student · {reply.student?.name}</Badge>;
 
 export const MentorTestsPage = () => {
   const { batchId = '' } = useParams();
@@ -173,14 +222,98 @@ export const MentorAttemptAnalysisPage = () => {
   if (query.isLoading) return <PageSkeleton />;
   const a = query.data?.analysis;
   if (!a) return <EmptyState icon={Trophy} title="Attempt unavailable" description="Could not load attempt." />;
-  return <div className="space-y-6"><Back to={`${batchRoot(batchId)}/tests`}>Tests</Back><Hero eyebrow="Attempt analysis" title={a.test.name} text={a.test.batchName} stats={[['score', `${a.attempt.marksScored}/${a.attempt.totalMarks}`], ['accuracy', `${Math.round(a.attempt.accuracy)}%`], ['correct', a.attempt.correctAnswers], ['incorrect', a.attempt.incorrectAnswers]]} /><Card className="p-5"><h2 className="font-bold">Marks distribution</h2><div className="mt-4 h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={a.test.marksDistribution}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="label" /><YAxis allowDecimals={false} /><Tooltip /><Bar dataKey="count" fill="#7a9c32" radius={[10, 10, 0, 0]} /></BarChart></ResponsiveContainer></div></Card><Panel title="Section performance">{a.sections.map((s) => <Card key={s.id} className="p-4 shadow-none"><div className="flex justify-between"><p className="font-semibold">{s.name}</p><Badge>{s.marksScored}/{s.totalMarks}</Badge></div><p className="mt-2 text-sm text-stone-500">{Math.round(s.accuracy)}% · {s.correctAnswers}C/{s.incorrectAnswers}W/{s.unattemptedAnswers}U</p></Card>)}</Panel></div>;
+  return (
+    <div className="space-y-6">
+      <Back to={`${batchRoot(batchId)}/tests`}>Tests</Back>
+      <Hero
+        eyebrow="Read-only attempt analysis"
+        title={a.test.name}
+        text={a.test.batchName}
+        stats={[
+          ['score', `${a.attempt.marksScored}/${a.attempt.totalMarks}`],
+          ['accuracy', `${Math.round(a.attempt.accuracy)}%`],
+          ['correct', a.attempt.correctAnswers],
+          ['incorrect', a.attempt.incorrectAnswers],
+        ]}
+      />
+      <section className="grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
+        <Card className="p-5">
+          <h2 className="font-bold">Marks distribution</h2>
+          <div className="mt-4 h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={a.test.marksDistribution}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="label" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="count" fill="#7a9c32" radius={[10, 10, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+        <Panel title="Section performance">
+          {a.sections.map((s) => (
+            <Card key={s.id} className="p-4 shadow-none">
+              <div className="flex justify-between">
+                <p className="font-semibold">{s.name}</p>
+                <Badge>{s.marksScored}/{s.totalMarks}</Badge>
+              </div>
+              <p className="mt-2 text-sm text-stone-500">
+                {Math.round(s.accuracy)}% · {s.correctAnswers}C/{s.incorrectAnswers}W/{s.unattemptedAnswers}U · {Math.round((s.timeTakenSeconds ?? 0) / 60)}m
+              </p>
+            </Card>
+          ))}
+        </Panel>
+      </section>
+      <Panel title="Question review">
+        {a.answers.map((answer, index) => (
+          <Card key={answer.id} className="overflow-hidden p-0 shadow-none">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge>Q{index + 1}</Badge>
+                <Badge className={answer.status === 'CORRECT' ? 'bg-emerald-100 text-emerald-800' : answer.status === 'INCORRECT' ? 'bg-red-100 text-red-800' : 'bg-stone-100 text-stone-600'}>{answer.status}</Badge>
+                <Badge>{answer.sectionName}</Badge>
+                <Badge>{answer.difficulty?.name ?? 'Difficulty'}</Badge>
+              </div>
+              <Badge>{answer.marksAwarded} marks</Badge>
+            </div>
+            <div className="p-4">
+              <p className="font-semibold">{answer.question}</p>
+              <div className="mt-4 space-y-2">
+                {renderOptions(answer).map((option) => (
+                  <div key={option.id} className={cn('rounded-2xl border p-3 text-sm', option.isCorrect && 'border-emerald-200 bg-emerald-50 text-emerald-900', option.isSelected && !option.isCorrect && 'border-red-200 bg-red-50 text-red-900')}>
+                    <span className="font-bold">{option.id}.</span> {option.text}
+                    {option.isSelected && <span className="ml-2 font-bold">(student)</span>}
+                    {option.isCorrect && <span className="ml-2 font-bold">(correct)</span>}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-3 text-sm md:grid-cols-3">
+                <Mini label="time spent" value={`${answer.timeTakenSeconds ?? 0}s`} />
+                <Mini label="avg time" value={`${answer.averageTimeTakenSeconds ?? 0}s`} />
+                <Mini label="topic" value={answer.topic?.name ?? '-'} />
+              </div>
+              <div className="mt-4 rounded-2xl bg-lime/20 p-4">
+                <p className="eyebrow">Explanation</p>
+                <p className="mt-1 text-sm text-stone-700">{answer.explanation}</p>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </Panel>
+    </div>
+  );
 };
 
 function TaskForm(props: any) { return <ScheduleForm {...props} fields={['title', 'description', 'attachmentUrl', 'startDatetime', 'endDatetime']} />; }
 function SessionForm(props: any) { return <ScheduleForm {...props} fields={['title', 'description', 'meetingLink', 'startDatetime', 'endDatetime']} />; }
 function NoticeForm(props: any) { return <ScheduleForm {...props} fields={['title', 'description', 'attachmentUrl']} />; }
 function ScheduleForm({ fields, initial, onSubmit, onCancel, pending }: any) {
-  const submit = (e: FormEvent<HTMLFormElement>) => { e.preventDefault(); const form = Object.fromEntries(new FormData(e.currentTarget)); onSubmit(form); };
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = Object.fromEntries(new FormData(e.currentTarget));
+    onSubmit(Object.fromEntries(Object.entries(form).map(([key, value]) => [key, value === '' ? null : value])));
+  };
   return <Card className="p-5"><form onSubmit={submit} className="grid gap-3 md:grid-cols-2">{fields.map((field: string) => field === 'description' ? <textarea key={field} name={field} defaultValue={initial?.[field] ?? ''} placeholder="Description" required className="focus-ring min-h-28 rounded-xl border p-3 md:col-span-2" /> : <Input key={field} name={field} type={field.includes('Datetime') ? 'datetime-local' : 'text'} defaultValue={toInputValue(initial?.[field])} placeholder={field} required={!field.includes('Url')} />)}<div className="flex gap-2 md:col-span-2"><Button disabled={pending}>{initial ? 'Update' : 'Create'}</Button><Button type="button" variant="outline" onClick={onCancel}>Cancel</Button></div></form></Card>;
 }
 
@@ -198,10 +331,25 @@ const Nav = ({ to, icon: Icon, title, text }: { to: string; icon: typeof UsersRo
 const Panel = ({ title, to, children }: { title: string; to?: string; children: any }) => <Card className="p-5"><div className="mb-4 flex items-center justify-between"><h2 className="font-bold">{title}</h2>{to && <Link to={to} className="text-sm font-semibold text-moss-700">View all</Link>}</div><div className="space-y-3">{children}</div></Card>;
 const TaskCard = ({ task }: { task: Task }) => <Card className="p-4 shadow-none"><div className="flex justify-between gap-3"><div><p className="font-semibold">{task.title}</p><p className="mt-1 text-sm text-stone-500">{task.description}</p><p className="mt-2 text-xs text-stone-400">Ends {formatDateTime(task.endDatetime)}</p></div><Badge className={phaseClass(task.phase)}>{phaseLabel(task.phase)}</Badge></div>{task.completionPercent != null && <p className="mt-2 text-xs font-semibold text-moss-700">{task.completionPercent}% completed</p>}</Card>;
 const SessionCard = ({ session }: { session: Session }) => <Card className="p-4 shadow-none"><div className="flex justify-between gap-3"><div><p className="font-semibold">{session.title}</p><p className="mt-1 text-sm text-stone-500">{session.description}</p><p className="mt-2 text-xs text-stone-400">Ends {formatDateTime(session.endDatetime)}</p></div><Badge className={phaseClass(session.phase)}>{phaseLabel(session.phase)}</Badge></div><p className="mt-2 text-xs font-semibold text-moss-700">{session.attendanceCount} attended · {session.attendancePercent}%</p></Card>;
-const NoticeCard = ({ notice }: { notice: Notice }) => <Card className="p-4 shadow-none"><p className="font-semibold">{notice.title}</p><p className="mt-1 text-sm text-stone-500">{notice.description}</p><p className="mt-2 text-xs text-stone-400">{formatDateTime(notice.createdAt)}</p></Card>;
+const NoticeCard = ({ notice, onEdit, onDelete, deleted = false }: { notice: Notice; onEdit?: () => void; onDelete?: () => void; deleted?: boolean }) => <Card className={cn('p-4 shadow-none', deleted && 'bg-stone-50 opacity-80')}><div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap gap-2">{notice.createdByMentor && <Badge className="bg-moss-100 text-moss-800">Mentor · {notice.createdByMentor.name}</Badge>}{notice.createdByAdmin && <Badge className="bg-purple-100 text-purple-800">{notice.createdByAdmin.role === 'SUPER_ADMIN' ? 'Super admin' : 'Admin'} · {notice.createdByAdmin.name}</Badge>}{deleted && <Badge className="bg-red-100 text-red-700">Deleted</Badge>}</div><p className="mt-3 font-semibold">{notice.title}</p></div>{!deleted && <div className="flex gap-2">{onEdit && <Button size="sm" variant="outline" onClick={onEdit}>Edit</Button>}{onDelete && <Button size="sm" variant="danger" onClick={onDelete}>Delete</Button>}</div>}</div><p className="mt-2 text-sm text-stone-500">{notice.description}</p><div className="mt-3 space-y-1 text-xs text-stone-400"><p>Created {formatDateTime(notice.createdAt)}</p><p>Last edited {formatDateTime(notice.updatedAt)} by {notice.updatedByMentor?.name ?? notice.updatedByAdmin?.name ?? '—'}</p>{deleted && <p>Deleted {notice.deletedAt ? formatDateTime(notice.deletedAt) : ''} by {notice.deletedByMentor?.name ?? notice.deletedByAdmin?.name ?? '—'}</p>}</div></Card>;
 const TestCard = ({ test, batchId }: { test: Test; batchId: string }) => <Link to={`${batchRoot(batchId)}/tests/${test.id}`}><Card className="p-5 transition hover:shadow-card"><div className="flex justify-between"><div><Badge className={phaseClass(test.phase)}>{phaseLabel(test.phase)}</Badge><h2 className="mt-3 font-bold">{test.name}</h2><p className="mt-1 text-sm text-stone-500">{test.description}</p></div><ArrowRight className="text-stone-300" /></div><div className="mt-4 flex flex-wrap gap-3 text-xs text-stone-500"><span>{test.questionCount} questions</span><span>{test.totalMarks} marks</span><span>{test.attemptCount} attempts</span><span>{typeof test.difficulty === 'string' ? test.difficulty : test.difficulty.name}</span></div></Card></Link>;
 const Mini = ({ label, value }: { label: string; value: string | number }) => <div className="rounded-2xl bg-moss-50 p-3"><p className="font-bold text-moss-900">{value}</p><p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">{label}</p></div>;
 const Back = ({ to, children }: { to: string; children: string }) => <Link to={to} className="inline-flex items-center gap-1 text-sm font-semibold text-moss-700 hover:text-moss-900"><ChevronLeft size={16} />{children}</Link>;
 const BatchBack = ({ batchId }: { batchId: string }) => <Back to={batchRoot(batchId)}>Batch dashboard</Back>;
 const PageSkeleton = () => <div className="space-y-6"><Skeleton className="h-44 rounded-4xl" /><div className="grid gap-5 lg:grid-cols-2"><Skeleton className="h-56" /><Skeleton className="h-56" /></div></div>;
 const toInputValue = (value: unknown) => !value ? '' : typeof value === 'string' && value.includes('T') ? value.slice(0, 16) : String(value);
+const MonthControls = ({ month, setMonth }: { month: string; setMonth: (value: string | ((value: string) => string)) => void }) => <div className="flex items-center gap-2"><Button size="sm" variant="outline" onClick={() => setMonth((value) => { const date = new Date(`${value}-01T00:00:00`); date.setMonth(date.getMonth() - 1); return date.toISOString().slice(0, 7); })}>Prev</Button><Badge>{month}</Badge><Button size="sm" variant="outline" onClick={() => setMonth((value) => { const date = new Date(`${value}-01T00:00:00`); date.setMonth(date.getMonth() + 1); return date.toISOString().slice(0, 7); })}>Next</Button></div>;
+const toArray = (value: unknown) => Array.isArray(value) ? value.map(String) : value == null ? [] : [String(value)];
+const renderOptions = (answer: AttemptAnalysis['answers'][number]) => {
+  const selected = new Set(toArray(answer.selectedAnswers));
+  const correct = new Set(toArray(answer.correctAnswers));
+  const options = Array.isArray(answer.options) ? answer.options : [];
+  if (!options.length) {
+    const values = Array.from(new Set([...selected, ...correct]));
+    return values.map((value) => ({ id: value, text: value, isSelected: selected.has(value), isCorrect: correct.has(value) }));
+  }
+  return options.map((option: any, index: number) => {
+    const id = String(option.id ?? option.label ?? String.fromCharCode(65 + index));
+    return { id, text: String(option.text ?? option.value ?? option.label ?? option), isSelected: selected.has(id) || selected.has(String(option.text)), isCorrect: correct.has(id) || correct.has(String(option.text)) };
+  });
+};

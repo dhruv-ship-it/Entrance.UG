@@ -50,6 +50,7 @@ import {
   MentorDoubtsPage,
   MentorNoticesPage,
   MentorProgramsPage,
+  MentorStudentAttemptsPage,
   MentorStudentDetailPage,
   MentorStudentsPage,
   MentorTasksPage,
@@ -210,6 +211,7 @@ export const App = () => (
         <Route path="batches/:batchId" element={<MentorBatchDashboardPage />} />
         <Route path="batches/:batchId/students" element={<MentorStudentsPage />} />
         <Route path="batches/:batchId/students/:studentId" element={<MentorStudentDetailPage />} />
+        <Route path="batches/:batchId/students/:studentId/attempts" element={<MentorStudentAttemptsPage />} />
         <Route path="batches/:batchId/tasks" element={<MentorTasksPage />} />
         <Route path="batches/:batchId/classes" element={<MentorClassesPage />} />
         <Route path="batches/:batchId/doubts" element={<MentorDoubtsPage />} />
